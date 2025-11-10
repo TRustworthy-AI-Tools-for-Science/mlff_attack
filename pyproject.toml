@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mlff_attack"
+version = "0.1.0"
+description = "Attacks against MLFF Models"
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+authors = [
+    {name = "Trustworthy AI Tools for Science"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "ase>=3.22.0",
+    "mace-torch>=0.3.0",
+    "torch>=2.0.0",
+    "matplotlib>=3.5.0",
+    "numpy>=1.20.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=22.0",
+    "flake8>=5.0",
+    "mypy>=0.990",
+]
+
+[project.scripts]
+mace-calc-single = "mlff_attack.cli.mace_calc_single:main"
+visualize-traj = "mlff_attack.cli.visualize_traj:main"
+
+[project.urls]
+Homepage = "https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack"
+Repository = "https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack"
