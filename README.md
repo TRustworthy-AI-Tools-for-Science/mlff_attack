@@ -18,12 +18,6 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
-### Using pip
-
-```bash
-pip install mlff_attack
-```
-
 ## Usage
 
 ### Running MACE calculations
