@@ -35,16 +35,19 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
+    "pytest",
+    "pytest-cov",
     "black>=22.0",
     "flake8>=5.0",
     "mypy>=0.990",
+    "ipython",
+    "ipykernel",
 ]
 
 [project.scripts]
 mace-calc-single = "mlff_attack.cli.mace_calc_single:main"
 visualize-traj = "mlff_attack.cli.visualize_traj:main"
+make-attack = "mlff_attack.cli.make_attack:main"
 
 [project.urls]
 Homepage = "https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack"
