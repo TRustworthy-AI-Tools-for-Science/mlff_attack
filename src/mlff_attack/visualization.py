@@ -72,6 +72,23 @@ def extract_trajectory_data(traj):
     return steps, energies, max_forces, volumes
 
 
+def calculate_noise_spectrum(max_forces):
+    """
+    Calculate noise spectrum from maximum forces.
+    
+    Args:
+        max_forces: List of maximum forces
+
+    Returns:
+        tuple: (frequencies, spectrum)
+    """
+    forces_array = np.array(max_forces)
+    n = len(forces_array)
+    freq = np.fft.rfftfreq(n)
+    spectrum = np.abs(np.fft.rfft(forces_array - np.mean(forces_array)))**2
+    return freq, spectrum
+
+
 def calculate_statistics(energies, max_forces, volumes):
     """
     Calculate summary statistics from trajectory data.
@@ -183,7 +200,20 @@ def plot_summary(ax, stats, n_frames):
     return summary_text
 
 
-def create_visualization(traj, traj_path, outdir, output_format='png', show=False):
+def plot_noise(ax, freq, spectrum):
+
+    if not all(np.isnan(spectrum)):
+        ax.plot(freq, spectrum, 'm-')
+        ax.set_xlabel('Frequency (1/steps)')
+        ax.set_ylabel('Power Spectrum')
+        ax.set_title('Noise Spectrum of Max Forces')
+        ax.grid(True, alpha=0.3)
+    else:
+        ax.text(0.5, 0.5, 'Force data not available', ha='center', va='center', transform=ax.transAxes)
+        ax.set_title('Noise Spectrum of Max Forces')  
+
+
+def create_visualization(traj, traj_path, outdir, output_format='png', show=False, save_to_csv=True):
     """
     Create visualization plots for trajectory data.
     
@@ -193,6 +223,7 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
         outdir: Output directory for plots
         output_format: Format for output plots (png, pdf, svg)
         show: Whether to show plots interactively
+        save_to_csv: Whether to save extracted data to CSV files
         
     Returns:
         str: Path to saved plot, or None if failed
@@ -202,6 +233,9 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
     
     # Calculate statistics
     stats = calculate_statistics(energies, max_forces, volumes)
+
+    # callculate noise spectrum
+    freq, spectrum = calculate_noise_spectrum(max_forces)
     
     # Create figure
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
@@ -210,7 +244,9 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
     # Create plots
     plot_energy(axes[0, 0], steps, energies)
     plot_forces(axes[0, 1], steps, max_forces)
-    plot_volume(axes[1, 0], steps, volumes)
+    # plot_volume(axes[1, 0], steps, volumes)
+    plot_noise(axes[1, 0], freq, spectrum)
+
     summary_text = plot_summary(axes[1, 1], stats, len(traj))
     
     plt.tight_layout()
@@ -230,5 +266,28 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
     print("\n" + "="*50)
     print(summary_text)
     print("="*50)
-    
+
+    # Save data to CSV if requested
+    if save_to_csv:
+        import pandas as pd
+        data = {
+            'Step': steps,
+            'Energy (eV)': energies,
+            'Max Force (eV/Å)': max_forces,
+            'Volume (Å³)': volumes
+        }
+        df = pd.DataFrame(data)
+        csv_file = outdir / f"relaxation_data.csv"
+        df.to_csv(csv_file, index=False)
+        print(f"[INFO] Data saved to CSV: {csv_file}")
+
+        noise = {
+            'Frequency (1/steps)': freq,
+            'Power Spectrum': spectrum
+        }
+        df_noise = pd.DataFrame(noise)
+        csv_noise_file = outdir / f"noise_spectrum.csv"
+        df_noise.to_csv(csv_noise_file, index=False)
+        print(f"[INFO] Noise spectrum data saved to CSV: {csv_noise_file}")
+
     return str(output_file)
