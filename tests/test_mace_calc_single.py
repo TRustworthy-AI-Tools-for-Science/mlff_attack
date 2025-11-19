@@ -1,10 +1,14 @@
 import pytest
 from mlff_attack import relaxation
+import mace
 from mace.calculators import mace_mp
+from ase import build
+from ase import Atoms
+from pathlib import Path
 
 def test_load_mace_model():
     calc = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
-    assert calc is not None
+    assert isinstance(calc, mace.calculators.mace.MACECalculator)
 
 def test_load_structure():
     """Test loading a structure file."""
@@ -31,17 +35,22 @@ def test_load_structure():
 
 def test_setup_calculator():
     """Test setting up MACE calculator."""
-    from ase import Atoms
-    from pathlib import Path
 
     # Create a dummy atoms object
-    atoms = Atoms('H2O', positions=[[0, 0, 0], [0.76, 0.58, 0], [-0.76, 0.58, 0]])
-
+    atoms = build.molecule("H2O")
+                
     # Use a non-existent model path for testing
     model_path = Path(__file__).parent / "data" / "non_existent_model.pth"
 
-    atoms_with_calc = relaxation.setup_calculator(atoms, str(model_path), device="cpu", dtype="float32")
+    atoms_with_calc = relaxation.setup_calculator(atoms, str(model_path), device="cpu", dtype_str="float32")
     assert atoms_with_calc is None  # Should fail to load model
+
+    model = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
+
+    atoms_with_mace = relaxation.setup_calculator(atoms, model, device="cpu", dtype_str="float32")
+
+    assert atoms_with_mace is not None
+    
 
 def test_get_optimizer_class():
     """Test getting optimizer class."""
@@ -57,7 +66,7 @@ def test_run_relaxation():
     from unittest.mock import patch, MagicMock
     from pathlib import Path
 
-    atoms = Atoms('H2O', positions=[[0, 0, 0], [0.76, 0.58, 0], [-0.76, 0.58, 0]])
+    atoms = build.molecule("H2O")
     atoms.calc = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
     
     traj_path = Path(__file__).parent / "data" / "test_traj.traj"

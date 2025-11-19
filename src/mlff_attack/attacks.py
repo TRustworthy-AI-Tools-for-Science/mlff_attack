@@ -5,69 +5,21 @@ Contains implementation for FGSM, I-FGSM, and PGD attacks on MLFF models.
 """
 from pathlib import Path
 import numpy as np
+
+from datetime import datetime
+    
 import torch
 import matplotlib.pyplot as plt
 from ase.io import read, write
 from mlff_attack.relaxation import setup_calculator
 
-def fgsm_attack(model, data, epsilon):
-    """
-    Perform Fast Gradient Sign Method (FGSM) attack.
-    
-    Args:
-        model: The machine learning force field model
-        data: Input data to attack
-        epsilon: Perturbation magnitude
-        
-    Returns:
-
-        perturbed_data: The adversarially perturbed data
-    """
-    
-
-    pass
-
-def ifgsm_attack(model, data, epsilon, alpha, num_iterations):
-    """
-    Perform Iterative Fast Gradient Sign Method (I-FGSM) attack.
-    
-    Args:
-        model: The machine learning force field model
-        data: Input data to attack
-        epsilon: Maximum perturbation magnitude
-        alpha: Step size for each iteration
-        num_iterations: Number of iterations to perform
-        
-    Returns:
-        perturbed_data: The adversarially perturbed data
-    """
-
-    pass
-
-def pgd_attack(model, data, epsilon, alpha, num_iterations):
-    """
-    Perform Projected Gradient Descent (PGD) attack.
-    
-    Args:
-        model: The machine learning force field model
-        data: Input data to attack
-        epsilon: Maximum perturbation magnitude
-        alpha: Step size for each iteration
-        num_iterations: Number of iterations to perform
-        
-    Returns:
-        perturbed_data: The adversarially perturbed data
-    """
-
-    pass
-
-
-def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif):
+def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm"):
     """
     Perform an adversarial attack on the given atomic structure using a MACE model.
+    
+    This is a convenience wrapper around the FGSM_MACE class.
 
     Args:
-
         model_path: Path to the MACE model file
         device: Device to run the model on ("cpu" or "cuda")
         atoms: ASE Atoms object representing the structure to attack
@@ -76,7 +28,9 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif):
         output_cif: Path to save the perturbed CIF file
     Returns:
         output_cif: Path to the saved perturbed CIF file
+        perturbed_atoms: Atoms object after attack
     """
+    from mlff_attack.grad_based.fgsm import FGSM_MACE
 
     # Setup calculator
     print(f"\nSetting up MACE calculator")
@@ -86,28 +40,43 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif):
     if atoms is None:
         raise RuntimeError("Failed to set up calculator")
     
-    # Perform adversarial attack
-    print(f"\nPerforming adversarial attack")
+    # Get original energy
+    orig_energy = atoms.get_potential_energy()
+    
+    # Create FGSM attack
+    print(f"\nPerforming FGSM adversarial attack")
     print(f"   Epsilon: {epsilon} Å")
     if target_energy is not None:
         print(f"   Target energy: {target_energy} eV")
     else:
         print(f"   Mode: Maximize energy")
     
-    perturbed_atoms, orig_energy, pert_energy, grads = adversarial_attack_step(
-        atoms, device=device, epsilon=epsilon, target_energy=target_energy
+    if attack_type == "fgsm":
+        attack = FGSM_MACE(
+            model=atoms.calc,
+            epsilon=epsilon,
+            device=device,
+            track_history=True,
+            target_energy=target_energy
     )
+    else:
+        raise NotImplementedError(f"Attack type '{attack_type}' not implemented yet.")
     
+    # Execute attack (single step for FGSM)
+    perturbed_atoms = attack.attack(atoms, n_steps=1, clip=True)
+    
+    # Get perturbed energy
+    pert_energy = perturbed_atoms.get_potential_energy()
     energy_change = pert_energy - orig_energy
+    
     print(f"   Original energy:  {orig_energy:.4f} eV")
     print(f"   Perturbed energy: {pert_energy:.4f} eV")
     print(f"   Energy change:    {energy_change:+.4f} eV")
     
     # Calculate displacement statistics
-    displacement = perturbed_atoms.get_positions() - atoms.get_positions()
-    displacement_mag = np.linalg.norm(displacement, axis=1)
-    print(f"   Mean displacement: {displacement_mag.mean():.4f} Å")
-    print(f"   Max displacement:  {displacement_mag.max():.4f} Å")
+    stats = attack.get_perturbation_stats()
+    print(f"   Mean displacement: {stats['mean_displacement']:.4f} Å")
+    print(f"   Max displacement:  {stats['max_displacement']:.4f} Å")
     
     # Save perturbed structure
     print(f"\nSaving perturbed structure to: {output_cif}")
@@ -121,6 +90,9 @@ def forward_pass_with_gradients(atoms, device="cpu"):
     """
     Perform a forward pass through the MACE model with gradient tracking.
     
+    .. deprecated::
+        Use FGSM_MACE class instead. This function is kept for backward compatibility.
+    
     This uses the calculator's internal method to prepare the batch,
     then replaces positions with a gradient-enabled version.
     
@@ -133,8 +105,6 @@ def forward_pass_with_gradients(atoms, device="cpu"):
         forces: Forces on atoms (shape [n_atoms, 3], with gradients)
         positions: Position tensor (requires_grad=True)
     """
-
-    
     calc = atoms.calc
     model = calc.models[0]
     
@@ -231,6 +201,9 @@ def backprop_step(energy, positions, loss_fn=None):
     """
     Perform backpropagation to compute gradients.
     
+    .. deprecated::
+        Use FGSM_MACE.compute_gradient() instead. This function is kept for backward compatibility.
+    
     Args:
         energy: Energy tensor from forward pass (requires_grad=True)
         positions: Position tensor from forward pass (requires_grad=True)
@@ -270,9 +243,7 @@ def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original,
         save_path: Path to save the data (will save as .npz file)
         metadata: Optional dictionary with additional metadata
     """
-    import numpy as np
-    from datetime import datetime
-    
+
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
     
@@ -390,6 +361,9 @@ def adversarial_attack_step(atoms, device="cpu", epsilon=0.01, target_energy=Non
     """
     Perform one step of adversarial attack on atomic positions.
     
+    .. deprecated::
+        Use FGSM_MACE.attack_step() instead. This function is kept for backward compatibility.
+    
     Args:
         atoms: ASE Atoms object with MACE calculator attached
         device: Device to run on
@@ -435,10 +409,6 @@ def adversarial_attack_step(atoms, device="cpu", epsilon=0.01, target_energy=Non
     
     return perturbed_atoms, energy.item(), perturbed_energy_np, grad_positions.detach()
 
-
-
-
-# %%
 
 def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None):
     """

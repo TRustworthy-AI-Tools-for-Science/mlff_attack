@@ -6,8 +6,9 @@ MACE relaxation functionality.
 from pathlib import Path
 from ase.io import read, write
 from ase.optimize import BFGS, LBFGS
-from mace.calculators import mace
-
+from mace.calculators import mace as mace_calculator
+import mace
+import torch
 
 def load_structure(input_path):
     """
@@ -30,7 +31,7 @@ def load_structure(input_path):
         return None
 
 
-def setup_calculator(atoms, model_path, device="cuda", dtype="float64"):
+def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64"):
     """
     Initialize and attach MACE calculator to atoms object.
     
@@ -44,12 +45,23 @@ def setup_calculator(atoms, model_path, device="cuda", dtype="float64"):
         ASE Atoms object with calculator attached, or None if setup fails
     """
     try:
-        print(f"[INFO] Loading MACE model: {model_path} on {device}")
-        atoms.calc = mace.MACECalculator(
-            model_paths=model_path, 
-            device=device, 
-            default_dtype=dtype
-        )
+
+
+        if isinstance(model_path, mace.calculators.mace.MACECalculator):
+            print("model is already a MACECalculator")
+            atoms.calc = model_path
+        else:
+            if dtype_str == "float32":
+                dtype = torch.float32
+            else:
+                dtype = "float64"
+            
+            print(f"[INFO] Loading MACE model: {model_path} on {device}")
+            atoms.calc = mace_calculator.MACECalculator(
+                model_paths=model_path, 
+                device=device, 
+                default_dtype=dtype
+            )
         return atoms
     except Exception as e:
         print(f"[ERROR] Failed to setup MACE calculator: {e}")

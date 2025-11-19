@@ -80,6 +80,14 @@ def parse_args():
         dest="visualize",
         help="Skip visualization plot generation"
     )
+
+    parser.add_argument(
+        "--type",
+        type=str,
+        default="fgsm",
+        choices=["fgsm", "pgd", "bim"],
+        help="Type of adversarial attack to perform"
+    )
     
     return parser.parse_args()
 
@@ -96,6 +104,7 @@ def main():
     device = args.device
     epsilon = args.epsilon
     target_energy = args.target_energy
+    attack_type = args.type
     
     # Determine output path
     if args.output is not None:
@@ -118,7 +127,8 @@ def main():
         device=device,
         epsilon=epsilon,
         target_energy=target_energy,
-        output_cif=output_cif
+        output_cif=output_cif,
+        attack_type=attack_type
     )
 
     # Visualize perturbation
