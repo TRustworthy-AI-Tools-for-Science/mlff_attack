@@ -7,7 +7,7 @@
     <title>mlff_attack.visualization &#8212; mlff_attack 0.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
-    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=f6a572b4" />
     <script src="../../_static/documentation_options.js?v=2709fde1"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
@@ -21,9 +21,68 @@
   
 
   </head><body>
-  
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">mlff_attack</a></h1>
 
-    <div class="document">
+
+
+<p class="blurb">Adversarial attacks on Machine Learning Force Fields</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=TRustworthy-AI-Tools-for-Science&repo=mlff_attack&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">API Documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../modules.html#package-overview">Package Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../modules.html#core-modules">Core Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../modules.html#gradient-based-attacks">Gradient-Based Attacks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../modules.html#command-line-interface">Command Line Interface</a></li>
+</ul>
+</li>
+</ul>
+
+
+<hr />
+<ul>
+    
+    <li class="toctree-l1"><a href="https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack">GitHub</a></li>
+    
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
       <div class="documentwrapper">
         <div class="bodywrapper">
           
@@ -43,7 +102,7 @@
 
 
 <div class="viewcode-block" id="load_trajectory">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.load_trajectory">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.visualization.html#mlff_attack.visualization.load_trajectory">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">load_trajectory</span><span class="p">(</span><span class="n">traj_path</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a trajectory file and validate it exists.</span>
 <span class="sd">    </span>
@@ -74,7 +133,7 @@
 
 
 <div class="viewcode-block" id="extract_trajectory_data">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.extract_trajectory_data">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.visualization.html#mlff_attack.visualization.extract_trajectory_data">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">extract_trajectory_data</span><span class="p">(</span><span class="n">traj</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract energy, force, and volume data from trajectory.</span>
 <span class="sd">    </span>
@@ -127,7 +186,7 @@
 
 
 <div class="viewcode-block" id="calculate_noise_spectrum">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.calculate_noise_spectrum">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.visualization.html#mlff_attack.visualization.calculate_noise_spectrum">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">calculate_noise_spectrum</span><span class="p">(</span><span class="n">max_forces</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate noise spectrum from maximum forces.</span>
 <span class="sd">    </span>
@@ -155,7 +214,7 @@
 
 
 <div class="viewcode-block" id="calculate_statistics">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.calculate_statistics">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.visualization.html#mlff_attack.visualization.calculate_statistics">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">calculate_statistics</span><span class="p">(</span><span class="n">energies</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">,</span> <span class="n">volumes</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate summary statistics from trajectory data.</span>
 <span class="sd">    </span>
@@ -202,7 +261,7 @@
 
 
 <div class="viewcode-block" id="plot_energy">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_energy">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.visualization.html#mlff_attack.visualization.plot_energy">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">plot_energy</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">energies</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot energy evolution.</span>
 <span class="sd">    </span>
@@ -228,7 +287,7 @@
 
 
 <div class="viewcode-block" id="plot_forces">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_forces">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.visualization.html#mlff_attack.visualization.plot_forces">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">plot_forces</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot force convergence.</span>
 <span class="sd">    </span>
@@ -258,7 +317,7 @@
 
 
 <div class="viewcode-block" id="plot_volume">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_volume">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.visualization.html#mlff_attack.visualization.plot_volume">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">plot_volume</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">volumes</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot volume evolution.</span>
 <span class="sd">    </span>
@@ -280,7 +339,7 @@
 
 
 <div class="viewcode-block" id="plot_summary">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_summary">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.visualization.html#mlff_attack.visualization.plot_summary">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">plot_summary</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">n_frames</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot summary statistics.</span>
 <span class="sd">    </span>
@@ -332,7 +391,7 @@
 
 
 <div class="viewcode-block" id="plot_noise">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_noise">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.visualization.html#mlff_attack.visualization.plot_noise">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">plot_noise</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot noise spectrum of maximum forces.</span>
 <span class="sd">    </span>
@@ -359,7 +418,7 @@
 
 
 <div class="viewcode-block" id="create_visualization">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.create_visualization">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.visualization.html#mlff_attack.visualization.create_visualization">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">create_visualization</span><span class="p">(</span><span class="n">traj</span><span class="p">,</span> <span class="n">traj_path</span><span class="p">,</span> <span class="n">outdir</span><span class="p">,</span> <span class="n">output_format</span><span class="o">=</span><span class="s1">&#39;png&#39;</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">save_to_csv</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Create visualization plots for trajectory data.</span>
 <span class="sd">    </span>
@@ -453,53 +512,8 @@
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="Main">
-        <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../../index.html">mlff_attack</a></h1>
-
-
-
-
-
-
-
-
-
-<search id="searchbox" style="display: none" role="search">
-    <div class="searchformwrapper">
-    <form class="search" action="../../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</search>
-<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../modules.html">src</a></li>
-</ul>
-
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../../index.html">Documentation overview</a><ul>
-  <li><a href="../index.html">Module code</a><ul>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
-
-
-
-
-
-
-
-
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
+    <div class="clearer"></div>
+  </div>
     <div class="footer">
       &#169;2025, Ashley S. Dale.
       

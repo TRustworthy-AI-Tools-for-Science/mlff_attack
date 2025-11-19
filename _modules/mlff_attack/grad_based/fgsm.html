@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mlff_attack.grad_based.fgsm &#8212; mlff_attack 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=f6a572b4" />
+    <script src="../../../_static/documentation_options.js?v=2709fde1"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">mlff_attack</a></h1>
+
+
+
+<p class="blurb">Adversarial attacks on Machine Learning Force Fields</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=TRustworthy-AI-Tools-for-Science&repo=mlff_attack&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">API Documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../../modules.html#package-overview">Package Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../modules.html#core-modules">Core Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../modules.html#gradient-based-attacks">Gradient-Based Attacks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../modules.html#command-line-interface">Command Line Interface</a></li>
+</ul>
+</li>
+</ul>
+
+
+<hr />
+<ul>
+    
+    <li class="toctree-l1"><a href="https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack">GitHub</a></li>
+    
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for mlff_attack.grad_based.fgsm</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Fast Gradient Sign Method (FGSM) attack implementation for MLFF models.</span>
+
+<span class="sd">This module implements the FGSM attack specifically for MACE models,</span>
+<span class="sd">extending the base MLFFAttack class.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Any</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.mlff_attack_class</span><span class="w"> </span><span class="kn">import</span> <span class="n">MLFFAttack</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mace.data</span><span class="w"> </span><span class="kn">import</span> <span class="n">AtomicData</span><span class="p">,</span> <span class="n">config_from_atoms</span>
+
+
+<div class="viewcode-block" id="FGSM_MACE">
+<a class="viewcode-back" href="../../../mlff_attack.grad_based.html#mlff_attack.grad_based.fgsm.FGSM_MACE">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">FGSM_MACE</span><span class="p">(</span><span class="n">MLFFAttack</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;FGSM attack implementation for MACE force field models.</span>
+<span class="sd">    </span>
+<span class="sd">    The Fast Gradient Sign Method computes the gradient of the loss with respect</span>
+<span class="sd">    to atomic positions and perturbs them in the direction that maximizes the loss.</span>
+<span class="sd">    </span>
+<span class="sd">    Attributes:</span>
+<span class="sd">        model: MACE calculator attached to atoms</span>
+<span class="sd">        epsilon: Step size for perturbation (Angstroms)</span>
+<span class="sd">        device: Device for PyTorch computations</span>
+<span class="sd">        target_energy: Optional target energy for the attack</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="FGSM_MACE.__init__">
+<a class="viewcode-back" href="../../../mlff_attack.grad_based.html#mlff_attack.grad_based.fgsm.FGSM_MACE.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">model</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">epsilon</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.01</span><span class="p">,</span>
+        <span class="n">device</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;cpu&#39;</span><span class="p">,</span>
+        <span class="n">track_history</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">target_energy</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize FGSM attack for MACE models.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        model : Any</span>
+<span class="sd">            MACE calculator (will be attached to atoms)</span>
+<span class="sd">        epsilon : float, optional</span>
+<span class="sd">            Perturbation step size in Angstroms, by default 0.01</span>
+<span class="sd">        device : str, optional</span>
+<span class="sd">            Device for computations (&#39;cpu&#39; or &#39;cuda&#39;), by default &#39;cpu&#39;</span>
+<span class="sd">        track_history : bool, optional</span>
+<span class="sd">            Whether to track attack progression, by default True</span>
+<span class="sd">        target_energy : Optional[float], optional</span>
+<span class="sd">            Optional target energy (if None, maximize energy), by default None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">track_history</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">target_energy</span> <span class="o">=</span> <span class="n">target_energy</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_energy</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_gradients</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_forward_pass_with_gradients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">atoms</span><span class="p">:</span> <span class="n">Any</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform forward pass through MACE model with gradient tracking.</span>
+<span class="sd">        </span>
+<span class="sd">        This uses the calculator&#39;s internal method to prepare the batch,</span>
+<span class="sd">        then replaces positions with a gradient-enabled version.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atoms : Any</span>
+<span class="sd">            ASE Atoms object with MACE calculator attached</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            A tuple containing:</span>
+<span class="sd">            </span>
+<span class="sd">            - energy : torch.Tensor</span>
+<span class="sd">                Total energy (scalar, requires_grad=True)</span>
+<span class="sd">            - forces : torch.Tensor</span>
+<span class="sd">                Forces on atoms (shape [n_atoms, 3], with gradients)</span>
+<span class="sd">            - positions : torch.Tensor</span>
+<span class="sd">                Position tensor (requires_grad=True)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">calc</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">calc</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">calc</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="c1"># model = self.model</span>
+        <span class="c1"># calc = atoms.calc</span>
+        
+        <span class="c1"># Save original positions</span>
+        <span class="n">positions_np</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">get_positions</span><span class="p">()</span>
+        
+        <span class="c1"># Create configuration from atoms</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">config_from_atoms</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span>
+        
+        <span class="c1"># Create AtomicData with the calculator&#39;s settings</span>
+        <span class="n">atomic_data</span> <span class="o">=</span> <span class="n">AtomicData</span><span class="o">.</span><span class="n">from_config</span><span class="p">(</span>
+            <span class="n">config</span><span class="p">,</span> <span class="n">z_table</span><span class="o">=</span><span class="n">calc</span><span class="o">.</span><span class="n">z_table</span><span class="p">,</span> <span class="n">cutoff</span><span class="o">=</span><span class="n">calc</span><span class="o">.</span><span class="n">r_max</span>
+        <span class="p">)</span>
+        
+        <span class="c1"># Convert to dict</span>
+        <span class="n">batch</span> <span class="o">=</span> <span class="n">atomic_data</span><span class="o">.</span><span class="n">to_dict</span><span class="p">()</span>
+        
+        <span class="c1"># Move everything to the right device first</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">is_tensor</span><span class="p">(</span><span class="n">batch</span><span class="p">[</span><span class="n">key</span><span class="p">]):</span>
+                <span class="n">batch</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        
+        <span class="c1"># Add batch indexing if not present (on correct device)</span>
+        <span class="k">if</span> <span class="s2">&quot;batch&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+            <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;batch&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;ptr&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+            <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;ptr&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        
+        <span class="c1"># Replace positions with gradient-enabled version</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+            <span class="n">positions_np</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span> <span class="o">==</span> <span class="s2">&quot;cpu&quot;</span> <span class="k">else</span> <span class="n">torch</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">,</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;positions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">positions</span>
+        
+        <span class="c1"># Check and fix natoms if present</span>
+        <span class="k">if</span> <span class="s2">&quot;natoms&quot;</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+            <span class="n">natoms_val</span> <span class="o">=</span> <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;natoms&quot;</span><span class="p">]</span>
+            <span class="c1"># Ensure it&#39;s 1D with 2 elements</span>
+            <span class="k">if</span> <span class="n">natoms_val</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;natoms&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+                    <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+                <span class="p">)</span>
+            <span class="k">elif</span> <span class="n">natoms_val</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">natoms_val</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;natoms&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+                    <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+                <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;natoms&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+                <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">)],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+            <span class="p">)</span>
+        
+        <span class="c1"># Add head field if present in calculator (for multi-head models)</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">calc</span><span class="p">,</span> <span class="s1">&#39;head&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">calc</span><span class="o">.</span><span class="n">head</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Map head name to index</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">calc</span><span class="p">,</span> <span class="s1">&#39;heads&#39;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">calc</span><span class="o">.</span><span class="n">heads</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">head_idx</span> <span class="o">=</span> <span class="n">calc</span><span class="o">.</span><span class="n">heads</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">calc</span><span class="o">.</span><span class="n">head</span><span class="p">)</span> <span class="k">if</span> <span class="n">calc</span><span class="o">.</span><span class="n">head</span> <span class="ow">in</span> <span class="n">calc</span><span class="o">.</span><span class="n">heads</span> <span class="k">else</span> <span class="mi">0</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">head_idx</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;head&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
+                <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">),),</span> <span class="n">head_idx</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="s2">&quot;head&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">batch</span><span class="p">:</span>
+            <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;head&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">long</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        
+        <span class="c1"># Forward pass - disable computing forces in the model output</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+        
+        <span class="k">with</span> <span class="n">torch</span><span class="o">.</span><span class="n">enable_grad</span><span class="p">():</span>
+            <span class="n">positions</span><span class="o">.</span><span class="n">requires_grad_</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">batch</span><span class="p">[</span><span class="s2">&quot;positions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">positions</span>
+            
+            <span class="c1"># Forward pass through model</span>
+            <span class="n">output</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">batch</span><span class="p">,</span> <span class="n">training</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">compute_force</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            
+            <span class="c1"># Extract energy</span>
+            <span class="n">energy</span> <span class="o">=</span> <span class="n">output</span><span class="p">[</span><span class="s2">&quot;energy&quot;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">energy</span><span class="o">.</span><span class="n">dim</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">energy</span> <span class="o">=</span> <span class="n">energy</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+            
+            <span class="c1"># Compute forces as negative gradient</span>
+            <span class="n">forces</span> <span class="o">=</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">grad</span><span class="p">(</span>
+                <span class="n">outputs</span><span class="o">=</span><span class="n">energy</span><span class="p">,</span>
+                <span class="n">inputs</span><span class="o">=</span><span class="n">positions</span><span class="p">,</span>
+                <span class="n">retain_graph</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">create_graph</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        
+        <span class="k">return</span> <span class="n">energy</span><span class="p">,</span> <span class="n">forces</span><span class="p">,</span> <span class="n">positions</span>
+    
+<div class="viewcode-block" id="FGSM_MACE.compute_gradient">
+<a class="viewcode-back" href="../../../mlff_attack.grad_based.html#mlff_attack.grad_based.fgsm.FGSM_MACE.compute_gradient">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_gradient</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">atoms</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">loss_fn</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute gradient of loss with respect to atomic positions.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atoms : Any</span>
+<span class="sd">            ASE Atoms object with MACE calculator</span>
+<span class="sd">        loss_fn : Optional[Callable], optional</span>
+<span class="sd">            Optional custom loss function. If None, uses default</span>
+<span class="sd">            (maximize energy or target energy loss), by default None</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        np.ndarray</span>
+<span class="sd">            Gradient array with shape (n_atoms, 3)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Forward pass with gradients</span>
+        <span class="n">energy</span><span class="p">,</span> <span class="n">forces</span><span class="p">,</span> <span class="n">positions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forward_pass_with_gradients</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span>
+        
+        <span class="c1"># Define loss</span>
+        <span class="k">if</span> <span class="n">loss_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="n">loss_fn</span><span class="p">(</span><span class="n">energy</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_energy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Try to reach target energy</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="p">(</span><span class="n">energy</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_energy</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Maximize energy (adversarial attack)</span>
+            <span class="n">loss</span> <span class="o">=</span> <span class="o">-</span><span class="n">energy</span>
+        
+        <span class="c1"># Backprop to get gradients w.r.t. positions</span>
+        <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
+        <span class="n">grad_positions</span> <span class="o">=</span> <span class="n">positions</span><span class="o">.</span><span class="n">grad</span>
+        
+        <span class="c1"># Store for history tracking</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_energy</span> <span class="o">=</span> <span class="n">energy</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_last_gradients</span> <span class="o">=</span> <span class="n">grad_positions</span><span class="o">.</span><span class="n">detach</span><span class="p">()</span><span class="o">.</span><span class="n">cpu</span><span class="p">()</span><span class="o">.</span><span class="n">numpy</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_last_gradients</span></div>
+
+    
+<div class="viewcode-block" id="FGSM_MACE.attack_step">
+<a class="viewcode-back" href="../../../mlff_attack.grad_based.html#mlff_attack.grad_based.fgsm.FGSM_MACE.attack_step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">attack_step</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">atoms</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">step</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Perform one step of FGSM attack.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atoms : Any</span>
+<span class="sd">            Current atomic structure with MACE calculator</span>
+<span class="sd">        step : int, optional</span>
+<span class="sd">            Current iteration number, by default 0</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Any</span>
+<span class="sd">            Updated atoms object with perturbed positions</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Compute gradients</span>
+        <span class="n">gradients</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_gradient</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span>
+        
+        <span class="c1"># FGSM: perturbation is epsilon * sign of gradient</span>
+        <span class="n">perturbation</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sign</span><span class="p">(</span><span class="n">gradients</span><span class="p">)</span>
+        
+        <span class="c1"># Apply perturbation</span>
+        <span class="n">current_positions</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">get_positions</span><span class="p">()</span>
+        <span class="n">perturbed_positions</span> <span class="o">=</span> <span class="n">current_positions</span> <span class="o">+</span> <span class="n">perturbation</span>
+        
+        <span class="c1"># Create new atoms with perturbed positions</span>
+        <span class="n">perturbed_atoms</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">perturbed_atoms</span><span class="o">.</span><span class="n">set_positions</span><span class="p">(</span><span class="n">perturbed_positions</span><span class="p">)</span>
+        
+        <span class="c1"># Ensure calculator is attached</span>
+        <span class="n">perturbed_atoms</span><span class="o">.</span><span class="n">calc</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">calc</span>
+        
+        <span class="c1"># Track history if enabled</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">track_history</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">perturbed_energy</span> <span class="o">=</span> <span class="n">perturbed_atoms</span><span class="o">.</span><span class="n">get_potential_energy</span><span class="p">()</span>
+                <span class="n">forces</span> <span class="o">=</span> <span class="n">perturbed_atoms</span><span class="o">.</span><span class="n">get_forces</span><span class="p">()</span>
+                <span class="n">max_force</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+                
+                <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">[</span><span class="s1">&#39;energies&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">perturbed_energy</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">[</span><span class="s1">&#39;max_forces&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">max_force</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">[</span><span class="s1">&#39;perturbations&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">perturbation</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">[</span><span class="s1">&#39;gradients&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">gradients</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">pass</span>  <span class="c1"># Skip if energy calculation fails</span>
+        
+        <span class="k">return</span> <span class="n">perturbed_atoms</span></div>
+
+    
+<div class="viewcode-block" id="FGSM_MACE.attack">
+<a class="viewcode-back" href="../../../mlff_attack.grad_based.html#mlff_attack.grad_based.fgsm.FGSM_MACE.attack">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">attack</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">atoms</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span>
+        <span class="n">n_steps</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">clip</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Any</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Execute FGSM attack.</span>
+<span class="sd">        </span>
+<span class="sd">        For standard FGSM, n_steps=1. For iterative FGSM (I-FGSM), use n_steps&gt;1.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        atoms : Any</span>
+<span class="sd">            Input atomic structure with MACE calculator</span>
+<span class="sd">        n_steps : int, optional</span>
+<span class="sd">            Number of attack iterations (1 for FGSM, &gt;1 for I-FGSM), by default 1</span>
+<span class="sd">        clip : bool, optional</span>
+<span class="sd">            Whether to clip perturbations to epsilon bound, by default True</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Any</span>
+<span class="sd">            Perturbed atoms object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Store original positions</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_original_positions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_original_positions</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">get_positions</span><span class="p">()</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        
+        <span class="c1"># Execute attack</span>
+        <span class="n">perturbed_atoms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attack_step</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">n_steps</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_perturbed_positions</span> <span class="o">=</span> <span class="n">perturbed_atoms</span><span class="o">.</span><span class="n">get_positions</span><span class="p">()</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        
+        <span class="k">return</span> <span class="n">perturbed_atoms</span></div>
+
+    
+<div class="viewcode-block" id="FGSM_MACE.save_perturbation">
+<a class="viewcode-back" href="../../../mlff_attack.grad_based.html#mlff_attack.grad_based.fgsm.FGSM_MACE.save_perturbation">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save_perturbation</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">atoms_original</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">atoms_perturbed</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">include_metadata</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Save perturbation data with additional FGSM-specific information.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filepath : str</span>
+<span class="sd">            Output file path (.npz format)</span>
+<span class="sd">        atoms_original : Optional[Any], optional</span>
+<span class="sd">            Optional original atoms (for saving chemical symbols, cell), by default None</span>
+<span class="sd">        atoms_perturbed : Optional[Any], optional</span>
+<span class="sd">            Optional perturbed atoms, by default None</span>
+<span class="sd">        include_metadata : bool, optional</span>
+<span class="sd">            Whether to include attack parameters, by default True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_original_positions</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_perturbed_positions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No attack has been performed yet&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># Build data dictionary</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;original_positions&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_original_positions</span><span class="p">,</span>
+            <span class="s1">&#39;perturbed_positions&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_perturbed_positions</span><span class="p">,</span>
+            <span class="s1">&#39;displacement&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_perturbed_positions</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_original_positions</span><span class="p">,</span>
+        <span class="p">}</span>
+        
+        <span class="c1"># Add atomic structure information if provided</span>
+        <span class="k">if</span> <span class="n">atoms_original</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;chemical_symbols&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                <span class="n">atoms_original</span><span class="o">.</span><span class="n">get_chemical_symbols</span><span class="p">(),</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;U2&#39;</span>
+            <span class="p">)</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;cell&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">atoms_original</span><span class="o">.</span><span class="n">get_cell</span><span class="p">()</span><span class="o">.</span><span class="n">array</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;pbc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">atoms_original</span><span class="o">.</span><span class="n">get_pbc</span><span class="p">()</span>
+        
+        <span class="c1"># Add metadata</span>
+        <span class="k">if</span> <span class="n">include_metadata</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;epsilon&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;device&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">device</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;target_energy&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_energy</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_energy</span> <span class="k">else</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">isoformat</span><span class="p">()</span>
+            
+            <span class="c1"># Add energy information if available</span>
+            <span class="k">if</span> <span class="n">atoms_original</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">atoms_original</span><span class="p">,</span> <span class="s1">&#39;calc&#39;</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">[</span><span class="s1">&#39;energy_original&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">atoms_original</span><span class="o">.</span><span class="n">get_potential_energy</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">pass</span>
+            
+            <span class="k">if</span> <span class="n">atoms_perturbed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">atoms_perturbed</span><span class="p">,</span> <span class="s1">&#39;calc&#39;</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">[</span><span class="s1">&#39;energy_perturbed&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">atoms_perturbed</span><span class="o">.</span><span class="n">get_potential_energy</span><span class="p">()</span>
+                    <span class="k">if</span> <span class="s1">&#39;energy_original&#39;</span> <span class="ow">in</span> <span class="n">data</span><span class="p">:</span>
+                        <span class="n">data</span><span class="p">[</span><span class="s1">&#39;energy_change&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                            <span class="n">data</span><span class="p">[</span><span class="s1">&#39;energy_perturbed&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;energy_original&#39;</span><span class="p">]</span>
+                        <span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                    <span class="k">pass</span>
+        
+        <span class="c1"># Add history if tracked</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">track_history</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="n">data</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;history_</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        
+        <span class="c1"># Save</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">savez_compressed</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">data</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="FGSM_MACE.get_attack_summary">
+<a class="viewcode-back" href="../../../mlff_attack.grad_based.html#mlff_attack.grad_based.fgsm.FGSM_MACE.get_attack_summary">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_attack_summary</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get a summary of the attack results.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Dictionary with attack summary statistics</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">summary</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_perturbation_stats</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">track_history</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">[</span><span class="s1">&#39;energies&#39;</span><span class="p">]:</span>
+                <span class="n">summary</span><span class="p">[</span><span class="s1">&#39;initial_energy&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">[</span><span class="s1">&#39;energies&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">summary</span><span class="p">[</span><span class="s1">&#39;final_energy&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">[</span><span class="s1">&#39;energies&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">summary</span><span class="p">[</span><span class="s1">&#39;energy_change&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">summary</span><span class="p">[</span><span class="s1">&#39;final_energy&#39;</span><span class="p">]</span> <span class="o">-</span> <span class="n">summary</span><span class="p">[</span><span class="s1">&#39;initial_energy&#39;</span><span class="p">]</span>
+                <span class="p">)</span>
+            
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">[</span><span class="s1">&#39;max_forces&#39;</span><span class="p">]:</span>
+                <span class="n">summary</span><span class="p">[</span><span class="s1">&#39;final_max_force&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">[</span><span class="s1">&#39;max_forces&#39;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        
+        <span class="n">summary</span><span class="p">[</span><span class="s1">&#39;target_energy&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">target_energy</span>
+        <span class="n">summary</span><span class="p">[</span><span class="s1">&#39;n_iterations&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">attack_history</span><span class="p">[</span><span class="s1">&#39;energies&#39;</span><span class="p">])</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">track_history</span> <span class="k">else</span> <span class="mi">0</span>
+        
+        <span class="k">return</span> <span class="n">summary</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;2025, Ashley S. Dale.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -7,7 +7,7 @@
     <title>mlff_attack.attacks &#8212; mlff_attack 0.1 documentation</title>
     <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
     <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
-    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=f6a572b4" />
     <script src="../../_static/documentation_options.js?v=2709fde1"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
@@ -21,9 +21,68 @@
   
 
   </head><body>
-  
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">mlff_attack</a></h1>
 
-    <div class="document">
+
+
+<p class="blurb">Adversarial attacks on Machine Learning Force Fields</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=TRustworthy-AI-Tools-for-Science&repo=mlff_attack&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">API Documentation:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../modules.html#package-overview">Package Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../modules.html#core-modules">Core Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../modules.html#gradient-based-attacks">Gradient-Based Attacks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../modules.html#command-line-interface">Command Line Interface</a></li>
+</ul>
+</li>
+</ul>
+
+
+<hr />
+<ul>
+    
+    <li class="toctree-l1"><a href="https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack">GitHub</a></li>
+    
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
       <div class="documentwrapper">
         <div class="bodywrapper">
           
@@ -47,7 +106,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">mlff_attack.relaxation</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_calculator</span>
 
 <div class="viewcode-block" id="make_attack">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.make_attack">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.attacks.html#mlff_attack.attacks.make_attack">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">make_attack</span><span class="p">(</span><span class="n">model_path</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">atoms</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">target_energy</span><span class="p">,</span> <span class="n">output_cif</span><span class="p">,</span> <span class="n">attack_type</span><span class="o">=</span><span class="s2">&quot;fgsm&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform an adversarial attack on the given atomic structure using a MACE model.</span>
 <span class="sd">    </span>
@@ -135,7 +194,7 @@
 
 
 <div class="viewcode-block" id="forward_pass_with_gradients">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.forward_pass_with_gradients">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.attacks.html#mlff_attack.attacks.forward_pass_with_gradients">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">forward_pass_with_gradients</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform a forward pass through the MACE model with gradient tracking.</span>
 <span class="sd">    </span>
@@ -258,7 +317,7 @@
 
 
 <div class="viewcode-block" id="backprop_step">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.backprop_step">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.attacks.html#mlff_attack.attacks.backprop_step">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">backprop_step</span><span class="p">(</span><span class="n">energy</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">loss_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform backpropagation to compute gradients.</span>
 <span class="sd">    </span>
@@ -297,7 +356,7 @@
 
 
 <div class="viewcode-block" id="save_perturbation">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.save_perturbation">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.attacks.html#mlff_attack.attacks.save_perturbation">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">save_perturbation</span><span class="p">(</span><span class="n">atoms_original</span><span class="p">,</span> <span class="n">atoms_perturbed</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">energy_original</span><span class="p">,</span> 
                      <span class="n">energy_perturbed</span><span class="p">,</span> <span class="n">gradients</span><span class="p">,</span> <span class="n">save_path</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Save perturbation data to a file for later analysis.</span>
@@ -367,7 +426,7 @@
 
 
 <div class="viewcode-block" id="load_perturbation">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.load_perturbation">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.attacks.html#mlff_attack.attacks.load_perturbation">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">load_perturbation</span><span class="p">(</span><span class="n">load_path</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Load perturbation data from a saved file.</span>
 <span class="sd">    </span>
@@ -459,7 +518,7 @@
 
 
 <div class="viewcode-block" id="adversarial_attack_step">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.adversarial_attack_step">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.attacks.html#mlff_attack.attacks.adversarial_attack_step">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">adversarial_attack_step</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">target_energy</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform one step of adversarial attack on atomic positions.</span>
 <span class="sd">    </span>
@@ -527,7 +586,7 @@
 
 
 <div class="viewcode-block" id="visualize_perturbation">
-<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.visualize_perturbation">[docs]</a>
+<a class="viewcode-back" href="../../mlff_attack.attacks.html#mlff_attack.attacks.visualize_perturbation">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">visualize_perturbation</span><span class="p">(</span><span class="n">atoms_before</span><span class="p">,</span> <span class="n">atoms_after</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Visualize the difference between original and perturbed atomic structures.</span>
 <span class="sd">    </span>
@@ -696,53 +755,8 @@
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="Main">
-        <div class="sphinxsidebarwrapper">
-<h1 class="logo"><a href="../../index.html">mlff_attack</a></h1>
-
-
-
-
-
-
-
-
-
-<search id="searchbox" style="display: none" role="search">
-    <div class="searchformwrapper">
-    <form class="search" action="../../search.html" method="get">
-      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
-      <input type="submit" value="Go" />
-    </form>
-    </div>
-</search>
-<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
-<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../modules.html">src</a></li>
-</ul>
-
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../../index.html">Documentation overview</a><ul>
-  <li><a href="../index.html">Module code</a><ul>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
-
-
-
-
-
-
-
-
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
+    <div class="clearer"></div>
+  </div>
     <div class="footer">
       &#169;2025, Ashley S. Dale.
       

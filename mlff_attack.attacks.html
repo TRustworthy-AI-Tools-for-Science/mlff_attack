@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="./">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>mlff_attack.attacks module &#8212; mlff_attack 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="_static/alabaster.css?v=f6a572b4" />
+    <script src="_static/documentation_options.js?v=2709fde1"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="mlff_attack.relaxation module" href="mlff_attack.relaxation.html" />
+    <link rel="prev" title="mlff_attack package" href="mlff_attack.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  <div class="document">
+    
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">mlff_attack</a></h1>
+
+
+
+<p class="blurb">Adversarial attacks on Machine Learning Force Fields</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=TRustworthy-AI-Tools-for-Science&repo=mlff_attack&type=star&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">API Documentation:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="modules.html#package-overview">Package Overview</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="modules.html#core-modules">Core Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules.html#gradient-based-attacks">Gradient-Based Attacks</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules.html#command-line-interface">Command Line Interface</a></li>
+</ul>
+</li>
+</ul>
+
+
+<hr />
+<ul>
+    
+    <li class="toctree-l1"><a href="https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack">GitHub</a></li>
+    
+</ul>
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  <li><a href="modules.html">API Reference</a><ul>
+      <li>Previous: <a href="mlff_attack.html" title="previous chapter">mlff_attack package</a></li>
+      <li>Next: <a href="mlff_attack.relaxation.html" title="next chapter">mlff_attack.relaxation module</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="mlff-attack-attacks-module">
+<h1>mlff_attack.attacks module<a class="headerlink" href="#mlff-attack-attacks-module" title="Link to this heading">¶</a></h1>
+<p>This module provides high-level convenience functions for performing adversarial attacks
+on MLFF models, including attack execution, perturbation saving/loading, and visualization.</p>
+<p id="module-mlff_attack.attacks">Contains implementation for FGSM, I-FGSM, and PGD attacks on MLFF models.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="mlff_attack.attacks.adversarial_attack_step">
+<span class="sig-prename descclassname"><span class="pre">mlff_attack.attacks.</span></span><span class="sig-name descname"><span class="pre">adversarial_attack_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">atoms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cpu'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_energy</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/attacks.html#adversarial_attack_step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.attacks.adversarial_attack_step" title="Link to this definition">¶</a></dt>
+<dd><p>Perform one step of adversarial attack on atomic positions.</p>
+<div class="deprecated">
+<p><span class="versionmodified deprecated">Deprecated since version Use: </span>FGSM_MACE.attack_step() instead. This function is kept for backward compatibility.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>atoms</strong> (<em>ase.Atoms</em>) – ASE Atoms object with MACE calculator attached</p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Device to run on, by default “cpu”</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>, </em><em>optional</em>) – Step size for perturbation, by default 0.01</p></li>
+<li><p><strong>target_energy</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – Optional target energy for attack. If None, maximize energy, by default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A tuple containing:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>perturbed_atoms<span class="classifier">ase.Atoms</span></dt><dd><p>Atoms with perturbed positions</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>energy<span class="classifier">float</span></dt><dd><p>Original energy</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>perturbed_energy<span class="classifier">float</span></dt><dd><p>Energy after perturbation</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>grad_positions<span class="classifier">torch.Tensor</span></dt><dd><p>Gradients used for perturbation</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mlff_attack.attacks.backprop_step">
+<span class="sig-prename descclassname"><span class="pre">mlff_attack.attacks.</span></span><span class="sig-name descname"><span class="pre">backprop_step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">energy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/attacks.html#backprop_step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.attacks.backprop_step" title="Link to this definition">¶</a></dt>
+<dd><p>Perform backpropagation to compute gradients.</p>
+<div class="deprecated">
+<p><span class="versionmodified deprecated">Deprecated since version Use: </span>FGSM_MACE.compute_gradient() instead. This function is kept for backward compatibility.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>energy</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)"><em>torch.Tensor</em></a>) – Energy tensor from forward pass (requires_grad=True)</p></li>
+<li><p><strong>positions</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)"><em>torch.Tensor</em></a>) – Position tensor from forward pass (requires_grad=True)</p></li>
+<li><p><strong>loss_fn</strong> (<em>Callable</em><em>, </em><em>optional</em>) – Optional loss function to apply to energy before backprop.
+If None, backprop directly on energy, by default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Gradient of loss w.r.t. positions (dL/dr)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)">torch.Tensor</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mlff_attack.attacks.forward_pass_with_gradients">
+<span class="sig-prename descclassname"><span class="pre">mlff_attack.attacks.</span></span><span class="sig-name descname"><span class="pre">forward_pass_with_gradients</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">atoms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cpu'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/attacks.html#forward_pass_with_gradients"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.attacks.forward_pass_with_gradients" title="Link to this definition">¶</a></dt>
+<dd><p>Perform a forward pass through the MACE model with gradient tracking.</p>
+<div class="deprecated">
+<p><span class="versionmodified deprecated">Deprecated since version Use: </span>FGSM_MACE class instead. This function is kept for backward compatibility.</p>
+</div>
+<p>This uses the calculator’s internal method to prepare the batch,
+then replaces positions with a gradient-enabled version.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>atoms</strong> (<em>ase.Atoms</em>) – ASE Atoms object with MACE calculator attached</p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Device to run on (“cpu” or “cuda”), by default “cpu”</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>A tuple containing:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>energy<span class="classifier">torch.Tensor</span></dt><dd><p>Total energy (scalar, requires_grad=True)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>forces<span class="classifier">torch.Tensor</span></dt><dd><p>Forces on atoms (shape [n_atoms, 3], with gradients)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>positions<span class="classifier">torch.Tensor</span></dt><dd><p>Position tensor (requires_grad=True)</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mlff_attack.attacks.load_perturbation">
+<span class="sig-prename descclassname"><span class="pre">mlff_attack.attacks.</span></span><span class="sig-name descname"><span class="pre">load_perturbation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">load_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/attacks.html#load_perturbation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.attacks.load_perturbation" title="Link to this definition">¶</a></dt>
+<dd><p>Load perturbation data from a saved file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>load_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>Path</em>) – Path to the saved .npz file</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><p>Dictionary containing all saved perturbation data with keys:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>atoms_original<span class="classifier">ase.Atoms</span></dt><dd><p>Reconstructed original ASE Atoms object</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>atoms_perturbed<span class="classifier">ase.Atoms</span></dt><dd><p>Reconstructed perturbed ASE Atoms object</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>displacement<span class="classifier">np.ndarray</span></dt><dd><p>Position displacement array</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>epsilon<span class="classifier">float</span></dt><dd><p>Perturbation step size</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>energy_original<span class="classifier">float</span></dt><dd><p>Original energy</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>energy_perturbed<span class="classifier">float</span></dt><dd><p>Perturbed energy</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>energy_change<span class="classifier">float</span></dt><dd><p>Energy change</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>gradients<span class="classifier">np.ndarray</span></dt><dd><p>Gradient array</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>timestamp<span class="classifier">str</span></dt><dd><p>Save timestamp</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>metadata<span class="classifier">dict</span></dt><dd><p>Dictionary of any additional metadata</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mlff_attack.attacks.make_attack">
+<span class="sig-prename descclassname"><span class="pre">mlff_attack.attacks.</span></span><span class="sig-name descname"><span class="pre">make_attack</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">atoms</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_energy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_cif</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attack_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'fgsm'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/attacks.html#make_attack"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.attacks.make_attack" title="Link to this definition">¶</a></dt>
+<dd><p>Perform an adversarial attack on the given atomic structure using a MACE model.</p>
+<p>This is a convenience wrapper around the FGSM_MACE class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>Path</em>) – Path to the MACE model file</p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Device to run the model on (“cpu” or “cuda”)</p></li>
+<li><p><strong>atoms</strong> (<em>ase.Atoms</em>) – ASE Atoms object representing the structure to attack</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Perturbation step size in Angstroms</p></li>
+<li><p><strong>target_energy</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> or </em><em>None</em>) – Target energy for the attack (if None, maximize energy)</p></li>
+<li><p><strong>output_cif</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>Path</em>) – Path to save the perturbed CIF file</p></li>
+<li><p><strong>attack_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Type of attack to perform, by default “fgsm”</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>str</em> – Path to the saved perturbed CIF file</p></li>
+<li><p><em>ase.Atoms</em> – Atoms object after attack</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mlff_attack.attacks.save_perturbation">
+<span class="sig-prename descclassname"><span class="pre">mlff_attack.attacks.</span></span><span class="sig-name descname"><span class="pre">save_perturbation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">atoms_original</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">atoms_perturbed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">energy_original</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">energy_perturbed</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gradients</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metadata</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/attacks.html#save_perturbation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.attacks.save_perturbation" title="Link to this definition">¶</a></dt>
+<dd><p>Save perturbation data to a file for later analysis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>atoms_original</strong> (<em>ase.Atoms</em>) – Original ASE Atoms object</p></li>
+<li><p><strong>atoms_perturbed</strong> (<em>ase.Atoms</em>) – Perturbed ASE Atoms object</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Step size used for perturbation</p></li>
+<li><p><strong>energy_original</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Original energy (eV)</p></li>
+<li><p><strong>energy_perturbed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Perturbed energy (eV)</p></li>
+<li><p><strong>gradients</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)"><em>torch.Tensor</em></a><em> or </em><em>np.ndarray</em>) – Gradients used for perturbation</p></li>
+<li><p><strong>save_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>Path</em>) – Path to save the data (will save as .npz file)</p></li>
+<li><p><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>, </em><em>optional</em>) – Optional dictionary with additional metadata, by default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Path to the saved file</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Path</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="mlff_attack.attacks.visualize_perturbation">
+<span class="sig-prename descclassname"><span class="pre">mlff_attack.attacks.</span></span><span class="sig-name descname"><span class="pre">visualize_perturbation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">atoms_before</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">atoms_after</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outdir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/attacks.html#visualize_perturbation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.attacks.visualize_perturbation" title="Link to this definition">¶</a></dt>
+<dd><p>Visualize the difference between original and perturbed atomic structures.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>atoms_before</strong> (<em>ase.Atoms</em>) – Original ASE Atoms object</p></li>
+<li><p><strong>atoms_after</strong> (<em>ase.Atoms</em>) – Perturbed ASE Atoms object</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>, </em><em>optional</em>) – Perturbation magnitude used, by default 0.01</p></li>
+<li><p><strong>outdir</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>Path</em><em>, </em><em>optional</em>) – Optional output directory to save plots, by default None</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Matplotlib figure object</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>matplotlib.figure.Figure</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+    <div class="clearer"></div>
+  </div>
+    <div class="footer">
+      &#169;2025, Ashley S. Dale.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="_sources/mlff_attack.attacks.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
