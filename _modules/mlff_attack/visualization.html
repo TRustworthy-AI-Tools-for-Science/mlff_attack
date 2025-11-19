@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mlff_attack.visualization &#8212; mlff_attack 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=2709fde1"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for mlff_attack.visualization</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Trajectory visualization functionality.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ase.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">read</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+
+<div class="viewcode-block" id="load_trajectory">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.load_trajectory">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_trajectory</span><span class="p">(</span><span class="n">traj_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load a trajectory file and validate it exists.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        traj_path: Path to the trajectory file</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        list: List of ASE Atoms objects, or None if loading fails</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">traj_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">traj_path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">traj_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] Trajectory file not found: </span><span class="si">{</span><span class="n">traj_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Reading trajectory: </span><span class="si">{</span><span class="n">traj_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">traj</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">traj_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="s2">&quot;:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Trajectory contains </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">traj</span><span class="p">)</span><span class="si">}</span><span class="s2"> frames&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">traj</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] Failed to read trajectory: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="extract_trajectory_data">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.extract_trajectory_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_trajectory_data</span><span class="p">(</span><span class="n">traj</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract energy, force, and volume data from trajectory.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        traj: List of ASE Atoms objects</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: (steps, energies, max_forces, volumes)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">steps</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">traj</span><span class="p">)))</span>
+    <span class="n">energies</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">max_forces</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">volumes</span> <span class="o">=</span> <span class="p">[]</span>
+    
+    <span class="k">for</span> <span class="n">atoms</span> <span class="ow">in</span> <span class="n">traj</span><span class="p">:</span>
+        <span class="c1"># Energy</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">energy</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">get_potential_energy</span><span class="p">()</span>
+            <span class="n">energies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">energy</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">energies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        
+        <span class="c1"># Forces</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">forces</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">get_forces</span><span class="p">()</span>
+            <span class="n">max_force</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="n">max_forces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">max_force</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+            <span class="n">max_forces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        
+        <span class="c1"># Volume</span>
+        <span class="n">volume</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">get_volume</span><span class="p">()</span>
+        <span class="n">volumes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">volume</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">steps</span><span class="p">,</span> <span class="n">energies</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">,</span> <span class="n">volumes</span></div>
+
+
+
+<div class="viewcode-block" id="calculate_noise_spectrum">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.calculate_noise_spectrum">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate_noise_spectrum</span><span class="p">(</span><span class="n">max_forces</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate noise spectrum from maximum forces.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        max_forces: List of maximum forces</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple: (frequencies, spectrum)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">forces_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">max_forces</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">forces_array</span><span class="p">)</span>
+    <span class="n">freq</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfftfreq</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+    <span class="n">spectrum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">fft</span><span class="o">.</span><span class="n">rfft</span><span class="p">(</span><span class="n">forces_array</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">forces_array</span><span class="p">)))</span><span class="o">**</span><span class="mi">2</span>
+    <span class="k">return</span> <span class="n">freq</span><span class="p">,</span> <span class="n">spectrum</span></div>
+
+
+
+<div class="viewcode-block" id="calculate_statistics">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.calculate_statistics">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calculate_statistics</span><span class="p">(</span><span class="n">energies</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">,</span> <span class="n">volumes</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate summary statistics from trajectory data.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        energies: List of energies</span>
+<span class="sd">        max_forces: List of maximum forces</span>
+<span class="sd">        volumes: List of volumes</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        dict: Dictionary of statistics</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="p">{}</span>
+    
+    <span class="c1"># Energy statistics</span>
+    <span class="n">initial_energy</span> <span class="o">=</span> <span class="n">energies</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">energies</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">final_energy</span> <span class="o">=</span> <span class="n">energies</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">energies</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;initial_energy&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">initial_energy</span>
+    <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;final_energy&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_energy</span>
+    <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;energy_change&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_energy</span> <span class="o">-</span> <span class="n">initial_energy</span> <span class="k">if</span> <span class="p">(</span><span class="n">initial_energy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">final_energy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+    
+    <span class="c1"># Force statistics</span>
+    <span class="n">initial_force</span> <span class="o">=</span> <span class="n">max_forces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">max_forces</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">final_force</span> <span class="o">=</span> <span class="n">max_forces</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">max_forces</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="k">else</span> <span class="kc">None</span>
+    <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;initial_force&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">initial_force</span>
+    <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;final_force&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_force</span>
+    <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;converged&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_force</span> <span class="o">&lt;</span> <span class="mf">0.01</span> <span class="k">if</span> <span class="n">final_force</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+    
+    <span class="c1"># Volume statistics</span>
+    <span class="n">initial_volume</span> <span class="o">=</span> <span class="n">volumes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">final_volume</span> <span class="o">=</span> <span class="n">volumes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;initial_volume&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">initial_volume</span>
+    <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;final_volume&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_volume</span>
+    <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;volume_change_percent&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">((</span><span class="n">final_volume</span> <span class="o">-</span> <span class="n">initial_volume</span><span class="p">)</span> <span class="o">/</span> <span class="n">initial_volume</span><span class="p">)</span> <span class="o">*</span> <span class="mi">100</span>
+    
+    <span class="k">return</span> <span class="n">stats</span></div>
+
+
+
+<div class="viewcode-block" id="plot_energy">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_energy">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_energy</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">energies</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot energy evolution.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">energies</span><span class="p">)):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">energies</span><span class="p">,</span> <span class="s1">&#39;b-o&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Step&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Energy (eV)&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Total Energy&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;Energy data not available&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Total Energy&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="plot_forces">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_forces">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_forces</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot force convergence.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">max_forces</span><span class="p">)):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">,</span> <span class="s1">&#39;r-o&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;fmax=0.01 eV/Å&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;orange&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;fmax=0.05 eV/Å&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Step&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Max Force (eV/Å)&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Maximum Force&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;Force data not available&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Maximum Force&#39;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="plot_volume">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_volume">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_volume</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">volumes</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot volume evolution.&quot;&quot;&quot;</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">volumes</span><span class="p">,</span> <span class="s1">&#39;g-o&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Step&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Volume (Å³)&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Cell Volume&#39;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="plot_summary">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_summary">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_summary</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">n_frames</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot summary statistics.&quot;&quot;&quot;</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Create summary text</span>
+    <span class="n">summary_text</span> <span class="o">=</span> <span class="s2">&quot;Relaxation Summary</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">40</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+    <span class="n">summary_text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Total steps: </span><span class="si">{</span><span class="n">n_frames</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+    
+    <span class="k">if</span> <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;initial_energy&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;final_energy&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">summary_text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Initial energy: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;initial_energy&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> eV</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">summary_text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Final energy: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;final_energy&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> eV</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">summary_text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Energy change: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;energy_change&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> eV</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">summary_text</span> <span class="o">+=</span> <span class="s2">&quot;Energy: Not available</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+    
+    <span class="k">if</span> <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;initial_force&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;final_force&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">summary_text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Initial max force: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;initial_force&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> eV/Å</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">summary_text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Final max force: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;final_force&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> eV/Å</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">converged</span> <span class="o">=</span> <span class="s2">&quot;Yes&quot;</span> <span class="k">if</span> <span class="n">stats</span><span class="p">[</span><span class="s1">&#39;converged&#39;</span><span class="p">]</span> <span class="k">else</span> <span class="s2">&quot;No&quot;</span>
+        <span class="n">summary_text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Converged (fmax&lt;0.01): </span><span class="si">{</span><span class="n">converged</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">summary_text</span> <span class="o">+=</span> <span class="s2">&quot;Forces: Not available</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+    
+    <span class="n">summary_text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Initial volume: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;initial_volume&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> Å³</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="n">summary_text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Final volume: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;final_volume&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> Å³</span><span class="se">\n</span><span class="s2">&quot;</span>
+    <span class="n">summary_text</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;Volume change: </span><span class="si">{</span><span class="n">stats</span><span class="p">[</span><span class="s1">&#39;volume_change_percent&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">+.2f</span><span class="si">}</span><span class="s2">%&quot;</span>
+    
+    <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">,</span> <span class="n">summary_text</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span> 
+             <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">verticalalignment</span><span class="o">=</span><span class="s1">&#39;top&#39;</span><span class="p">,</span> <span class="n">fontfamily</span><span class="o">=</span><span class="s1">&#39;monospace&#39;</span><span class="p">,</span>
+             <span class="n">bbox</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">boxstyle</span><span class="o">=</span><span class="s1">&#39;round&#39;</span><span class="p">,</span> <span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;wheat&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">))</span>
+    
+    <span class="k">return</span> <span class="n">summary_text</span></div>
+
+
+
+<div class="viewcode-block" id="plot_noise">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_noise">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">plot_noise</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">spectrum</span><span class="p">)):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">,</span> <span class="s1">&#39;m-&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Frequency (1/steps)&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Power Spectrum&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Noise Spectrum of Max Forces&#39;</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="s1">&#39;Force data not available&#39;</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">va</span><span class="o">=</span><span class="s1">&#39;center&#39;</span><span class="p">,</span> <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Noise Spectrum of Max Forces&#39;</span><span class="p">)</span>  </div>
+
+
+
+<div class="viewcode-block" id="create_visualization">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.create_visualization">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_visualization</span><span class="p">(</span><span class="n">traj</span><span class="p">,</span> <span class="n">traj_path</span><span class="p">,</span> <span class="n">outdir</span><span class="p">,</span> <span class="n">output_format</span><span class="o">=</span><span class="s1">&#39;png&#39;</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">save_to_csv</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Create visualization plots for trajectory data.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        traj: List of ASE Atoms objects</span>
+<span class="sd">        traj_path: Path object for the trajectory file</span>
+<span class="sd">        outdir: Output directory for plots</span>
+<span class="sd">        output_format: Format for output plots (png, pdf, svg)</span>
+<span class="sd">        show: Whether to show plots interactively</span>
+<span class="sd">        save_to_csv: Whether to save extracted data to CSV files</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        str: Path to saved plot, or None if failed</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Extract data</span>
+    <span class="n">steps</span><span class="p">,</span> <span class="n">energies</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">,</span> <span class="n">volumes</span> <span class="o">=</span> <span class="n">extract_trajectory_data</span><span class="p">(</span><span class="n">traj</span><span class="p">)</span>
+    
+    <span class="c1"># Calculate statistics</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="n">calculate_statistics</span><span class="p">(</span><span class="n">energies</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">,</span> <span class="n">volumes</span><span class="p">)</span>
+
+    <span class="c1"># callculate noise spectrum</span>
+    <span class="n">freq</span><span class="p">,</span> <span class="n">spectrum</span> <span class="o">=</span> <span class="n">calculate_noise_spectrum</span><span class="p">(</span><span class="n">max_forces</span><span class="p">)</span>
+    
+    <span class="c1"># Create figure</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">suptitle</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Relaxation Trajectory: </span><span class="si">{</span><span class="n">traj_path</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span> <span class="n">fontweight</span><span class="o">=</span><span class="s1">&#39;bold&#39;</span><span class="p">)</span>
+    
+    <span class="c1"># Create plots</span>
+    <span class="n">plot_energy</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">steps</span><span class="p">,</span> <span class="n">energies</span><span class="p">)</span>
+    <span class="n">plot_forces</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">steps</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">)</span>
+    <span class="c1"># plot_volume(axes[1, 0], steps, volumes)</span>
+    <span class="n">plot_noise</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span> <span class="n">freq</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">)</span>
+
+    <span class="n">summary_text</span> <span class="o">=</span> <span class="n">plot_summary</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="n">stats</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">traj</span><span class="p">))</span>
+    
+    <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    
+    <span class="c1"># Save figure</span>
+    <span class="n">output_file</span> <span class="o">=</span> <span class="n">outdir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;relaxation_analysis.</span><span class="si">{</span><span class="n">output_format</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">output_file</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s1">&#39;tight&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Plot saved to: </span><span class="si">{</span><span class="n">output_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Show plot if requested</span>
+    <span class="k">if</span> <span class="n">show</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    
+    <span class="c1"># Print summary to console</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">50</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">summary_text</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="o">*</span><span class="mi">50</span><span class="p">)</span>
+
+    <span class="c1"># Save data to CSV if requested</span>
+    <span class="k">if</span> <span class="n">save_to_csv</span><span class="p">:</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;Step&#39;</span><span class="p">:</span> <span class="n">steps</span><span class="p">,</span>
+            <span class="s1">&#39;Energy (eV)&#39;</span><span class="p">:</span> <span class="n">energies</span><span class="p">,</span>
+            <span class="s1">&#39;Max Force (eV/Å)&#39;</span><span class="p">:</span> <span class="n">max_forces</span><span class="p">,</span>
+            <span class="s1">&#39;Volume (Å³)&#39;</span><span class="p">:</span> <span class="n">volumes</span>
+        <span class="p">}</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">csv_file</span> <span class="o">=</span> <span class="n">outdir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;relaxation_data.csv&quot;</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">csv_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Data saved to CSV: </span><span class="si">{</span><span class="n">csv_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">noise</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;Frequency (1/steps)&#39;</span><span class="p">:</span> <span class="n">freq</span><span class="p">,</span>
+            <span class="s1">&#39;Power Spectrum&#39;</span><span class="p">:</span> <span class="n">spectrum</span>
+        <span class="p">}</span>
+        <span class="n">df_noise</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">noise</span><span class="p">)</span>
+        <span class="n">csv_noise_file</span> <span class="o">=</span> <span class="n">outdir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;noise_spectrum.csv&quot;</span>
+        <span class="n">df_noise</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">csv_noise_file</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Noise spectrum data saved to CSV: </span><span class="si">{</span><span class="n">csv_noise_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">output_file</span><span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">mlff_attack</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Ashley S. Dale.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

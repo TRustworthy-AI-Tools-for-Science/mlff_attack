@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mlff_attack.relaxation &#8212; mlff_attack 0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=2709fde1"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for mlff_attack.relaxation</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python3</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">MACE relaxation functionality.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ase.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">read</span><span class="p">,</span> <span class="n">write</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ase.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">BFGS</span><span class="p">,</span> <span class="n">LBFGS</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mace.calculators</span><span class="w"> </span><span class="kn">import</span> <span class="n">mace</span> <span class="k">as</span> <span class="n">mace_calculator</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">mace</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+
+<div class="viewcode-block" id="load_structure">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.relaxation.load_structure">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">load_structure</span><span class="p">(</span><span class="n">input_path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load structure from input file.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    input_path : str or Path</span>
+<span class="sd">        Path to input structure file (CIF, POSCAR, etc.)</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ase.Atoms or None</span>
+<span class="sd">        ASE Atoms object, or None if loading fails</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">atoms</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">input_path</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Loaded structure: </span><span class="si">{</span><span class="n">input_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Number of atoms: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">atoms</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Chemical formula: </span><span class="si">{</span><span class="n">atoms</span><span class="o">.</span><span class="n">get_chemical_formula</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">atoms</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] Failed to load structure from </span><span class="si">{</span><span class="n">input_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="setup_calculator">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.relaxation.setup_calculator">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">setup_calculator</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">model_path</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cuda&quot;</span><span class="p">,</span> <span class="n">dtype_str</span><span class="o">=</span><span class="s2">&quot;float64&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize and attach MACE calculator to atoms object.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    atoms : ase.Atoms</span>
+<span class="sd">        ASE Atoms object</span>
+<span class="sd">    model_path : str or Path or MACECalculator</span>
+<span class="sd">        Path to MACE model file or existing MACECalculator instance</span>
+<span class="sd">    device : str, optional</span>
+<span class="sd">        Device to use (cuda or cpu), by default &quot;cuda&quot;</span>
+<span class="sd">    dtype_str : str, optional</span>
+<span class="sd">        Data type for calculations (&quot;float32&quot; or &quot;float64&quot;), by default &quot;float64&quot;</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ase.Atoms or None</span>
+<span class="sd">        ASE Atoms object with calculator attached, or None if setup fails</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_path</span><span class="p">,</span> <span class="n">mace</span><span class="o">.</span><span class="n">calculators</span><span class="o">.</span><span class="n">mace</span><span class="o">.</span><span class="n">MACECalculator</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;model is already a MACECalculator&quot;</span><span class="p">)</span>
+            <span class="n">atoms</span><span class="o">.</span><span class="n">calc</span> <span class="o">=</span> <span class="n">model_path</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">dtype_str</span> <span class="o">==</span> <span class="s2">&quot;float32&quot;</span><span class="p">:</span>
+                <span class="n">dtype</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">float32</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dtype</span> <span class="o">=</span> <span class="s2">&quot;float64&quot;</span>
+            
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Loading MACE model: </span><span class="si">{</span><span class="n">model_path</span><span class="si">}</span><span class="s2"> on </span><span class="si">{</span><span class="n">device</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">atoms</span><span class="o">.</span><span class="n">calc</span> <span class="o">=</span> <span class="n">mace_calculator</span><span class="o">.</span><span class="n">MACECalculator</span><span class="p">(</span>
+                <span class="n">model_paths</span><span class="o">=</span><span class="n">model_path</span><span class="p">,</span> 
+                <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">,</span> 
+                <span class="n">default_dtype</span><span class="o">=</span><span class="n">dtype</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">atoms</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] Failed to setup MACE calculator: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+
+<div class="viewcode-block" id="get_optimizer_class">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.relaxation.get_optimizer_class">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_optimizer_class</span><span class="p">(</span><span class="n">optimizer_name</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the ASE optimizer class from name.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    optimizer_name : str</span>
+<span class="sd">        Name of optimizer (&quot;BFGS&quot; or &quot;LBFGS&quot;)</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    type</span>
+<span class="sd">        ASE Optimizer class</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">optimizers</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;BFGS&quot;</span><span class="p">:</span> <span class="n">BFGS</span><span class="p">,</span>
+        <span class="s2">&quot;LBFGS&quot;</span><span class="p">:</span> <span class="n">LBFGS</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">optimizers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">optimizer_name</span><span class="p">,</span> <span class="n">LBFGS</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="run_relaxation">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.relaxation.run_relaxation">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">run_relaxation</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">traj_path</span><span class="p">,</span> <span class="n">fmax</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">max_steps</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="s2">&quot;LBFGS&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run structural relaxation.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    atoms : ase.Atoms</span>
+<span class="sd">        ASE Atoms object with calculator attached</span>
+<span class="sd">    traj_path : str or Path</span>
+<span class="sd">        Path to save trajectory file</span>
+<span class="sd">    fmax : float, optional</span>
+<span class="sd">        Force convergence criterion (eV/Å), by default 0.01</span>
+<span class="sd">    max_steps : int, optional</span>
+<span class="sd">        Maximum number of optimization steps, by default 300</span>
+<span class="sd">    optimizer : str, optional</span>
+<span class="sd">        Name of optimizer to use (&quot;BFGS&quot; or &quot;LBFGS&quot;), by default &quot;LBFGS&quot;</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        True if relaxation completed successfully, False otherwise</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Starting relaxation with </span><span class="si">{</span><span class="n">optimizer</span><span class="si">}</span><span class="s2"> optimizer&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Convergence criterion: fmax = </span><span class="si">{</span><span class="n">fmax</span><span class="si">}</span><span class="s2"> eV/Å&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Maximum steps: </span><span class="si">{</span><span class="n">max_steps</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="n">opt_cls</span> <span class="o">=</span> <span class="n">get_optimizer_class</span><span class="p">(</span><span class="n">optimizer</span><span class="p">)</span>
+        <span class="n">opt</span> <span class="o">=</span> <span class="n">opt_cls</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">trajectory</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">traj_path</span><span class="p">),</span> <span class="n">logfile</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="n">opt</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">fmax</span><span class="o">=</span><span class="n">fmax</span><span class="p">,</span> <span class="n">steps</span><span class="o">=</span><span class="n">max_steps</span><span class="p">)</span>
+        
+        <span class="c1"># Get final forces</span>
+        <span class="n">final_forces</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">get_forces</span><span class="p">()</span>
+        <span class="n">max_force</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="nb">sum</span><span class="p">(</span><span class="n">f</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span><span class="o">**</span><span class="mf">0.5</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">final_forces</span><span class="p">])</span>
+        
+        <span class="n">converged</span> <span class="o">=</span> <span class="n">max_force</span> <span class="o">&lt;</span> <span class="n">fmax</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="s2">&quot;CONVERGED&quot;</span> <span class="k">if</span> <span class="n">converged</span> <span class="k">else</span> <span class="s2">&quot;NOT CONVERGED&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Relaxation </span><span class="si">{</span><span class="n">status</span><span class="si">}</span><span class="s2"> after </span><span class="si">{</span><span class="n">opt</span><span class="o">.</span><span class="n">nsteps</span><span class="si">}</span><span class="s2"> steps&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Final maximum force: </span><span class="si">{</span><span class="n">max_force</span><span class="si">:</span><span class="s2">.6f</span><span class="si">}</span><span class="s2"> eV/Å&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] Relaxation failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+
+
+<div class="viewcode-block" id="save_results">
+<a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.relaxation.save_results">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">save_results</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">output_dir</span><span class="p">,</span> <span class="n">base_name</span><span class="o">=</span><span class="s2">&quot;relaxed&quot;</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Save relaxed structure to output files.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    atoms : ase.Atoms</span>
+<span class="sd">        ASE Atoms object to save</span>
+<span class="sd">    output_dir : str or Path</span>
+<span class="sd">        Output directory path</span>
+<span class="sd">    base_name : str, optional</span>
+<span class="sd">        Base name for output files, by default &quot;relaxed&quot;</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Path or None</span>
+<span class="sd">        Path to saved CIF file, or None if saving fails</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">output_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+        <span class="n">output_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        
+        <span class="n">cif_path</span> <span class="o">=</span> <span class="n">output_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">base_name</span><span class="si">}</span><span class="s2">.cif&quot;</span>
+        <span class="n">write</span><span class="p">(</span><span class="n">cif_path</span><span class="p">,</span> <span class="n">atoms</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[INFO] Saved relaxed structure to: </span><span class="si">{</span><span class="n">cif_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="n">cif_path</span>
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;[ERROR] Failed to save results: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">mlff_attack</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2025, Ashley S. Dale.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
