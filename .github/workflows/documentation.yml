@@ -16,7 +16,7 @@
           - name: Set up Python
             uses: actions/setup-python@v5
             with:
-              python-version: '3.x' # Specify your desired Python version
+              python-version: '3.12' # Specify your desired Python version
           - name: Install dependencies
             run: |
               pip install sphinx sphinx_rtd_theme # Add other dependencies if needed
