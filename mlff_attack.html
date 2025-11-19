@@ -76,20 +76,40 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>atoms</strong> – ASE Atoms object with MACE calculator attached</p></li>
-<li><p><strong>device</strong> – Device to run on</p></li>
-<li><p><strong>epsilon</strong> – Step size for perturbation</p></li>
-<li><p><strong>target_energy</strong> – Optional target energy for attack. If None, maximize energy.</p></li>
+<li><p><strong>atoms</strong> (<em>ase.Atoms</em>) – ASE Atoms object with MACE calculator attached</p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Device to run on, by default “cpu”</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>, </em><em>optional</em>) – Step size for perturbation, by default 0.01</p></li>
+<li><p><strong>target_energy</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> or </em><em>None</em><em>, </em><em>optional</em>) – Optional target energy for attack. If None, maximize energy, by default None</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Atoms with perturbed positions
-energy: Original energy
-perturbed_energy: Energy after perturbation
-grad_positions: Gradients used for perturbation</p>
+<dd class="field-even"><p><p>A tuple containing:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>perturbed_atoms<span class="classifier">ase.Atoms</span></dt><dd><p>Atoms with perturbed positions</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>energy<span class="classifier">float</span></dt><dd><p>Original energy</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>perturbed_energy<span class="classifier">float</span></dt><dd><p>Energy after perturbation</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>grad_positions<span class="classifier">torch.Tensor</span></dt><dd><p>Gradients used for perturbation</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>perturbed_atoms</p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -104,17 +124,17 @@ grad_positions: Gradients used for perturbation</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>energy</strong> – Energy tensor from forward pass (requires_grad=True)</p></li>
-<li><p><strong>positions</strong> – Position tensor from forward pass (requires_grad=True)</p></li>
-<li><p><strong>loss_fn</strong> – Optional loss function to apply to energy before backprop.
-If None, backprop directly on energy.</p></li>
+<li><p><strong>energy</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)"><em>torch.Tensor</em></a>) – Energy tensor from forward pass (requires_grad=True)</p></li>
+<li><p><strong>positions</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)"><em>torch.Tensor</em></a>) – Position tensor from forward pass (requires_grad=True)</p></li>
+<li><p><strong>loss_fn</strong> (<em>Callable</em><em>, </em><em>optional</em>) – Optional loss function to apply to energy before backprop.
+If None, backprop directly on energy, by default None</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Gradient of loss w.r.t. positions (dL/dr)</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>grad_positions</p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)">torch.Tensor</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -131,17 +151,33 @@ then replaces positions with a gradient-enabled version.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>atoms</strong> – ASE Atoms object with MACE calculator attached</p></li>
-<li><p><strong>device</strong> – Device to run on (“cpu” or “cuda”)</p></li>
+<li><p><strong>atoms</strong> (<em>ase.Atoms</em>) – ASE Atoms object with MACE calculator attached</p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Device to run on (“cpu” or “cuda”), by default “cpu”</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Total energy (scalar, requires_grad=True)
-forces: Forces on atoms (shape [n_atoms, 3], with gradients)
-positions: Position tensor (requires_grad=True)</p>
+<dd class="field-even"><p><p>A tuple containing:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>energy<span class="classifier">torch.Tensor</span></dt><dd><p>Total energy (scalar, requires_grad=True)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>forces<span class="classifier">torch.Tensor</span></dt><dd><p>Forces on atoms (shape [n_atoms, 3], with gradients)</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>positions<span class="classifier">torch.Tensor</span></dt><dd><p>Position tensor (requires_grad=True)</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>energy</p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -152,24 +188,62 @@ positions: Position tensor (requires_grad=True)</p>
 <dd><p>Load perturbation data from a saved file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>load_path</strong> – Path to the saved .npz file</p>
+<dd class="field-odd"><p><strong>load_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>Path</em>) – Path to the saved .npz file</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><dl class="simple">
-<dt>Dictionary containing all saved perturbation data with keys:</dt><dd><ul class="simple">
-<li><p>atoms_original: Reconstructed original ASE Atoms object</p></li>
-<li><p>atoms_perturbed: Reconstructed perturbed ASE Atoms object</p></li>
-<li><p>displacement: Position displacement array</p></li>
-<li><p>epsilon: Perturbation step size</p></li>
-<li><p>energy_original: Original energy</p></li>
-<li><p>energy_perturbed: Perturbed energy</p></li>
-<li><p>energy_change: Energy change</p></li>
-<li><p>gradients: Gradient array</p></li>
-<li><p>timestamp: Save timestamp</p></li>
-<li><p>metadata: Dictionary of any additional metadata</p></li>
-</ul>
+<dd class="field-even"><p><p>Dictionary containing all saved perturbation data with keys:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>atoms_original<span class="classifier">ase.Atoms</span></dt><dd><p>Reconstructed original ASE Atoms object</p>
 </dd>
 </dl>
+</li>
+<li><dl class="simple">
+<dt>atoms_perturbed<span class="classifier">ase.Atoms</span></dt><dd><p>Reconstructed perturbed ASE Atoms object</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>displacement<span class="classifier">np.ndarray</span></dt><dd><p>Position displacement array</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>epsilon<span class="classifier">float</span></dt><dd><p>Perturbation step size</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>energy_original<span class="classifier">float</span></dt><dd><p>Original energy</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>energy_perturbed<span class="classifier">float</span></dt><dd><p>Perturbed energy</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>energy_change<span class="classifier">float</span></dt><dd><p>Energy change</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>gradients<span class="classifier">np.ndarray</span></dt><dd><p>Gradient array</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>timestamp<span class="classifier">str</span></dt><dd><p>Save timestamp</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>metadata<span class="classifier">dict</span></dt><dd><p>Dictionary of any additional metadata</p>
+</dd>
+</dl>
+</li>
+</ul>
 </p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
@@ -186,20 +260,21 @@ positions: Position tensor (requires_grad=True)</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>model_path</strong> – Path to the MACE model file</p></li>
-<li><p><strong>device</strong> – Device to run the model on (“cpu” or “cuda”)</p></li>
-<li><p><strong>atoms</strong> – ASE Atoms object representing the structure to attack</p></li>
-<li><p><strong>epsilon</strong> – Perturbation step size in Angstroms</p></li>
-<li><p><strong>target_energy</strong> – Target energy for the attack (if None, maximize energy)</p></li>
-<li><p><strong>output_cif</strong> – Path to save the perturbed CIF file</p></li>
+<li><p><strong>model_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>Path</em>) – Path to the MACE model file</p></li>
+<li><p><strong>device</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>) – Device to run the model on (“cpu” or “cuda”)</p></li>
+<li><p><strong>atoms</strong> (<em>ase.Atoms</em>) – ASE Atoms object representing the structure to attack</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Perturbation step size in Angstroms</p></li>
+<li><p><strong>target_energy</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> or </em><em>None</em>) – Target energy for the attack (if None, maximize energy)</p></li>
+<li><p><strong>output_cif</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>Path</em>) – Path to save the perturbed CIF file</p></li>
+<li><p><strong>attack_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Type of attack to perform, by default “fgsm”</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Path to the saved perturbed CIF file
-perturbed_atoms: Atoms object after attack</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>output_cif</p>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>str</em> – Path to the saved perturbed CIF file</p></li>
+<li><p><em>ase.Atoms</em> – Atoms object after attack</p></li>
+</ul>
+</p>
 </dd>
 </dl>
 </dd></dl>
@@ -211,15 +286,21 @@ perturbed_atoms: Atoms object after attack</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>atoms_original</strong> – Original ASE Atoms object</p></li>
-<li><p><strong>atoms_perturbed</strong> – Perturbed ASE Atoms object</p></li>
-<li><p><strong>epsilon</strong> – Step size used for perturbation</p></li>
-<li><p><strong>energy_original</strong> – Original energy (eV)</p></li>
-<li><p><strong>energy_perturbed</strong> – Perturbed energy (eV)</p></li>
-<li><p><strong>gradients</strong> – Gradients used for perturbation (torch tensor or numpy array)</p></li>
-<li><p><strong>save_path</strong> – Path to save the data (will save as .npz file)</p></li>
-<li><p><strong>metadata</strong> – Optional dictionary with additional metadata</p></li>
+<li><p><strong>atoms_original</strong> (<em>ase.Atoms</em>) – Original ASE Atoms object</p></li>
+<li><p><strong>atoms_perturbed</strong> (<em>ase.Atoms</em>) – Perturbed ASE Atoms object</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Step size used for perturbation</p></li>
+<li><p><strong>energy_original</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Original energy (eV)</p></li>
+<li><p><strong>energy_perturbed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Perturbed energy (eV)</p></li>
+<li><p><strong>gradients</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.9)"><em>torch.Tensor</em></a><em> or </em><em>np.ndarray</em>) – Gradients used for perturbation</p></li>
+<li><p><strong>save_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>Path</em>) – Path to save the data (will save as .npz file)</p></li>
+<li><p><strong>metadata</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>, </em><em>optional</em>) – Optional dictionary with additional metadata, by default None</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Path to the saved file</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Path</p>
 </dd>
 </dl>
 </dd></dl>
@@ -231,17 +312,17 @@ perturbed_atoms: Atoms object after attack</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>atoms_before</strong> – Original ASE Atoms object</p></li>
-<li><p><strong>atoms_after</strong> – Perturbed ASE Atoms object</p></li>
-<li><p><strong>epsilon</strong> – Perturbation magnitude used</p></li>
-<li><p><strong>outdir</strong> – Optional output directory to save plots</p></li>
+<li><p><strong>atoms_before</strong> (<em>ase.Atoms</em>) – Original ASE Atoms object</p></li>
+<li><p><strong>atoms_after</strong> (<em>ase.Atoms</em>) – Perturbed ASE Atoms object</p></li>
+<li><p><strong>epsilon</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em>, </em><em>optional</em>) – Perturbation magnitude used, by default 0.01</p></li>
+<li><p><strong>outdir</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>Path</em><em>, </em><em>optional</em>) – Optional output directory to save plots, by default None</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Matplotlib figure</p>
+<dd class="field-even"><p>Matplotlib figure object</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>fig</p>
+<dd class="field-odd"><p>matplotlib.figure.Figure</p>
 </dd>
 </dl>
 </dd></dl>

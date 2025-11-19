@@ -49,21 +49,33 @@
 <div class="viewcode-block" id="make_attack">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.make_attack">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">make_attack</span><span class="p">(</span><span class="n">model_path</span><span class="p">,</span> <span class="n">device</span><span class="p">,</span> <span class="n">atoms</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">target_energy</span><span class="p">,</span> <span class="n">output_cif</span><span class="p">,</span> <span class="n">attack_type</span><span class="o">=</span><span class="s2">&quot;fgsm&quot;</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Perform an adversarial attack on the given atomic structure using a MACE model.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform an adversarial attack on the given atomic structure using a MACE model.</span>
 <span class="sd">    </span>
 <span class="sd">    This is a convenience wrapper around the FGSM_MACE class.</span>
 
-<span class="sd">    Args:</span>
-<span class="sd">        model_path: Path to the MACE model file</span>
-<span class="sd">        device: Device to run the model on (&quot;cpu&quot; or &quot;cuda&quot;)</span>
-<span class="sd">        atoms: ASE Atoms object representing the structure to attack</span>
-<span class="sd">        epsilon: Perturbation step size in Angstroms</span>
-<span class="sd">        target_energy: Target energy for the attack (if None, maximize energy)</span>
-<span class="sd">        output_cif: Path to save the perturbed CIF file</span>
-<span class="sd">    Returns:</span>
-<span class="sd">        output_cif: Path to the saved perturbed CIF file</span>
-<span class="sd">        perturbed_atoms: Atoms object after attack</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    model_path : str or Path</span>
+<span class="sd">        Path to the MACE model file</span>
+<span class="sd">    device : str</span>
+<span class="sd">        Device to run the model on (&quot;cpu&quot; or &quot;cuda&quot;)</span>
+<span class="sd">    atoms : ase.Atoms</span>
+<span class="sd">        ASE Atoms object representing the structure to attack</span>
+<span class="sd">    epsilon : float</span>
+<span class="sd">        Perturbation step size in Angstroms</span>
+<span class="sd">    target_energy : float or None</span>
+<span class="sd">        Target energy for the attack (if None, maximize energy)</span>
+<span class="sd">    output_cif : str or Path</span>
+<span class="sd">        Path to save the perturbed CIF file</span>
+<span class="sd">    attack_type : str, optional</span>
+<span class="sd">        Type of attack to perform, by default &quot;fgsm&quot;</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        Path to the saved perturbed CIF file</span>
+<span class="sd">    ase.Atoms</span>
+<span class="sd">        Atoms object after attack</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">mlff_attack.grad_based.fgsm</span><span class="w"> </span><span class="kn">import</span> <span class="n">FGSM_MACE</span>
 
@@ -125,8 +137,7 @@
 <div class="viewcode-block" id="forward_pass_with_gradients">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.forward_pass_with_gradients">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">forward_pass_with_gradients</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Perform a forward pass through the MACE model with gradient tracking.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform a forward pass through the MACE model with gradient tracking.</span>
 <span class="sd">    </span>
 <span class="sd">    .. deprecated::</span>
 <span class="sd">        Use FGSM_MACE class instead. This function is kept for backward compatibility.</span>
@@ -134,14 +145,24 @@
 <span class="sd">    This uses the calculator&#39;s internal method to prepare the batch,</span>
 <span class="sd">    then replaces positions with a gradient-enabled version.</span>
 <span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        atoms: ASE Atoms object with MACE calculator attached</span>
-<span class="sd">        device: Device to run on (&quot;cpu&quot; or &quot;cuda&quot;)</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    atoms : ase.Atoms</span>
+<span class="sd">        ASE Atoms object with MACE calculator attached</span>
+<span class="sd">    device : str, optional</span>
+<span class="sd">        Device to run on (&quot;cpu&quot; or &quot;cuda&quot;), by default &quot;cpu&quot;</span>
 <span class="sd">    </span>
-<span class="sd">    Returns:</span>
-<span class="sd">        energy: Total energy (scalar, requires_grad=True)</span>
-<span class="sd">        forces: Forces on atoms (shape [n_atoms, 3], with gradients)</span>
-<span class="sd">        positions: Position tensor (requires_grad=True)</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        A tuple containing:</span>
+<span class="sd">        </span>
+<span class="sd">        - energy : torch.Tensor</span>
+<span class="sd">            Total energy (scalar, requires_grad=True)</span>
+<span class="sd">        - forces : torch.Tensor</span>
+<span class="sd">            Forces on atoms (shape [n_atoms, 3], with gradients)</span>
+<span class="sd">        - positions : torch.Tensor</span>
+<span class="sd">            Position tensor (requires_grad=True)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">calc</span> <span class="o">=</span> <span class="n">atoms</span><span class="o">.</span><span class="n">calc</span>
     <span class="n">model</span> <span class="o">=</span> <span class="n">calc</span><span class="o">.</span><span class="n">models</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -239,20 +260,25 @@
 <div class="viewcode-block" id="backprop_step">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.backprop_step">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">backprop_step</span><span class="p">(</span><span class="n">energy</span><span class="p">,</span> <span class="n">positions</span><span class="p">,</span> <span class="n">loss_fn</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Perform backpropagation to compute gradients.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform backpropagation to compute gradients.</span>
 <span class="sd">    </span>
 <span class="sd">    .. deprecated::</span>
 <span class="sd">        Use FGSM_MACE.compute_gradient() instead. This function is kept for backward compatibility.</span>
 <span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        energy: Energy tensor from forward pass (requires_grad=True)</span>
-<span class="sd">        positions: Position tensor from forward pass (requires_grad=True)</span>
-<span class="sd">        loss_fn: Optional loss function to apply to energy before backprop.</span>
-<span class="sd">                 If None, backprop directly on energy.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    energy : torch.Tensor</span>
+<span class="sd">        Energy tensor from forward pass (requires_grad=True)</span>
+<span class="sd">    positions : torch.Tensor</span>
+<span class="sd">        Position tensor from forward pass (requires_grad=True)</span>
+<span class="sd">    loss_fn : Callable, optional</span>
+<span class="sd">        Optional loss function to apply to energy before backprop.</span>
+<span class="sd">        If None, backprop directly on energy, by default None</span>
 <span class="sd">    </span>
-<span class="sd">    Returns:</span>
-<span class="sd">        grad_positions: Gradient of loss w.r.t. positions (dL/dr)</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    torch.Tensor</span>
+<span class="sd">        Gradient of loss w.r.t. positions (dL/dr)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Apply loss function if provided</span>
     <span class="k">if</span> <span class="n">loss_fn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -274,18 +300,31 @@
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.save_perturbation">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">save_perturbation</span><span class="p">(</span><span class="n">atoms_original</span><span class="p">,</span> <span class="n">atoms_perturbed</span><span class="p">,</span> <span class="n">epsilon</span><span class="p">,</span> <span class="n">energy_original</span><span class="p">,</span> 
                      <span class="n">energy_perturbed</span><span class="p">,</span> <span class="n">gradients</span><span class="p">,</span> <span class="n">save_path</span><span class="p">,</span> <span class="n">metadata</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Save perturbation data to a file for later analysis.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Save perturbation data to a file for later analysis.</span>
 <span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        atoms_original: Original ASE Atoms object</span>
-<span class="sd">        atoms_perturbed: Perturbed ASE Atoms object</span>
-<span class="sd">        epsilon: Step size used for perturbation</span>
-<span class="sd">        energy_original: Original energy (eV)</span>
-<span class="sd">        energy_perturbed: Perturbed energy (eV)</span>
-<span class="sd">        gradients: Gradients used for perturbation (torch tensor or numpy array)</span>
-<span class="sd">        save_path: Path to save the data (will save as .npz file)</span>
-<span class="sd">        metadata: Optional dictionary with additional metadata</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    atoms_original : ase.Atoms</span>
+<span class="sd">        Original ASE Atoms object</span>
+<span class="sd">    atoms_perturbed : ase.Atoms</span>
+<span class="sd">        Perturbed ASE Atoms object</span>
+<span class="sd">    epsilon : float</span>
+<span class="sd">        Step size used for perturbation</span>
+<span class="sd">    energy_original : float</span>
+<span class="sd">        Original energy (eV)</span>
+<span class="sd">    energy_perturbed : float</span>
+<span class="sd">        Perturbed energy (eV)</span>
+<span class="sd">    gradients : torch.Tensor or np.ndarray</span>
+<span class="sd">        Gradients used for perturbation</span>
+<span class="sd">    save_path : str or Path</span>
+<span class="sd">        Path to save the data (will save as .npz file)</span>
+<span class="sd">    metadata : dict, optional</span>
+<span class="sd">        Optional dictionary with additional metadata, by default None</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Path</span>
+<span class="sd">        Path to the saved file</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">save_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">save_path</span><span class="p">)</span>
@@ -330,24 +369,38 @@
 <div class="viewcode-block" id="load_perturbation">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.load_perturbation">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">load_perturbation</span><span class="p">(</span><span class="n">load_path</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Load perturbation data from a saved file.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load perturbation data from a saved file.</span>
 <span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        load_path: Path to the saved .npz file</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    load_path : str or Path</span>
+<span class="sd">        Path to the saved .npz file</span>
 <span class="sd">    </span>
-<span class="sd">    Returns:</span>
-<span class="sd">        dict: Dictionary containing all saved perturbation data with keys:</span>
-<span class="sd">            - atoms_original: Reconstructed original ASE Atoms object</span>
-<span class="sd">            - atoms_perturbed: Reconstructed perturbed ASE Atoms object</span>
-<span class="sd">            - displacement: Position displacement array</span>
-<span class="sd">            - epsilon: Perturbation step size</span>
-<span class="sd">            - energy_original: Original energy</span>
-<span class="sd">            - energy_perturbed: Perturbed energy</span>
-<span class="sd">            - energy_change: Energy change</span>
-<span class="sd">            - gradients: Gradient array</span>
-<span class="sd">            - timestamp: Save timestamp</span>
-<span class="sd">            - metadata: Dictionary of any additional metadata</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        Dictionary containing all saved perturbation data with keys:</span>
+<span class="sd">        </span>
+<span class="sd">        - atoms_original : ase.Atoms</span>
+<span class="sd">            Reconstructed original ASE Atoms object</span>
+<span class="sd">        - atoms_perturbed : ase.Atoms</span>
+<span class="sd">            Reconstructed perturbed ASE Atoms object</span>
+<span class="sd">        - displacement : np.ndarray</span>
+<span class="sd">            Position displacement array</span>
+<span class="sd">        - epsilon : float</span>
+<span class="sd">            Perturbation step size</span>
+<span class="sd">        - energy_original : float</span>
+<span class="sd">            Original energy</span>
+<span class="sd">        - energy_perturbed : float</span>
+<span class="sd">            Perturbed energy</span>
+<span class="sd">        - energy_change : float</span>
+<span class="sd">            Energy change</span>
+<span class="sd">        - gradients : np.ndarray</span>
+<span class="sd">            Gradient array</span>
+<span class="sd">        - timestamp : str</span>
+<span class="sd">            Save timestamp</span>
+<span class="sd">        - metadata : dict</span>
+<span class="sd">            Dictionary of any additional metadata</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
     <span class="kn">from</span><span class="w"> </span><span class="nn">ase</span><span class="w"> </span><span class="kn">import</span> <span class="n">Atoms</span>
@@ -408,23 +461,35 @@
 <div class="viewcode-block" id="adversarial_attack_step">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.adversarial_attack_step">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">adversarial_attack_step</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="s2">&quot;cpu&quot;</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">target_energy</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Perform one step of adversarial attack on atomic positions.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Perform one step of adversarial attack on atomic positions.</span>
 <span class="sd">    </span>
 <span class="sd">    .. deprecated::</span>
 <span class="sd">        Use FGSM_MACE.attack_step() instead. This function is kept for backward compatibility.</span>
 <span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        atoms: ASE Atoms object with MACE calculator attached</span>
-<span class="sd">        device: Device to run on</span>
-<span class="sd">        epsilon: Step size for perturbation</span>
-<span class="sd">        target_energy: Optional target energy for attack. If None, maximize energy.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    atoms : ase.Atoms</span>
+<span class="sd">        ASE Atoms object with MACE calculator attached</span>
+<span class="sd">    device : str, optional</span>
+<span class="sd">        Device to run on, by default &quot;cpu&quot;</span>
+<span class="sd">    epsilon : float, optional</span>
+<span class="sd">        Step size for perturbation, by default 0.01</span>
+<span class="sd">    target_energy : float or None, optional</span>
+<span class="sd">        Optional target energy for attack. If None, maximize energy, by default None</span>
 <span class="sd">    </span>
-<span class="sd">    Returns:</span>
-<span class="sd">        perturbed_atoms: Atoms with perturbed positions</span>
-<span class="sd">        energy: Original energy</span>
-<span class="sd">        perturbed_energy: Energy after perturbation</span>
-<span class="sd">        grad_positions: Gradients used for perturbation</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        A tuple containing:</span>
+<span class="sd">        </span>
+<span class="sd">        - perturbed_atoms : ase.Atoms</span>
+<span class="sd">            Atoms with perturbed positions</span>
+<span class="sd">        - energy : float</span>
+<span class="sd">            Original energy</span>
+<span class="sd">        - perturbed_energy : float</span>
+<span class="sd">            Energy after perturbation</span>
+<span class="sd">        - grad_positions : torch.Tensor</span>
+<span class="sd">            Gradients used for perturbation</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Forward pass with gradients</span>
     <span class="n">energy</span><span class="p">,</span> <span class="n">forces</span><span class="p">,</span> <span class="n">positions</span> <span class="o">=</span> <span class="n">forward_pass_with_gradients</span><span class="p">(</span><span class="n">atoms</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="n">device</span><span class="p">)</span>
@@ -464,17 +529,23 @@
 <div class="viewcode-block" id="visualize_perturbation">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.attacks.visualize_perturbation">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">visualize_perturbation</span><span class="p">(</span><span class="n">atoms_before</span><span class="p">,</span> <span class="n">atoms_after</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">outdir</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Visualize the difference between original and perturbed atomic structures.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Visualize the difference between original and perturbed atomic structures.</span>
 <span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        atoms_before: Original ASE Atoms object</span>
-<span class="sd">        atoms_after: Perturbed ASE Atoms object</span>
-<span class="sd">        epsilon: Perturbation magnitude used</span>
-<span class="sd">        outdir: Optional output directory to save plots</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    atoms_before : ase.Atoms</span>
+<span class="sd">        Original ASE Atoms object</span>
+<span class="sd">    atoms_after : ase.Atoms</span>
+<span class="sd">        Perturbed ASE Atoms object</span>
+<span class="sd">    epsilon : float, optional</span>
+<span class="sd">        Perturbation magnitude used, by default 0.01</span>
+<span class="sd">    outdir : str or Path, optional</span>
+<span class="sd">        Optional output directory to save plots, by default None</span>
 <span class="sd">    </span>
-<span class="sd">    Returns:</span>
-<span class="sd">        fig: Matplotlib figure</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    matplotlib.figure.Figure</span>
+<span class="sd">        Matplotlib figure object</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
     
