@@ -8,6 +8,12 @@
         branches:
           - main # or your default branch
 
+    permissions:
+        contents: read
+        pages: write
+        id-token: write
+
+
     jobs:
       build-and-deploy:
         runs-on: ubuntu-latest
@@ -17,12 +23,35 @@
             uses: actions/setup-python@v5
             with:
               python-version: '3.12' # Specify your desired Python version
+          - name: Debug workspace (optional - remove when working)
+            run: |
+              echo "PWD: $(pwd)"
+              ls -la
+              echo "Listing repo root docs/ if present:"
+              ls -la docs || echo "docs directory not found"
+          
           - name: Install dependencies
             run: |
               pip install sphinx sphinx_rtd_theme # Add other dependencies if needed
+              
           - name: Build Sphinx documentation
             run: |
               sphinx-build docs/source _build
+              
+          - name: Build Sphinx HTML
+            run: |
+              # ensure the Makefile exists and run make html. Adjust if your build target differs.
+              make -C docs html
+    
+          - name: Upload pages artifact
+            uses: actions/upload-pages-artifact@v1
+            with:
+              # adjust path if your build directory is different (e.g., docs/_build/html)
+              path: docs/_build/html
+    
+          - name: Deploy to GitHub Pages
+            uses: actions/deploy-pages@v1
+            
           - name: Deploy to GitHub Pages
             uses: peaceiris/actions-gh-pages@v3
             if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
