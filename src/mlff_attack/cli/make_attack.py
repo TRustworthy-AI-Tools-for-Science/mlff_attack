@@ -54,10 +54,10 @@ def parse_args():
     )
     
     parser.add_argument(
-        "--output",
+        "--outdir",
         type=str,
         default=None,
-        help="Path to output CIF file (default: auto-generated from input with '_perturbed' suffix)"
+        help="Path to output directory (default: auto-generated from input with '_perturbed' suffix)"
     )
     
     parser.add_argument(
@@ -107,8 +107,8 @@ def main():
     attack_type = args.type
     
     # Determine output path
-    if args.output is not None:
-        output_cif = Path(args.output)
+    if args.outdir is not None:
+        output_cif = Path(args.outdir) / (Path(input_cif).stem + "_perturbed.cif")
     else:
         output_cif = Path(input_cif).with_name(Path(input_cif).stem + "_perturbed.cif")
 
