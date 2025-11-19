@@ -10,11 +10,13 @@ This script shows:
 """
 
 from pathlib import Path
+import ase
 from ase.io import read, write
 from mlff_attack.relaxation import setup_calculator, load_structure
 from mlff_attack.grad_based.fgsm import FGSM_MACE
 from mlff_attack.attacks import visualize_perturbation
-
+from ase import build
+from mace.calculators import mace_mp
 
 def basic_fgsm_example():
     """Example 1: Basic FGSM attack (single step)."""
@@ -23,12 +25,13 @@ def basic_fgsm_example():
     print("=" * 70)
     
     # Load structure
-    atoms = load_structure("initial_cifs/chemistry_value_isovalent_0_05_18_traj.cif")
+    # atoms = load_structure("initial_cifs/chemistry_value_isovalent_0_05_18_traj.cif")
+    atoms = build.molecule("H2O")  # Using a simple molecule for demonstration
     
     # Setup MACE calculator
-    model_path = "mace-mpa-0-medium.model"
+    model = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
     device = "cpu"
-    atoms = setup_calculator(atoms, model_path, device)
+    atoms = setup_calculator(atoms, model, device)
 
     # Get original energy
     orig_energy = atoms.get_potential_energy()
@@ -89,12 +92,12 @@ def iterative_fgsm_example():
     print("=" * 70)
     
     # Load structure
-    atoms = read("initial_cifs/chemistry_value_isovalent_0_05_18_traj.cif")
+    atoms = build.molecule("H2O")  # Using a simple molecule for demonstration
     
     # Setup MACE calculator
-    model_path = "mace-mpa-0-medium.model"
+    model = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
     device = "cpu"
-    atoms = setup_calculator(atoms, model_path, device)
+    atoms = setup_calculator(atoms, model, device)
     
     orig_energy = atoms.get_potential_energy()
     print(f"\nOriginal energy: {orig_energy:.4f} eV")
@@ -127,6 +130,7 @@ def iterative_fgsm_example():
     
     # Save outputs
     output_dir = Path("example_outputs")
+    output_dir.mkdir(exist_ok=True)
     write(output_dir / "ifgsm_perturbed.cif", perturbed_atoms)
     attack.save_perturbation(
         output_dir / "ifgsm_perturbation.npz",
@@ -145,12 +149,12 @@ def targeted_attack_example():
     print("=" * 70)
     
     # Load structure
-    atoms = read("initial_cifs/chemistry_value_isovalent_0_05_18_traj.cif")
+    atoms = build.molecule("H2O")  # Using a simple molecule for demonstration
     
-    # Setup calculator
-    model_path = "mace-mpa-0-medium.model"
+    # Setup MACE calculator
+    model = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
     device = "cpu"
-    atoms = setup_calculator(atoms, model_path, device)
+    atoms = setup_calculator(atoms, model, device)
     
     orig_energy = atoms.get_potential_energy()
     target_energy = orig_energy + 2.0  # Try to increase energy by 2 eV
@@ -176,6 +180,8 @@ def targeted_attack_example():
     
     # Save outputs
     output_dir = Path("example_outputs")
+    output_dir.mkdir(exist_ok=True)
+
     write(output_dir / "targeted_perturbed.cif", perturbed_atoms)
     
     return atoms, perturbed_atoms, attack

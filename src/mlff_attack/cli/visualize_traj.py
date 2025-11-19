@@ -23,6 +23,7 @@ def main():
     # Load trajectory
     traj = load_trajectory(args.traj)
     if traj is None:
+        print(f"Error: Could not load trajectory from {args.traj}")
         return 1
 
     # Create output directory
@@ -39,6 +40,7 @@ def main():
     )
     
     if output_file:
+        print(f"Visualization saved to {output_file}")
         return 0
     else:
         return 1

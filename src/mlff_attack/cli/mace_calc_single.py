@@ -33,11 +33,13 @@ def main():
     # Load structure
     atoms = load_structure(args.input)
     if atoms is None:
+        print(f"[ERROR] Failed to load input structure for {args.input}.")
         return 1
 
     # Setup calculator
     atoms = setup_calculator(atoms, args.model, args.device)
     if atoms is None:
+        print(f"[ERROR] Failed to setup calculator with model {args.model}.")
         return 1
 
     # Run relaxation
@@ -49,6 +51,7 @@ def main():
         optimizer=args.optimizer
     )
     if not success:
+        print("[ERROR] Relaxation failed.")
         return 1
 
     # Save results

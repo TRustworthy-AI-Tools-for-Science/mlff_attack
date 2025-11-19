@@ -17,10 +17,9 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Chemistry",
     "Topic :: Scientific/Engineering :: Physics",
@@ -51,5 +50,5 @@ visualize-traj = "mlff_attack.cli.visualize_traj:main"
 make-attack = "mlff_attack.cli.make_attack:main"
 
 [project.urls]
-Homepage = "https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack"
+Homepage = "https://trustworthy-ai-tools-for-science.github.io/mlff_attack/"
 Repository = "https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack"
