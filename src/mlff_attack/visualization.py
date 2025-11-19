@@ -10,14 +10,17 @@ import numpy as np
 
 
 def load_trajectory(traj_path):
-    """
-    Load a trajectory file and validate it exists.
+    """Load a trajectory file and validate it exists.
     
-    Args:
-        traj_path: Path to the trajectory file
+    Parameters
+    ----------
+    traj_path : str or Path
+        Path to the trajectory file
         
-    Returns:
-        list: List of ASE Atoms objects, or None if loading fails
+    Returns
+    -------
+    list of ase.Atoms or None
+        List of ASE Atoms objects, or None if loading fails
     """
     traj_path = Path(traj_path)
     if not traj_path.exists():
@@ -35,14 +38,26 @@ def load_trajectory(traj_path):
 
 
 def extract_trajectory_data(traj):
-    """
-    Extract energy, force, and volume data from trajectory.
+    """Extract energy, force, and volume data from trajectory.
     
-    Args:
-        traj: List of ASE Atoms objects
+    Parameters
+    ----------
+    traj : list of ase.Atoms
+        List of ASE Atoms objects
         
-    Returns:
-        tuple: (steps, energies, max_forces, volumes)
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        
+        - steps : list of int
+            Step numbers
+        - energies : list of float
+            Energies at each step
+        - max_forces : list of float
+            Maximum forces at each step
+        - volumes : list of float
+            Volumes at each step
     """
     steps = list(range(len(traj)))
     energies = []
@@ -73,14 +88,22 @@ def extract_trajectory_data(traj):
 
 
 def calculate_noise_spectrum(max_forces):
-    """
-    Calculate noise spectrum from maximum forces.
+    """Calculate noise spectrum from maximum forces.
     
-    Args:
-        max_forces: List of maximum forces
+    Parameters
+    ----------
+    max_forces : list of float
+        List of maximum forces
 
-    Returns:
-        tuple: (frequencies, spectrum)
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        
+        - frequencies : np.ndarray
+            Frequency array
+        - spectrum : np.ndarray
+            Power spectrum
     """
     forces_array = np.array(max_forces)
     n = len(forces_array)
@@ -90,16 +113,22 @@ def calculate_noise_spectrum(max_forces):
 
 
 def calculate_statistics(energies, max_forces, volumes):
-    """
-    Calculate summary statistics from trajectory data.
+    """Calculate summary statistics from trajectory data.
     
-    Args:
-        energies: List of energies
-        max_forces: List of maximum forces
-        volumes: List of volumes
+    Parameters
+    ----------
+    energies : list of float
+        List of energies
+    max_forces : list of float
+        List of maximum forces
+    volumes : list of float
+        List of volumes
         
-    Returns:
-        dict: Dictionary of statistics
+    Returns
+    -------
+    dict
+        Dictionary of statistics including initial/final energies, forces, volumes,
+        convergence status, and change percentages
     """
     stats = {}
     
@@ -128,7 +157,17 @@ def calculate_statistics(energies, max_forces, volumes):
 
 
 def plot_energy(ax, steps, energies):
-    """Plot energy evolution."""
+    """Plot energy evolution.
+    
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Matplotlib axes object to plot on
+    steps : list of int
+        Step numbers
+    energies : list of float
+        Energy values at each step
+    """
     if not all(np.isnan(energies)):
         ax.plot(steps, energies, 'b-o', markersize=4)
         ax.set_xlabel('Step')
@@ -141,7 +180,17 @@ def plot_energy(ax, steps, energies):
 
 
 def plot_forces(ax, steps, max_forces):
-    """Plot force convergence."""
+    """Plot force convergence.
+    
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Matplotlib axes object to plot on
+    steps : list of int
+        Step numbers
+    max_forces : list of float
+        Maximum force values at each step
+    """
     if not all(np.isnan(max_forces)):
         ax.plot(steps, max_forces, 'r-o', markersize=4)
         ax.axhline(y=0.01, color='g', linestyle='--', label='fmax=0.01 eV/Å')
@@ -158,7 +207,17 @@ def plot_forces(ax, steps, max_forces):
 
 
 def plot_volume(ax, steps, volumes):
-    """Plot volume evolution."""
+    """Plot volume evolution.
+    
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Matplotlib axes object to plot on
+    steps : list of int
+        Step numbers
+    volumes : list of float
+        Volume values at each step
+    """
     ax.plot(steps, volumes, 'g-o', markersize=4)
     ax.set_xlabel('Step')
     ax.set_ylabel('Volume (Å³)')
@@ -167,7 +226,22 @@ def plot_volume(ax, steps, volumes):
 
 
 def plot_summary(ax, stats, n_frames):
-    """Plot summary statistics."""
+    """Plot summary statistics.
+    
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Matplotlib axes object to plot on
+    stats : dict
+        Dictionary of statistics from calculate_statistics
+    n_frames : int
+        Number of frames in trajectory
+        
+    Returns
+    -------
+    str
+        Formatted summary text
+    """
     ax.axis('off')
     
     # Create summary text
@@ -201,6 +275,17 @@ def plot_summary(ax, stats, n_frames):
 
 
 def plot_noise(ax, freq, spectrum):
+    """Plot noise spectrum of maximum forces.
+    
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Matplotlib axes object to plot on
+    freq : np.ndarray
+        Frequency array
+    spectrum : np.ndarray
+        Power spectrum values
+    """
 
     if not all(np.isnan(spectrum)):
         ax.plot(freq, spectrum, 'm-')
@@ -214,19 +299,27 @@ def plot_noise(ax, freq, spectrum):
 
 
 def create_visualization(traj, traj_path, outdir, output_format='png', show=False, save_to_csv=True):
-    """
-    Create visualization plots for trajectory data.
+    """Create visualization plots for trajectory data.
     
-    Args:
-        traj: List of ASE Atoms objects
-        traj_path: Path object for the trajectory file
-        outdir: Output directory for plots
-        output_format: Format for output plots (png, pdf, svg)
-        show: Whether to show plots interactively
-        save_to_csv: Whether to save extracted data to CSV files
+    Parameters
+    ----------
+    traj : list of ase.Atoms
+        List of ASE Atoms objects
+    traj_path : Path
+        Path object for the trajectory file
+    outdir : Path
+        Output directory for plots
+    output_format : str, optional
+        Format for output plots (png, pdf, svg), by default 'png'
+    show : bool, optional
+        Whether to show plots interactively, by default False
+    save_to_csv : bool, optional
+        Whether to save extracted data to CSV files, by default True
         
-    Returns:
-        str: Path to saved plot, or None if failed
+    Returns
+    -------
+    str or None
+        Path to saved plot, or None if failed
     """
     # Extract data
     steps, energies, max_forces, volumes = extract_trajectory_data(traj)
