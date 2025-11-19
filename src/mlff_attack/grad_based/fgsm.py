@@ -8,8 +8,9 @@ extending the base MLFFAttack class.
 from typing import Optional, Callable, Any
 import numpy as np
 import torch
+import copy
 from datetime import datetime
-
+from tqdm import trange
 from .mlff_attack_class import MLFFAttack
 from mace.data import AtomicData, config_from_atoms
 
@@ -113,9 +114,11 @@ class FGSM_MACE(MLFFAttack):
         if "ptr" not in batch:
             batch["ptr"] = torch.tensor([0, len(atoms)], dtype=torch.long, device=self.device)
         
-        # Replace positions with gradient-enabled version
+        # Replace positions with gradient-enabled version (match model dtype)
+        # Get the dtype from the model's parameters
+        model_dtype = next(model.parameters()).dtype
         positions = torch.tensor(
-            positions_np, dtype=torch.float32 if self.device == "cpu" else torch.float64, device=self.device, requires_grad=True
+            positions_np, dtype=model_dtype, device=self.device, requires_grad=True
         )
         batch["positions"] = positions
         
@@ -247,7 +250,7 @@ class FGSM_MACE(MLFFAttack):
         perturbed_positions = current_positions + perturbation
         
         # Create new atoms with perturbed positions
-        perturbed_atoms = atoms.copy()
+        perturbed_atoms = copy.deepcopy(atoms)
         perturbed_atoms.set_positions(perturbed_positions)
         
         # Ensure calculator is attached
@@ -298,7 +301,9 @@ class FGSM_MACE(MLFFAttack):
             self._original_positions = atoms.get_positions().copy()
         
         # Execute attack
-        perturbed_atoms = self.attack_step(atoms, n_steps)
+        perturbed_atoms = copy.deepcopy(atoms)
+        for step in trange(n_steps, desc="Iterating Attack"):
+            perturbed_atoms = self.attack_step(perturbed_atoms, step)
 
         self._perturbed_positions = perturbed_atoms.get_positions().copy()
         
