@@ -26,11 +26,16 @@ class MLFFAttack(ABC):
     ):
         """Initialize the attack.
         
-        Args:
-            model: MLFF model with calculator interface
-            epsilon: Maximum perturbation magnitude
-            device: Device for PyTorch computations
-            track_history: Whether to track attack progression
+        Parameters
+        ----------
+        model : Any
+            MLFF model with calculator interface
+        epsilon : float
+            Maximum perturbation magnitude
+        device : str, optional
+            Device for PyTorch computations, by default 'cpu'
+        track_history : bool, optional
+            Whether to track attack progression, by default True
         """
         self.model = model
         self.epsilon = epsilon
@@ -53,11 +58,16 @@ class MLFFAttack(ABC):
     ) -> np.ndarray:
         """Compute gradient of loss with respect to atomic positions.
         
-        Args:
-            atoms: ASE Atoms object or equivalent structure
-            loss_fn: Optional custom loss function (default: maximize energy)
+        Parameters
+        ----------
+        atoms : Any
+            ASE Atoms object or equivalent structure
+        loss_fn : Optional[Callable], optional
+            Optional custom loss function (default: maximize energy), by default None
             
-        Returns:
+        Returns
+        -------
+        np.ndarray
             Gradient array with shape (n_atoms, 3)
         """
         pass
@@ -70,11 +80,16 @@ class MLFFAttack(ABC):
     ) -> Any:
         """Perform one step of the adversarial attack.
         
-        Args:
-            atoms: Current atomic structure
-            step: Current iteration number
+        Parameters
+        ----------
+        atoms : Any
+            Current atomic structure
+        step : int, optional
+            Current iteration number, by default 0
             
-        Returns:
+        Returns
+        -------
+        Any
             Updated atoms object with perturbed positions
         """
         pass
@@ -87,12 +102,18 @@ class MLFFAttack(ABC):
     ) -> Any:
         """Execute the complete attack.
         
-        Args:
-            atoms: Input atomic structure to attack
-            n_steps: Number of attack iterations
-            clip: Whether to clip perturbations to epsilon bound
+        Parameters
+        ----------
+        atoms : Any
+            Input atomic structure to attack
+        n_steps : int, optional
+            Number of attack iterations, by default 1
+        clip : bool, optional
+            Whether to clip perturbations to epsilon bound, by default True
             
-        Returns:
+        Returns
+        -------
+        Any
             Perturbed atoms object
         """
         if self._original_positions is None:
@@ -112,8 +133,10 @@ class MLFFAttack(ABC):
     def _clip_perturbations(self, atoms: Any) -> None:
         """Ensure perturbations stay within epsilon bound.
         
-        Args:
-            atoms: Atoms object to clip (modified in-place)
+        Parameters
+        ----------
+        atoms : Any
+            Atoms object to clip (modified in-place)
         """
         if self._original_positions is None:
             return
@@ -136,9 +159,12 @@ class MLFFAttack(ABC):
     ) -> None:
         """Save perturbation data to file.
         
-        Args:
-            filepath: Output file path (.npz format)
-            include_metadata: Whether to include attack parameters
+        Parameters
+        ----------
+        filepath : str
+            Output file path (.npz format)
+        include_metadata : bool, optional
+            Whether to include attack parameters, by default True
         """
         if self._original_positions is None or self._perturbed_positions is None:
             raise ValueError("No attack has been performed yet")
@@ -163,10 +189,14 @@ class MLFFAttack(ABC):
     def load_perturbation(self, filepath: str) -> Dict[str, np.ndarray]:
         """Load perturbation data from file.
         
-        Args:
-            filepath: Input file path (.npz format)
+        Parameters
+        ----------
+        filepath : str
+            Input file path (.npz format)
             
-        Returns:
+        Returns
+        -------
+        Dict[str, np.ndarray]
             Dictionary containing loaded data
         """
         data = np.load(filepath)
@@ -185,7 +215,9 @@ class MLFFAttack(ABC):
     def get_perturbation_stats(self) -> Dict[str, float]:
         """Get statistics about the current perturbation.
         
-        Returns:
+        Returns
+        -------
+        Dict[str, float]
             Dictionary with perturbation statistics
         """
         if self._original_positions is None or self._perturbed_positions is None:

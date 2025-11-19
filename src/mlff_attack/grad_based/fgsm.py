@@ -37,12 +37,18 @@ class FGSM_MACE(MLFFAttack):
     ):
         """Initialize FGSM attack for MACE models.
         
-        Args:
-            model: MACE calculator (will be attached to atoms)
-            epsilon: Perturbation step size in Angstroms
-            device: Device for computations ('cpu' or 'cuda')
-            track_history: Whether to track attack progression
-            target_energy: Optional target energy (if None, maximize energy)
+        Parameters
+        ----------
+        model : Any
+            MACE calculator (will be attached to atoms)
+        epsilon : float, optional
+            Perturbation step size in Angstroms, by default 0.01
+        device : str, optional
+            Device for computations ('cpu' or 'cuda'), by default 'cpu'
+        track_history : bool, optional
+            Whether to track attack progression, by default True
+        target_energy : Optional[float], optional
+            Optional target energy (if None, maximize energy), by default None
         """
         super().__init__(model, epsilon, device, track_history)
         self.target_energy = target_energy
@@ -55,13 +61,22 @@ class FGSM_MACE(MLFFAttack):
         This uses the calculator's internal method to prepare the batch,
         then replaces positions with a gradient-enabled version.
         
-        Args:
-            atoms: ASE Atoms object with MACE calculator attached
+        Parameters
+        ----------
+        atoms : Any
+            ASE Atoms object with MACE calculator attached
         
-        Returns:
-            energy: Total energy (scalar, requires_grad=True)
-            forces: Forces on atoms (shape [n_atoms, 3], with gradients)
-            positions: Position tensor (requires_grad=True)
+        Returns
+        -------
+        tuple
+            A tuple containing:
+            
+            - energy : torch.Tensor
+                Total energy (scalar, requires_grad=True)
+            - forces : torch.Tensor
+                Forces on atoms (shape [n_atoms, 3], with gradients)
+            - positions : torch.Tensor
+                Position tensor (requires_grad=True)
         """
         calc = atoms.calc
         model = calc.models[0]
@@ -161,12 +176,17 @@ class FGSM_MACE(MLFFAttack):
     ) -> np.ndarray:
         """Compute gradient of loss with respect to atomic positions.
         
-        Args:
-            atoms: ASE Atoms object with MACE calculator
-            loss_fn: Optional custom loss function. If None, uses default
-                    (maximize energy or target energy loss)
+        Parameters
+        ----------
+        atoms : Any
+            ASE Atoms object with MACE calculator
+        loss_fn : Optional[Callable], optional
+            Optional custom loss function. If None, uses default
+            (maximize energy or target energy loss), by default None
         
-        Returns:
+        Returns
+        -------
+        np.ndarray
             Gradient array with shape (n_atoms, 3)
         """
         # Forward pass with gradients
@@ -199,11 +219,16 @@ class FGSM_MACE(MLFFAttack):
     ) -> Any:
         """Perform one step of FGSM attack.
         
-        Args:
-            atoms: Current atomic structure with MACE calculator
-            step: Current iteration number
+        Parameters
+        ----------
+        atoms : Any
+            Current atomic structure with MACE calculator
+        step : int, optional
+            Current iteration number, by default 0
         
-        Returns:
+        Returns
+        -------
+        Any
             Updated atoms object with perturbed positions
         """
         # Compute gradients
@@ -249,12 +274,18 @@ class FGSM_MACE(MLFFAttack):
         
         For standard FGSM, n_steps=1. For iterative FGSM (I-FGSM), use n_steps>1.
         
-        Args:
-            atoms: Input atomic structure with MACE calculator
-            n_steps: Number of attack iterations (1 for FGSM, >1 for I-FGSM)
-            clip: Whether to clip perturbations to epsilon bound
+        Parameters
+        ----------
+        atoms : Any
+            Input atomic structure with MACE calculator
+        n_steps : int, optional
+            Number of attack iterations (1 for FGSM, >1 for I-FGSM), by default 1
+        clip : bool, optional
+            Whether to clip perturbations to epsilon bound, by default True
         
-        Returns:
+        Returns
+        -------
+        Any
             Perturbed atoms object
         """
         # Store original positions
@@ -277,11 +308,16 @@ class FGSM_MACE(MLFFAttack):
     ) -> None:
         """Save perturbation data with additional FGSM-specific information.
         
-        Args:
-            filepath: Output file path (.npz format)
-            atoms_original: Optional original atoms (for saving chemical symbols, cell)
-            atoms_perturbed: Optional perturbed atoms
-            include_metadata: Whether to include attack parameters
+        Parameters
+        ----------
+        filepath : str
+            Output file path (.npz format)
+        atoms_original : Optional[Any], optional
+            Optional original atoms (for saving chemical symbols, cell), by default None
+        atoms_perturbed : Optional[Any], optional
+            Optional perturbed atoms, by default None
+        include_metadata : bool, optional
+            Whether to include attack parameters, by default True
         """
         if self._original_positions is None or self._perturbed_positions is None:
             raise ValueError("No attack has been performed yet")
@@ -337,7 +373,9 @@ class FGSM_MACE(MLFFAttack):
     def get_attack_summary(self) -> dict:
         """Get a summary of the attack results.
         
-        Returns:
+        Returns
+        -------
+        dict
             Dictionary with attack summary statistics
         """
         summary = self.get_perturbation_stats()

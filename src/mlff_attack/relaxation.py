@@ -11,13 +11,16 @@ import mace
 import torch
 
 def load_structure(input_path):
-    """
-    Load structure from input file.
+    """Load structure from input file.
     
-    Args:
-        input_path: Path to input structure file (CIF, POSCAR, etc.)
+    Parameters
+    ----------
+    input_path : str or Path
+        Path to input structure file (CIF, POSCAR, etc.)
         
-    Returns:
+    Returns
+    -------
+    ase.Atoms or None
         ASE Atoms object, or None if loading fails
     """
     try:
@@ -32,16 +35,22 @@ def load_structure(input_path):
 
 
 def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64"):
-    """
-    Initialize and attach MACE calculator to atoms object.
+    """Initialize and attach MACE calculator to atoms object.
     
-    Args:
-        atoms: ASE Atoms object
-        model_path: Path to MACE model file
-        device: Device to use (cuda or cpu)
-        dtype: Data type for calculations
+    Parameters
+    ----------
+    atoms : ase.Atoms
+        ASE Atoms object
+    model_path : str or Path or MACECalculator
+        Path to MACE model file or existing MACECalculator instance
+    device : str, optional
+        Device to use (cuda or cpu), by default "cuda"
+    dtype_str : str, optional
+        Data type for calculations ("float32" or "float64"), by default "float64"
         
-    Returns:
+    Returns
+    -------
+    ase.Atoms or None
         ASE Atoms object with calculator attached, or None if setup fails
     """
     try:
@@ -69,14 +78,17 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64"):
 
 
 def get_optimizer_class(optimizer_name):
-    """
-    Get the ASE optimizer class from name.
+    """Get the ASE optimizer class from name.
     
-    Args:
-        optimizer_name: Name of optimizer ("BFGS" or "LBFGS")
+    Parameters
+    ----------
+    optimizer_name : str
+        Name of optimizer ("BFGS" or "LBFGS")
         
-    Returns:
-        Optimizer class
+    Returns
+    -------
+    type
+        ASE Optimizer class
     """
     optimizers = {
         "BFGS": BFGS,
@@ -86,18 +98,25 @@ def get_optimizer_class(optimizer_name):
 
 
 def run_relaxation(atoms, traj_path, fmax=0.01, max_steps=300, optimizer="LBFGS"):
-    """
-    Run structural relaxation.
+    """Run structural relaxation.
     
-    Args:
-        atoms: ASE Atoms object with calculator attached
-        traj_path: Path to save trajectory file
-        fmax: Force convergence criterion (eV/Å)
-        max_steps: Maximum number of optimization steps
-        optimizer: Name of optimizer to use
+    Parameters
+    ----------
+    atoms : ase.Atoms
+        ASE Atoms object with calculator attached
+    traj_path : str or Path
+        Path to save trajectory file
+    fmax : float, optional
+        Force convergence criterion (eV/Å), by default 0.01
+    max_steps : int, optional
+        Maximum number of optimization steps, by default 300
+    optimizer : str, optional
+        Name of optimizer to use ("BFGS" or "LBFGS"), by default "LBFGS"
         
-    Returns:
-        bool: True if relaxation completed successfully, False otherwise
+    Returns
+    -------
+    bool
+        True if relaxation completed successfully, False otherwise
     """
     try:
         print(f"[INFO] Starting relaxation with {optimizer} optimizer")
@@ -124,15 +143,20 @@ def run_relaxation(atoms, traj_path, fmax=0.01, max_steps=300, optimizer="LBFGS"
 
 
 def save_results(atoms, output_dir, base_name="relaxed"):
-    """
-    Save relaxed structure to output files.
+    """Save relaxed structure to output files.
     
-    Args:
-        atoms: ASE Atoms object to save
-        output_dir: Output directory path
-        base_name: Base name for output files
+    Parameters
+    ----------
+    atoms : ase.Atoms
+        ASE Atoms object to save
+    output_dir : str or Path
+        Output directory path
+    base_name : str, optional
+        Base name for output files, by default "relaxed"
         
-    Returns:
+    Returns
+    -------
+    Path or None
         Path to saved CIF file, or None if saving fails
     """
     try:
