@@ -42,6 +42,7 @@ dev = [
     "mypy>=0.990",
     "ipython",
     "ipykernel",
+    "sphinx"
 ]
 
 [project.scripts]
