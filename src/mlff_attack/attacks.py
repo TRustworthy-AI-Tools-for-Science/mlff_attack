@@ -14,21 +14,33 @@ from ase.io import read, write
 from mlff_attack.relaxation import setup_calculator
 
 def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm"):
-    """
-    Perform an adversarial attack on the given atomic structure using a MACE model.
+    """Perform an adversarial attack on the given atomic structure using a MACE model.
     
     This is a convenience wrapper around the FGSM_MACE class.
 
-    Args:
-        model_path: Path to the MACE model file
-        device: Device to run the model on ("cpu" or "cuda")
-        atoms: ASE Atoms object representing the structure to attack
-        epsilon: Perturbation step size in Angstroms
-        target_energy: Target energy for the attack (if None, maximize energy)
-        output_cif: Path to save the perturbed CIF file
-    Returns:
-        output_cif: Path to the saved perturbed CIF file
-        perturbed_atoms: Atoms object after attack
+    Parameters
+    ----------
+    model_path : str or Path
+        Path to the MACE model file
+    device : str
+        Device to run the model on ("cpu" or "cuda")
+    atoms : ase.Atoms
+        ASE Atoms object representing the structure to attack
+    epsilon : float
+        Perturbation step size in Angstroms
+    target_energy : float or None
+        Target energy for the attack (if None, maximize energy)
+    output_cif : str or Path
+        Path to save the perturbed CIF file
+    attack_type : str, optional
+        Type of attack to perform, by default "fgsm"
+        
+    Returns
+    -------
+    str
+        Path to the saved perturbed CIF file
+    ase.Atoms
+        Atoms object after attack
     """
     from mlff_attack.grad_based.fgsm import FGSM_MACE
 
@@ -87,8 +99,7 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
 
 
 def forward_pass_with_gradients(atoms, device="cpu"):
-    """
-    Perform a forward pass through the MACE model with gradient tracking.
+    """Perform a forward pass through the MACE model with gradient tracking.
     
     .. deprecated::
         Use FGSM_MACE class instead. This function is kept for backward compatibility.
@@ -96,14 +107,24 @@ def forward_pass_with_gradients(atoms, device="cpu"):
     This uses the calculator's internal method to prepare the batch,
     then replaces positions with a gradient-enabled version.
     
-    Args:
-        atoms: ASE Atoms object with MACE calculator attached
-        device: Device to run on ("cpu" or "cuda")
+    Parameters
+    ----------
+    atoms : ase.Atoms
+        ASE Atoms object with MACE calculator attached
+    device : str, optional
+        Device to run on ("cpu" or "cuda"), by default "cpu"
     
-    Returns:
-        energy: Total energy (scalar, requires_grad=True)
-        forces: Forces on atoms (shape [n_atoms, 3], with gradients)
-        positions: Position tensor (requires_grad=True)
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        
+        - energy : torch.Tensor
+            Total energy (scalar, requires_grad=True)
+        - forces : torch.Tensor
+            Forces on atoms (shape [n_atoms, 3], with gradients)
+        - positions : torch.Tensor
+            Position tensor (requires_grad=True)
     """
     calc = atoms.calc
     model = calc.models[0]
@@ -198,20 +219,25 @@ def forward_pass_with_gradients(atoms, device="cpu"):
 
 
 def backprop_step(energy, positions, loss_fn=None):
-    """
-    Perform backpropagation to compute gradients.
+    """Perform backpropagation to compute gradients.
     
     .. deprecated::
         Use FGSM_MACE.compute_gradient() instead. This function is kept for backward compatibility.
     
-    Args:
-        energy: Energy tensor from forward pass (requires_grad=True)
-        positions: Position tensor from forward pass (requires_grad=True)
-        loss_fn: Optional loss function to apply to energy before backprop.
-                 If None, backprop directly on energy.
+    Parameters
+    ----------
+    energy : torch.Tensor
+        Energy tensor from forward pass (requires_grad=True)
+    positions : torch.Tensor
+        Position tensor from forward pass (requires_grad=True)
+    loss_fn : Callable, optional
+        Optional loss function to apply to energy before backprop.
+        If None, backprop directly on energy, by default None
     
-    Returns:
-        grad_positions: Gradient of loss w.r.t. positions (dL/dr)
+    Returns
+    -------
+    torch.Tensor
+        Gradient of loss w.r.t. positions (dL/dr)
     """
     # Apply loss function if provided
     if loss_fn is not None:
@@ -230,18 +256,31 @@ def backprop_step(energy, positions, loss_fn=None):
 
 def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original, 
                      energy_perturbed, gradients, save_path, metadata=None):
-    """
-    Save perturbation data to a file for later analysis.
+    """Save perturbation data to a file for later analysis.
     
-    Args:
-        atoms_original: Original ASE Atoms object
-        atoms_perturbed: Perturbed ASE Atoms object
-        epsilon: Step size used for perturbation
-        energy_original: Original energy (eV)
-        energy_perturbed: Perturbed energy (eV)
-        gradients: Gradients used for perturbation (torch tensor or numpy array)
-        save_path: Path to save the data (will save as .npz file)
-        metadata: Optional dictionary with additional metadata
+    Parameters
+    ----------
+    atoms_original : ase.Atoms
+        Original ASE Atoms object
+    atoms_perturbed : ase.Atoms
+        Perturbed ASE Atoms object
+    epsilon : float
+        Step size used for perturbation
+    energy_original : float
+        Original energy (eV)
+    energy_perturbed : float
+        Perturbed energy (eV)
+    gradients : torch.Tensor or np.ndarray
+        Gradients used for perturbation
+    save_path : str or Path
+        Path to save the data (will save as .npz file)
+    metadata : dict, optional
+        Optional dictionary with additional metadata, by default None
+        
+    Returns
+    -------
+    Path
+        Path to the saved file
     """
 
     save_path = Path(save_path)
@@ -283,24 +322,38 @@ def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original,
 
 
 def load_perturbation(load_path):
-    """
-    Load perturbation data from a saved file.
+    """Load perturbation data from a saved file.
     
-    Args:
-        load_path: Path to the saved .npz file
+    Parameters
+    ----------
+    load_path : str or Path
+        Path to the saved .npz file
     
-    Returns:
-        dict: Dictionary containing all saved perturbation data with keys:
-            - atoms_original: Reconstructed original ASE Atoms object
-            - atoms_perturbed: Reconstructed perturbed ASE Atoms object
-            - displacement: Position displacement array
-            - epsilon: Perturbation step size
-            - energy_original: Original energy
-            - energy_perturbed: Perturbed energy
-            - energy_change: Energy change
-            - gradients: Gradient array
-            - timestamp: Save timestamp
-            - metadata: Dictionary of any additional metadata
+    Returns
+    -------
+    dict
+        Dictionary containing all saved perturbation data with keys:
+        
+        - atoms_original : ase.Atoms
+            Reconstructed original ASE Atoms object
+        - atoms_perturbed : ase.Atoms
+            Reconstructed perturbed ASE Atoms object
+        - displacement : np.ndarray
+            Position displacement array
+        - epsilon : float
+            Perturbation step size
+        - energy_original : float
+            Original energy
+        - energy_perturbed : float
+            Perturbed energy
+        - energy_change : float
+            Energy change
+        - gradients : np.ndarray
+            Gradient array
+        - timestamp : str
+            Save timestamp
+        - metadata : dict
+            Dictionary of any additional metadata
     """
     import numpy as np
     from ase import Atoms
@@ -358,23 +411,35 @@ def load_perturbation(load_path):
 
 
 def adversarial_attack_step(atoms, device="cpu", epsilon=0.01, target_energy=None):
-    """
-    Perform one step of adversarial attack on atomic positions.
+    """Perform one step of adversarial attack on atomic positions.
     
     .. deprecated::
         Use FGSM_MACE.attack_step() instead. This function is kept for backward compatibility.
     
-    Args:
-        atoms: ASE Atoms object with MACE calculator attached
-        device: Device to run on
-        epsilon: Step size for perturbation
-        target_energy: Optional target energy for attack. If None, maximize energy.
+    Parameters
+    ----------
+    atoms : ase.Atoms
+        ASE Atoms object with MACE calculator attached
+    device : str, optional
+        Device to run on, by default "cpu"
+    epsilon : float, optional
+        Step size for perturbation, by default 0.01
+    target_energy : float or None, optional
+        Optional target energy for attack. If None, maximize energy, by default None
     
-    Returns:
-        perturbed_atoms: Atoms with perturbed positions
-        energy: Original energy
-        perturbed_energy: Energy after perturbation
-        grad_positions: Gradients used for perturbation
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        
+        - perturbed_atoms : ase.Atoms
+            Atoms with perturbed positions
+        - energy : float
+            Original energy
+        - perturbed_energy : float
+            Energy after perturbation
+        - grad_positions : torch.Tensor
+            Gradients used for perturbation
     """
     # Forward pass with gradients
     energy, forces, positions = forward_pass_with_gradients(atoms, device=device)
@@ -411,17 +476,23 @@ def adversarial_attack_step(atoms, device="cpu", epsilon=0.01, target_energy=Non
 
 
 def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None):
-    """
-    Visualize the difference between original and perturbed atomic structures.
+    """Visualize the difference between original and perturbed atomic structures.
     
-    Args:
-        atoms_before: Original ASE Atoms object
-        atoms_after: Perturbed ASE Atoms object
-        epsilon: Perturbation magnitude used
-        outdir: Optional output directory to save plots
+    Parameters
+    ----------
+    atoms_before : ase.Atoms
+        Original ASE Atoms object
+    atoms_after : ase.Atoms
+        Perturbed ASE Atoms object
+    epsilon : float, optional
+        Perturbation magnitude used, by default 0.01
+    outdir : str or Path, optional
+        Optional output directory to save plots, by default None
     
-    Returns:
-        fig: Matplotlib figure
+    Returns
+    -------
+    matplotlib.figure.Figure
+        Matplotlib figure object
     """
     import numpy as np
     
