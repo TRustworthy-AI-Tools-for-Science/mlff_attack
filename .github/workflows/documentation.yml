@@ -1,12 +1,12 @@
 # Build and deploy Sphinx docs to gh-pages using peaceiris/actions-gh-pages
-name: Documentation
+name: Build Documentation
 on:
   push:
     branches:
       - main
 
 permissions:
-  contents: read
+  contents: write
   pages: write
 
 jobs:
@@ -15,12 +15,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true   # IMPORTANT: ensure the checkout step preserves GITHUB_TOKEN for pushing
 
       - name: Debug workspace (optional - remove when working)
         run: |
           echo "PWD: $(pwd)"
           ls -la
-          echo "Listing repo root docs/ if present:"
           ls -la docs || echo "docs directory not found"
 
       - name: Set up Python
