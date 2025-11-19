@@ -20,11 +20,16 @@ class FGSM_MACE(MLFFAttack):
     The Fast Gradient Sign Method computes the gradient of the loss with respect
     to atomic positions and perturbs them in the direction that maximizes the loss.
     
-    Attributes:
-        model: MACE calculator attached to atoms
-        epsilon: Step size for perturbation (Angstroms)
-        device: Device for PyTorch computations
-        target_energy: Optional target energy for the attack
+    Attributes
+    ----------
+    model : Any
+        MACE calculator attached to atoms
+    epsilon : float
+        Step size for perturbation (Angstroms)
+    device : str
+        Device for PyTorch computations
+    target_energy : float or None
+        Optional target energy for the attack. If None, maximizes energy
     """
     
     def __init__(

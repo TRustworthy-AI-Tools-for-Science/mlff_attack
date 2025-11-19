@@ -10,11 +10,17 @@ class MLFFAttack(ABC):
     This abstract class defines the interface for implementing various attack
     strategies on MLFF models like MACE, ALIGNN, etc.
     
-    Attributes:
-        model: The MLFF model (e.g., MACE calculator, ALIGNN ForceField)
-        epsilon: Maximum perturbation magnitude (in Angstroms for position attacks)
-        device: Device for computations ('cpu', 'cuda', etc.)
-        attack_history: Dictionary storing attack trajectory information
+    Attributes
+    ----------
+    model : Any
+        The MLFF model (e.g., MACE calculator, ALIGNN ForceField)
+    epsilon : float
+        Maximum perturbation magnitude (in Angstroms for position attacks)
+    device : str
+        Device for computations ('cpu', 'cuda', etc.)
+    attack_history : dict or None
+        Dictionary storing attack trajectory information including energies,
+        forces, perturbations, and gradients
     """
     
     def __init__(
