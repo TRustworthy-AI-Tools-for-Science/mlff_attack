@@ -92,8 +92,8 @@ Contents
 
 .. toctree::
    :maxdepth: 2
-   :caption: API Documentation:
 
+   examples
    modules
 
 Indices and tables
