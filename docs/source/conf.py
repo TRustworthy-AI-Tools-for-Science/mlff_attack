@@ -52,4 +52,27 @@ exclude_patterns = []
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = 'alabaster'
-# html_static_path = ['_static']
+html_static_path = ['_static']
+
+# Alabaster theme options
+html_theme_options = {
+    'description': 'Adversarial attacks on Machine Learning Force Fields',
+    'github_user': 'TRustworthy-AI-Tools-for-Science',
+    'github_repo': 'mlff_attack',
+    'github_button': True,
+    'github_type': 'star',
+    'fixed_sidebar': True,
+    'sidebar_collapse': False,
+    'extra_nav_links': {
+        'GitHub': 'https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack',
+    }
+}
+
+html_sidebars = {
+    '**': [
+        'about.html',
+        'navigation.html',
+        'relations.html',
+        'searchbox.html',
+    ]
+}
