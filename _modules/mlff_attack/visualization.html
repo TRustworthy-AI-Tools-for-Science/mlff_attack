@@ -45,14 +45,17 @@
 <div class="viewcode-block" id="load_trajectory">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.load_trajectory">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">load_trajectory</span><span class="p">(</span><span class="n">traj_path</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Load a trajectory file and validate it exists.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a trajectory file and validate it exists.</span>
 <span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        traj_path: Path to the trajectory file</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    traj_path : str or Path</span>
+<span class="sd">        Path to the trajectory file</span>
 <span class="sd">        </span>
-<span class="sd">    Returns:</span>
-<span class="sd">        list: List of ASE Atoms objects, or None if loading fails</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    list of ase.Atoms or None</span>
+<span class="sd">        List of ASE Atoms objects, or None if loading fails</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">traj_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">traj_path</span><span class="p">)</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">traj_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
@@ -73,14 +76,26 @@
 <div class="viewcode-block" id="extract_trajectory_data">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.extract_trajectory_data">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">extract_trajectory_data</span><span class="p">(</span><span class="n">traj</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Extract energy, force, and volume data from trajectory.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract energy, force, and volume data from trajectory.</span>
 <span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        traj: List of ASE Atoms objects</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    traj : list of ase.Atoms</span>
+<span class="sd">        List of ASE Atoms objects</span>
 <span class="sd">        </span>
-<span class="sd">    Returns:</span>
-<span class="sd">        tuple: (steps, energies, max_forces, volumes)</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        A tuple containing:</span>
+<span class="sd">        </span>
+<span class="sd">        - steps : list of int</span>
+<span class="sd">            Step numbers</span>
+<span class="sd">        - energies : list of float</span>
+<span class="sd">            Energies at each step</span>
+<span class="sd">        - max_forces : list of float</span>
+<span class="sd">            Maximum forces at each step</span>
+<span class="sd">        - volumes : list of float</span>
+<span class="sd">            Volumes at each step</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">steps</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">traj</span><span class="p">)))</span>
     <span class="n">energies</span> <span class="o">=</span> <span class="p">[]</span>
@@ -114,14 +129,22 @@
 <div class="viewcode-block" id="calculate_noise_spectrum">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.calculate_noise_spectrum">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">calculate_noise_spectrum</span><span class="p">(</span><span class="n">max_forces</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Calculate noise spectrum from maximum forces.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate noise spectrum from maximum forces.</span>
 <span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        max_forces: List of maximum forces</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    max_forces : list of float</span>
+<span class="sd">        List of maximum forces</span>
 
-<span class="sd">    Returns:</span>
-<span class="sd">        tuple: (frequencies, spectrum)</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    tuple</span>
+<span class="sd">        A tuple containing:</span>
+<span class="sd">        </span>
+<span class="sd">        - frequencies : np.ndarray</span>
+<span class="sd">            Frequency array</span>
+<span class="sd">        - spectrum : np.ndarray</span>
+<span class="sd">            Power spectrum</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">forces_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">max_forces</span><span class="p">)</span>
     <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">forces_array</span><span class="p">)</span>
@@ -134,16 +157,22 @@
 <div class="viewcode-block" id="calculate_statistics">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.calculate_statistics">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">calculate_statistics</span><span class="p">(</span><span class="n">energies</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">,</span> <span class="n">volumes</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Calculate summary statistics from trajectory data.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate summary statistics from trajectory data.</span>
 <span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        energies: List of energies</span>
-<span class="sd">        max_forces: List of maximum forces</span>
-<span class="sd">        volumes: List of volumes</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    energies : list of float</span>
+<span class="sd">        List of energies</span>
+<span class="sd">    max_forces : list of float</span>
+<span class="sd">        List of maximum forces</span>
+<span class="sd">    volumes : list of float</span>
+<span class="sd">        List of volumes</span>
 <span class="sd">        </span>
-<span class="sd">    Returns:</span>
-<span class="sd">        dict: Dictionary of statistics</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    dict</span>
+<span class="sd">        Dictionary of statistics including initial/final energies, forces, volumes,</span>
+<span class="sd">        convergence status, and change percentages</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">stats</span> <span class="o">=</span> <span class="p">{}</span>
     
@@ -175,7 +204,17 @@
 <div class="viewcode-block" id="plot_energy">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_energy">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">plot_energy</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">energies</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot energy evolution.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot energy evolution.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ax : matplotlib.axes.Axes</span>
+<span class="sd">        Matplotlib axes object to plot on</span>
+<span class="sd">    steps : list of int</span>
+<span class="sd">        Step numbers</span>
+<span class="sd">    energies : list of float</span>
+<span class="sd">        Energy values at each step</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">energies</span><span class="p">)):</span>
         <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">energies</span><span class="p">,</span> <span class="s1">&#39;b-o&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
         <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Step&#39;</span><span class="p">)</span>
@@ -191,7 +230,17 @@
 <div class="viewcode-block" id="plot_forces">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_forces">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">plot_forces</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot force convergence.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot force convergence.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ax : matplotlib.axes.Axes</span>
+<span class="sd">        Matplotlib axes object to plot on</span>
+<span class="sd">    steps : list of int</span>
+<span class="sd">        Step numbers</span>
+<span class="sd">    max_forces : list of float</span>
+<span class="sd">        Maximum force values at each step</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">max_forces</span><span class="p">)):</span>
         <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">,</span> <span class="s1">&#39;r-o&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
         <span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="n">y</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;g&#39;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;fmax=0.01 eV/Å&#39;</span><span class="p">)</span>
@@ -211,7 +260,17 @@
 <div class="viewcode-block" id="plot_volume">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_volume">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">plot_volume</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">steps</span><span class="p">,</span> <span class="n">volumes</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot volume evolution.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot volume evolution.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ax : matplotlib.axes.Axes</span>
+<span class="sd">        Matplotlib axes object to plot on</span>
+<span class="sd">    steps : list of int</span>
+<span class="sd">        Step numbers</span>
+<span class="sd">    volumes : list of float</span>
+<span class="sd">        Volume values at each step</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">steps</span><span class="p">,</span> <span class="n">volumes</span><span class="p">,</span> <span class="s1">&#39;g-o&#39;</span><span class="p">,</span> <span class="n">markersize</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
     <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Step&#39;</span><span class="p">)</span>
     <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Volume (Å³)&#39;</span><span class="p">)</span>
@@ -223,7 +282,22 @@
 <div class="viewcode-block" id="plot_summary">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_summary">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">plot_summary</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">stats</span><span class="p">,</span> <span class="n">n_frames</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot summary statistics.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot summary statistics.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ax : matplotlib.axes.Axes</span>
+<span class="sd">        Matplotlib axes object to plot on</span>
+<span class="sd">    stats : dict</span>
+<span class="sd">        Dictionary of statistics from calculate_statistics</span>
+<span class="sd">    n_frames : int</span>
+<span class="sd">        Number of frames in trajectory</span>
+<span class="sd">        </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str</span>
+<span class="sd">        Formatted summary text</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">ax</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s1">&#39;off&#39;</span><span class="p">)</span>
     
     <span class="c1"># Create summary text</span>
@@ -260,6 +334,17 @@
 <div class="viewcode-block" id="plot_noise">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.plot_noise">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">plot_noise</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">freq</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Plot noise spectrum of maximum forces.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    ax : matplotlib.axes.Axes</span>
+<span class="sd">        Matplotlib axes object to plot on</span>
+<span class="sd">    freq : np.ndarray</span>
+<span class="sd">        Frequency array</span>
+<span class="sd">    spectrum : np.ndarray</span>
+<span class="sd">        Power spectrum values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">spectrum</span><span class="p">)):</span>
         <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">freq</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">,</span> <span class="s1">&#39;m-&#39;</span><span class="p">)</span>
@@ -276,19 +361,27 @@
 <div class="viewcode-block" id="create_visualization">
 <a class="viewcode-back" href="../../mlff_attack.html#mlff_attack.visualization.create_visualization">[docs]</a>
 <span class="k">def</span><span class="w"> </span><span class="nf">create_visualization</span><span class="p">(</span><span class="n">traj</span><span class="p">,</span> <span class="n">traj_path</span><span class="p">,</span> <span class="n">outdir</span><span class="p">,</span> <span class="n">output_format</span><span class="o">=</span><span class="s1">&#39;png&#39;</span><span class="p">,</span> <span class="n">show</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">save_to_csv</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Create visualization plots for trajectory data.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create visualization plots for trajectory data.</span>
 <span class="sd">    </span>
-<span class="sd">    Args:</span>
-<span class="sd">        traj: List of ASE Atoms objects</span>
-<span class="sd">        traj_path: Path object for the trajectory file</span>
-<span class="sd">        outdir: Output directory for plots</span>
-<span class="sd">        output_format: Format for output plots (png, pdf, svg)</span>
-<span class="sd">        show: Whether to show plots interactively</span>
-<span class="sd">        save_to_csv: Whether to save extracted data to CSV files</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    traj : list of ase.Atoms</span>
+<span class="sd">        List of ASE Atoms objects</span>
+<span class="sd">    traj_path : Path</span>
+<span class="sd">        Path object for the trajectory file</span>
+<span class="sd">    outdir : Path</span>
+<span class="sd">        Output directory for plots</span>
+<span class="sd">    output_format : str, optional</span>
+<span class="sd">        Format for output plots (png, pdf, svg), by default &#39;png&#39;</span>
+<span class="sd">    show : bool, optional</span>
+<span class="sd">        Whether to show plots interactively, by default False</span>
+<span class="sd">    save_to_csv : bool, optional</span>
+<span class="sd">        Whether to save extracted data to CSV files, by default True</span>
 <span class="sd">        </span>
-<span class="sd">    Returns:</span>
-<span class="sd">        str: Path to saved plot, or None if failed</span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    str or None</span>
+<span class="sd">        Path to saved plot, or None if failed</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Extract data</span>
     <span class="n">steps</span><span class="p">,</span> <span class="n">energies</span><span class="p">,</span> <span class="n">max_forces</span><span class="p">,</span> <span class="n">volumes</span> <span class="o">=</span> <span class="n">extract_trajectory_data</span><span class="p">(</span><span class="n">traj</span><span class="p">)</span>

@@ -441,10 +441,23 @@ then replaces positions with a gradient-enabled version.</p>
 <dd><p>Calculate noise spectrum from maximum forces.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>max_forces</strong> – List of maximum forces</p>
+<dd class="field-odd"><p><strong>max_forces</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – List of maximum forces</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>(frequencies, spectrum)</p>
+<dd class="field-even"><p><p>A tuple containing:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>frequencies<span class="classifier">np.ndarray</span></dt><dd><p>Frequency array</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>spectrum<span class="classifier">np.ndarray</span></dt><dd><p>Power spectrum</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
@@ -459,13 +472,14 @@ then replaces positions with a gradient-enabled version.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>energies</strong> – List of energies</p></li>
-<li><p><strong>max_forces</strong> – List of maximum forces</p></li>
-<li><p><strong>volumes</strong> – List of volumes</p></li>
+<li><p><strong>energies</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – List of energies</p></li>
+<li><p><strong>max_forces</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – List of maximum forces</p></li>
+<li><p><strong>volumes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – List of volumes</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Dictionary of statistics</p>
+<dd class="field-even"><p>Dictionary of statistics including initial/final energies, forces, volumes,
+convergence status, and change percentages</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a></p>
@@ -480,19 +494,19 @@ then replaces positions with a gradient-enabled version.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>traj</strong> – List of ASE Atoms objects</p></li>
-<li><p><strong>traj_path</strong> – Path object for the trajectory file</p></li>
-<li><p><strong>outdir</strong> – Output directory for plots</p></li>
-<li><p><strong>output_format</strong> – Format for output plots (png, pdf, svg)</p></li>
-<li><p><strong>show</strong> – Whether to show plots interactively</p></li>
-<li><p><strong>save_to_csv</strong> – Whether to save extracted data to CSV files</p></li>
+<li><p><strong>traj</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><em>ase.Atoms</em>) – List of ASE Atoms objects</p></li>
+<li><p><strong>traj_path</strong> (<em>Path</em>) – Path object for the trajectory file</p></li>
+<li><p><strong>outdir</strong> (<em>Path</em>) – Output directory for plots</p></li>
+<li><p><strong>output_format</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>optional</em>) – Format for output plots (png, pdf, svg), by default ‘png’</p></li>
+<li><p><strong>show</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to show plots interactively, by default False</p></li>
+<li><p><strong>save_to_csv</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a><em>, </em><em>optional</em>) – Whether to save extracted data to CSV files, by default True</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Path to saved plot, or None if failed</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a> or None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -503,10 +517,33 @@ then replaces positions with a gradient-enabled version.</p>
 <dd><p>Extract energy, force, and volume data from trajectory.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>traj</strong> – List of ASE Atoms objects</p>
+<dd class="field-odd"><p><strong>traj</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><em>ase.Atoms</em>) – List of ASE Atoms objects</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>(steps, energies, max_forces, volumes)</p>
+<dd class="field-even"><p><p>A tuple containing:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>steps<span class="classifier">list of int</span></dt><dd><p>Step numbers</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>energies<span class="classifier">list of float</span></dt><dd><p>Energies at each step</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>max_forces<span class="classifier">list of float</span></dt><dd><p>Maximum forces at each step</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>volumes<span class="classifier">list of float</span></dt><dd><p>Volumes at each step</p>
+</dd>
+</dl>
+</li>
+</ul>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
@@ -520,13 +557,13 @@ then replaces positions with a gradient-enabled version.</p>
 <dd><p>Load a trajectory file and validate it exists.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>traj_path</strong> – Path to the trajectory file</p>
+<dd class="field-odd"><p><strong>traj_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> or </em><em>Path</em>) – Path to the trajectory file</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>List of ASE Atoms objects, or None if loading fails</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a></p>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a> of ase.Atoms or None</p>
 </dd>
 </dl>
 </dd></dl>
@@ -535,29 +572,81 @@ then replaces positions with a gradient-enabled version.</p>
 <dt class="sig sig-object py" id="mlff_attack.visualization.plot_energy">
 <span class="sig-prename descclassname"><span class="pre">mlff_attack.visualization.</span></span><span class="sig-name descname"><span class="pre">plot_energy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">energies</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/visualization.html#plot_energy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.visualization.plot_energy" title="Link to this definition">¶</a></dt>
 <dd><p>Plot energy evolution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em>) – Matplotlib axes object to plot on</p></li>
+<li><p><strong>steps</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Step numbers</p></li>
+<li><p><strong>energies</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Energy values at each step</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="mlff_attack.visualization.plot_forces">
 <span class="sig-prename descclassname"><span class="pre">mlff_attack.visualization.</span></span><span class="sig-name descname"><span class="pre">plot_forces</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_forces</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/visualization.html#plot_forces"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.visualization.plot_forces" title="Link to this definition">¶</a></dt>
 <dd><p>Plot force convergence.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em>) – Matplotlib axes object to plot on</p></li>
+<li><p><strong>steps</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Step numbers</p></li>
+<li><p><strong>max_forces</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Maximum force values at each step</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="mlff_attack.visualization.plot_noise">
 <span class="sig-prename descclassname"><span class="pre">mlff_attack.visualization.</span></span><span class="sig-name descname"><span class="pre">plot_noise</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">freq</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">spectrum</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/visualization.html#plot_noise"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.visualization.plot_noise" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Plot noise spectrum of maximum forces.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em>) – Matplotlib axes object to plot on</p></li>
+<li><p><strong>freq</strong> (<em>np.ndarray</em>) – Frequency array</p></li>
+<li><p><strong>spectrum</strong> (<em>np.ndarray</em>) – Power spectrum values</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="mlff_attack.visualization.plot_summary">
 <span class="sig-prename descclassname"><span class="pre">mlff_attack.visualization.</span></span><span class="sig-name descname"><span class="pre">plot_summary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stats</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_frames</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/visualization.html#plot_summary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.visualization.plot_summary" title="Link to this definition">¶</a></dt>
 <dd><p>Plot summary statistics.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em>) – Matplotlib axes object to plot on</p></li>
+<li><p><strong>stats</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a>) – Dictionary of statistics from calculate_statistics</p></li>
+<li><p><strong>n_frames</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Number of frames in trajectory</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Formatted summary text</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="mlff_attack.visualization.plot_volume">
 <span class="sig-prename descclassname"><span class="pre">mlff_attack.visualization.</span></span><span class="sig-name descname"><span class="pre">plot_volume</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ax</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">volumes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/mlff_attack/visualization.html#plot_volume"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#mlff_attack.visualization.plot_volume" title="Link to this definition">¶</a></dt>
 <dd><p>Plot volume evolution.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ax</strong> (<em>matplotlib.axes.Axes</em>) – Matplotlib axes object to plot on</p></li>
+<li><p><strong>steps</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – Step numbers</p></li>
+<li><p><strong>volumes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em> of </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>) – Volume values at each step</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 </section>
