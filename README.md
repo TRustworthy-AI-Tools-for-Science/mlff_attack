@@ -5,9 +5,16 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-sphinx-blue.svg)](https://trustworthy-ai-tools-for-science.github.io/mlff_attack/)
 
-
-
 Attacks against MLFF Models - A Python package for testing and analyzing Machine Learning Force Fields models through adversarial attacks.
+
+### Attacks Implemented
+
+| Attack Name | Paper | 
+| --- | --- |
+| Fast Gradient Sign Method (FGSM) | [link](https://arxiv.org/abs/1412.6572) |
+| Iterative Fast Gradient Sign Method (I-FGSM) | [link](https://arxiv.org/abs/1607.02533) | 
+| Projected Gradient Method (PGD) | [link](https://arxiv.org/abs/1706.06083) |
+
 
 ## Installation
 
@@ -90,6 +97,9 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 ```bash
 # Perform an FGSM attack
 make-attack --type fgsm --input structure.cif --model mace-model.model --outdir perturbed_structure.cif --epsilon 0.1
+
+# Perform an I-FGSM attack
+make-attack --type fgsm --input structure.cif --model mace-model.model --outdir perturbed_structure.cif --epsilon 0.1 --n-steps 10
 
 # Perform a PGD attack with 10 steps
 make-attack --type pgd --input structure.cif --model mace-model.model --outdir perturbed_structure.cif --epsilon 0.1 --n-steps 10

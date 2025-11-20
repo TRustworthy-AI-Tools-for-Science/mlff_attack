@@ -57,7 +57,7 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64"):
 
 
         if isinstance(model_path, mace.calculators.mace.MACECalculator):
-            print("model is already a MACECalculator")
+            print("[INFO] Model is already a MACECalculator")
             atoms.calc = model_path
         else:
             if dtype_str == "float32":
