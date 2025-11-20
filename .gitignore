@@ -210,3 +210,4 @@ __marimo__/
 tests/data
 pytest.ini
 *.traj
+*.cif
