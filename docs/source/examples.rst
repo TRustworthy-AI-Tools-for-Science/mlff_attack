@@ -17,7 +17,7 @@ The simplest way to perform an FGSM attack using the high-level API:
    atoms = read('structure.cif')
    
    # Perform FGSM attack
-   output_path, perturbed_atoms = make_attack(
+   output_path, perturbed_atoms, attack_details = make_attack(
        model_path='mace-mpa-0-medium.model',
        device='cuda',
        atoms=atoms,
@@ -41,17 +41,17 @@ For iterative attacks with stronger perturbations:
    
    atoms = read('structure.cif')
    
-   # Perform PGD attack with 10 iterations
-   output_path, perturbed_atoms = make_attack(
+   # Perform iterative FGSM attack (I-FGSM) with 10 iterations
+   output_path, perturbed_atoms, attack_details = make_attack(
        model_path='mace-mpa-0-medium.model',
        device='cuda',
        atoms=atoms,
        epsilon=0.05,
        target_energy=None,
-       output_cif='perturbed_pgd.cif',
-       attack_type='pgd',
+       output_cif='perturbed_ifgsm.cif',
+       attack_type='fgsm',
        n_steps=10,
-       clip=True
+       clip=False
    )
 
 Using the Class-Based API
@@ -63,7 +63,6 @@ For more control over the attack process:
 
    from ase.io import read
    from mlff_attack.grad_based.fgsm import FGSM_MACE
-   from mlff_attack.grad_based.pgd import PGD_MACE
    from mlff_attack.relaxation import setup_calculator
    
    # Load structure and setup calculator
@@ -78,13 +77,12 @@ For more control over the attack process:
        track_history=True
    )
    
-   # Execute attack
-   perturbed_positions = fgsm_attack.attack(atoms, n_steps=1, clip=True)
-   atoms.set_positions(perturbed_positions)
+   # Execute attack (returns perturbed atoms object)
+   perturbed_atoms = fgsm_attack.attack(atoms, n_steps=1, clip=True)
    
    # Access attack history
-   print("Energy change:", fgsm_attack.history['energy'][-1])
-   print("Max perturbation:", fgsm_attack.history['max_perturbation'][-1])
+   print("Energies:", fgsm_attack.attack_history['energies'])
+   print("Max forces:", fgsm_attack.attack_history['max_forces'])
 
 Targeted Energy Attack
 ----------------------
@@ -95,24 +93,25 @@ Perform an attack aiming for a specific energy value:
 
    from ase.io import read
    from mlff_attack.attacks import make_attack
+   from mlff_attack.relaxation import setup_calculator
    
    atoms = read('structure.cif')
    
    # Get initial energy
    atoms = setup_calculator(atoms, 'mace-mpa-0-medium.model', device='cuda')
    initial_energy = atoms.get_potential_energy()
-   target_energy = initial_energy + 10.0  # Target 10 eV higher
+   target_energy = initial_energy + 1.0  # Target 1 eV higher
    
    # Perform targeted attack
-   output_path, perturbed_atoms = make_attack(
+   output_path, perturbed_atoms, attack_details = make_attack(
        model_path='mace-mpa-0-medium.model',
        device='cuda',
        atoms=atoms,
-       epsilon=0.1,
+       epsilon=0.01,
        target_energy=target_energy,
        output_cif='targeted_attack.cif',
-       attack_type='pgd',
-       n_steps=20
+       attack_type='fgsm',
+       n_steps=100
    )
 
 Tracking Attack Progress
@@ -123,7 +122,7 @@ Monitor the attack progress with detailed history tracking:
 .. code-block:: python
 
    from ase.io import read
-   from mlff_attack.grad_based.pgd import PGD_MACE
+   from mlff_attack.grad_based.fgsm import FGSM_MACE
    from mlff_attack.relaxation import setup_calculator
    import matplotlib.pyplot as plt
    
@@ -131,26 +130,26 @@ Monitor the attack progress with detailed history tracking:
    atoms = setup_calculator(atoms, 'mace-mpa-0-medium.model', device='cuda')
    
    # Create attack with history tracking
-   attack = PGD_MACE(
+   attack = FGSM_MACE(
        model=atoms.calc,
        epsilon=0.05,
        device='cuda',
        track_history=True
    )
    
-   # Execute attack
-   perturbed_positions = attack.attack(atoms, n_steps=20, clip=True)
+   # Execute iterative attack
+   perturbed_atoms = attack.attack(atoms, n_steps=20, clip=False)
    
    # Get attack summary
    summary = attack.get_attack_summary()
    print(f"Initial Energy: {summary['initial_energy']:.3f} eV")
    print(f"Final Energy: {summary['final_energy']:.3f} eV")
    print(f"Energy Change: {summary['energy_change']:.3f} eV")
-   print(f"Max Perturbation: {summary['max_perturbation']:.3f} Å")
+   print(f"Max Displacement: {summary['max_displacement']:.3f} Å")
    
    # Plot energy evolution
    plt.figure(figsize=(10, 6))
-   plt.plot(attack.history['energy'])
+   plt.plot(attack.attack_history['energies'])
    plt.xlabel('Attack Step')
    plt.ylabel('Energy (eV)')
    plt.title('Energy Evolution During Attack')
@@ -168,7 +167,7 @@ Visualize the perturbations applied to the structure:
    
    # Perform attack
    atoms = read('structure.cif')
-   output_path, perturbed_atoms = make_attack(
+   output_path, perturbed_atoms, attack_details = make_attack(
        model_path='mace-mpa-0-medium.model',
        device='cuda',
        atoms=atoms,
@@ -178,10 +177,11 @@ Visualize the perturbations applied to the structure:
    )
    
    # Visualize the perturbation
-   visualize_perturbation(
-       original_atoms=atoms,
-       perturbed_atoms=perturbed_atoms,
-       output_file='perturbation_viz.png'
+   fig = visualize_perturbation(
+       atoms_before=atoms,
+       atoms_after=perturbed_atoms,
+       epsilon=0.1,
+       outdir='./'
    )
 
 Saving and Loading Perturbations
@@ -196,7 +196,7 @@ Save perturbations for later analysis or reuse:
    
    # Perform attack
    atoms = read('structure.cif')
-   output_path, perturbed_atoms = make_attack(
+   output_path, perturbed_atoms, attack_details = make_attack(
        model_path='mace-mpa-0-medium.model',
        device='cuda',
        atoms=atoms,
@@ -205,14 +205,21 @@ Save perturbations for later analysis or reuse:
        output_cif='perturbed.cif'
    )
    
-   # Calculate and save perturbation
-   perturbation = perturbed_atoms.get_positions() - atoms.get_positions()
-   save_perturbation(perturbation, 'perturbation.npy')
+   # Save perturbation with full metadata
+   save_perturbation(
+       atoms_original=atoms,
+       atoms_perturbed=perturbed_atoms,
+       epsilon=0.1,
+       energy_original=atoms.get_potential_energy(),
+       energy_perturbed=perturbed_atoms.get_potential_energy(),
+       gradients=attack_details['gradients'][-1],
+       save_path='perturbation_data.npz'
+   )
    
-   # Later, load and apply perturbation
-   loaded_perturbation = load_perturbation('perturbation.npy')
-   new_atoms = read('another_structure.cif')
-   new_atoms.set_positions(new_atoms.get_positions() + loaded_perturbation)
+   # Later, load perturbation data
+   loaded_data = load_perturbation('perturbation_data.npz')
+   print(f"Energy change: {loaded_data['energy_change']:.4f} eV")
+   print(f"Displacement: {loaded_data['displacement']}")
 
 Complete Workflow Example
 --------------------------
@@ -230,7 +237,7 @@ A complete workflow from attack to relaxation analysis:
    original_atoms = read('structure.cif')
    
    # 2. Perform adversarial attack
-   output_cif, perturbed_atoms = make_attack(
+   output_cif, perturbed_atoms, attack_details = make_attack(
        model_path='mace-mpa-0-medium.model',
        device='cuda',
        atoms=original_atoms,
@@ -299,7 +306,7 @@ Process multiple structures in a batch:
        print(f"Processing {cif_file.name}...")
        
        atoms = read(cif_file)
-       output_path, perturbed_atoms = make_attack(
+       output_path, perturbed_atoms, attack_details = make_attack(
            model_path='mace-mpa-0-medium.model',
            device='cuda',
            atoms=atoms,
