@@ -8,7 +8,6 @@ extending the base MLFFAttack class.
 from typing import Optional, Callable, Any
 import numpy as np
 import torch
-import copy
 from datetime import datetime
 from tqdm import trange
 from .mlff_attack_class import MLFFAttack
@@ -41,7 +40,8 @@ class FGSM_MACE(MLFFAttack):
         track_history: bool = True,
         target_energy: Optional[float] = None
     ):
-        """Initialize FGSM attack for MACE models.
+        """Initialize FGSM ,
+        clip_radius: Optional[float] = Noneattack for MACE models.
         
         Parameters
         ----------
@@ -250,7 +250,7 @@ class FGSM_MACE(MLFFAttack):
         perturbed_positions = current_positions + perturbation
         
         # Create new atoms with perturbed positions
-        perturbed_atoms = copy.deepcopy(atoms)
+        perturbed_atoms = atoms.copy()
         perturbed_atoms.set_positions(perturbed_positions)
         
         # Ensure calculator is attached
@@ -301,9 +301,21 @@ class FGSM_MACE(MLFFAttack):
             self._original_positions = atoms.get_positions().copy()
         
         # Execute attack
-        perturbed_atoms = copy.deepcopy(atoms)
-        for step in trange(n_steps, desc="Iterating Attack"):
+        perturbed_atoms = atoms.copy()
+        perturbed_atoms.calc = atoms.calc  # Ensure calculator is attached
+        for step in trange(n_steps):
             perturbed_atoms = self.attack_step(perturbed_atoms, step)
+            
+            # Check if target energy is reached
+            if self.target_energy is not None:
+                try:
+                    current_energy = perturbed_atoms.get_potential_energy()
+                    energy_diff = abs(current_energy - self.target_energy)
+                    if energy_diff < 0.01:  # Within 0.01 eV of target
+                        print(f"Target energy reached at step {step+1}: {current_energy:.4f} eV (target: {self.target_energy:.4f} eV)")
+                        break
+                except Exception:
+                    pass
 
         self._perturbed_positions = perturbed_atoms.get_positions().copy()
         
