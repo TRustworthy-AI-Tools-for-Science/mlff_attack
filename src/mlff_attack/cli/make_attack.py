@@ -121,7 +121,7 @@ def main():
 
     # Generate perturbed structure
     print(f"\nGenerating perturbed structure with epsilon={epsilon} Å")
-    output_file, perturbed_atoms = make_attack(
+    output_file, perturbed_atoms, attack_details = make_attack(
         atoms=atoms,
         model_path=model_path,
         device=device,

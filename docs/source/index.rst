@@ -53,7 +53,7 @@ Performing an FGSM attack:
    atoms = read('structure.cif')
    
    # Perform attack
-   output_path, perturbed_atoms = make_attack(
+   output_path, perturbed_atoms, attack_details = make_attack(
        model_path='mace-model.model',
        device='cuda',
        atoms=atoms,
