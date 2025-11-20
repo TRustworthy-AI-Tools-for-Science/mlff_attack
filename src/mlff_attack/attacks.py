@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from ase.io import read, write
 from mlff_attack.relaxation import setup_calculator
 
-def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm"):
+def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, clip=False):
     """Perform an adversarial attack on the given atomic structure using a MACE model.
     
     This is a convenience wrapper around the FGSM_MACE class.
@@ -34,6 +34,10 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
         Path to save the perturbed CIF file
     attack_type : str, optional
         Type of attack to perform, by default "fgsm"
+    n_steps : int, optional
+        Number of steps for iterative attacks (only used for I-FGSM/PGD), by default 1
+    clip : bool, optional
+        Whether to clip the perturbations, by default False
         
     Returns
     -------
@@ -41,6 +45,8 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
         Path to the saved perturbed CIF file
     ase.Atoms
         Atoms object after attack
+    attack.attack_history : dict
+        Contains details and history of the attack
     """
     from mlff_attack.grad_based.fgsm import FGSM_MACE
 
@@ -69,13 +75,13 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
             epsilon=epsilon,
             device=device,
             track_history=True,
-            target_energy=target_energy
+            target_energy=target_energy,
     )
     else:
         raise NotImplementedError(f"Attack type '{attack_type}' not implemented yet.")
     
     # Execute attack (single step for FGSM)
-    perturbed_atoms = attack.attack(atoms, n_steps=1, clip=True)
+    perturbed_atoms = attack.attack(atoms, n_steps=n_steps, clip=clip)
     
     # Get perturbed energy
     pert_energy = perturbed_atoms.get_potential_energy()
@@ -95,163 +101,163 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
     write(output_cif, perturbed_atoms)
     print(f"   Successfully saved!")
 
-    return str(output_cif), perturbed_atoms
+    return str(output_cif), perturbed_atoms, attack.attack_history
 
 
-def forward_pass_with_gradients(atoms, device="cpu"):
-    """Perform a forward pass through the MACE model with gradient tracking.
+# def forward_pass_with_gradients(atoms, device="cpu"):
+#     """Perform a forward pass through the MACE model with gradient tracking.
     
-    .. deprecated::
-        Use FGSM_MACE class instead. This function is kept for backward compatibility.
+#     .. deprecated::
+#         Use FGSM_MACE class instead. This function is kept for backward compatibility.
     
-    This uses the calculator's internal method to prepare the batch,
-    then replaces positions with a gradient-enabled version.
+#     This uses the calculator's internal method to prepare the batch,
+#     then replaces positions with a gradient-enabled version.
     
-    Parameters
-    ----------
-    atoms : ase.Atoms
-        ASE Atoms object with MACE calculator attached
-    device : str, optional
-        Device to run on ("cpu" or "cuda"), by default "cpu"
+#     Parameters
+#     ----------
+#     atoms : ase.Atoms
+#         ASE Atoms object with MACE calculator attached
+#     device : str, optional
+#         Device to run on ("cpu" or "cuda"), by default "cpu"
     
-    Returns
-    -------
-    tuple
-        A tuple containing:
+#     Returns
+#     -------
+#     tuple
+#         A tuple containing:
         
-        - energy : torch.Tensor
-            Total energy (scalar, requires_grad=True)
-        - forces : torch.Tensor
-            Forces on atoms (shape [n_atoms, 3], with gradients)
-        - positions : torch.Tensor
-            Position tensor (requires_grad=True)
-    """
-    calc = atoms.calc
-    model = calc.models[0]
+#         - energy : torch.Tensor
+#             Total energy (scalar, requires_grad=True)
+#         - forces : torch.Tensor
+#             Forces on atoms (shape [n_atoms, 3], with gradients)
+#         - positions : torch.Tensor
+#             Position tensor (requires_grad=True)
+#     """
+#     calc = atoms.calc
+#     model = calc.models[0]
     
-    # Save original positions
-    positions_np = atoms.get_positions()
+#     # Save original positions
+#     positions_np = atoms.get_positions()
     
-    # Use the calculator's internal method to prepare the batch
-    # Call the calculator to get the batch structure, then modify positions
-    from mace.data import AtomicData, config_from_atoms
+#     # Use the calculator's internal method to prepare the batch
+#     # Call the calculator to get the batch structure, then modify positions
+#     from mace.data import AtomicData, config_from_atoms
     
-    # Create configuration from atoms
-    config = config_from_atoms(atoms)
+#     # Create configuration from atoms
+#     config = config_from_atoms(atoms)
     
-    # Create AtomicData with the calculator's settings
-    atomic_data = AtomicData.from_config(
-        config, z_table=calc.z_table, cutoff=calc.r_max
-    )
+#     # Create AtomicData with the calculator's settings
+#     atomic_data = AtomicData.from_config(
+#         config, z_table=calc.z_table, cutoff=calc.r_max
+#     )
     
-    # Convert to dict
-    batch = atomic_data.to_dict()
+#     # Convert to dict
+#     batch = atomic_data.to_dict()
     
-    # Move everything to the right device first
-    for key in batch:
-        if torch.is_tensor(batch[key]):
-            batch[key] = batch[key].to(device)
+#     # Move everything to the right device first
+#     for key in batch:
+#         if torch.is_tensor(batch[key]):
+#             batch[key] = batch[key].to(device)
     
-    # Add batch indexing if not present (on correct device)
-    if "batch" not in batch:
-        batch["batch"] = torch.zeros(len(atoms), dtype=torch.long, device=device)
-    if "ptr" not in batch:
-        batch["ptr"] = torch.tensor([0, len(atoms)], dtype=torch.long, device=device)
+#     # Add batch indexing if not present (on correct device)
+#     if "batch" not in batch:
+#         batch["batch"] = torch.zeros(len(atoms), dtype=torch.long, device=device)
+#     if "ptr" not in batch:
+#         batch["ptr"] = torch.tensor([0, len(atoms)], dtype=torch.long, device=device)
     
-    # Now replace positions with gradient-enabled version
-    positions = torch.tensor(positions_np, dtype=torch.float64, device=device, requires_grad=True)
-    batch["positions"] = positions
+#     # Now replace positions with gradient-enabled version
+#     positions = torch.tensor(positions_np, dtype=torch.float64, device=device, requires_grad=True)
+#     batch["positions"] = positions
     
-    # Check and fix natoms if present
-    if "natoms" in batch:
-        natoms_val = batch["natoms"]
-        # Ensure it's 1D with 2 elements
-        if natoms_val.dim() == 0:
-            batch["natoms"] = torch.tensor([len(atoms), len(atoms)], dtype=torch.long, device=device)
-        elif natoms_val.dim() == 1 and len(natoms_val) < 2:
-            batch["natoms"] = torch.tensor([len(atoms), len(atoms)], dtype=torch.long, device=device)
-    else:
-        batch["natoms"] = torch.tensor([len(atoms), len(atoms)], dtype=torch.long, device=device)
+#     # Check and fix natoms if present
+#     if "natoms" in batch:
+#         natoms_val = batch["natoms"]
+#         # Ensure it's 1D with 2 elements
+#         if natoms_val.dim() == 0:
+#             batch["natoms"] = torch.tensor([len(atoms), len(atoms)], dtype=torch.long, device=device)
+#         elif natoms_val.dim() == 1 and len(natoms_val) < 2:
+#             batch["natoms"] = torch.tensor([len(atoms), len(atoms)], dtype=torch.long, device=device)
+#     else:
+#         batch["natoms"] = torch.tensor([len(atoms), len(atoms)], dtype=torch.long, device=device)
     
-    # Add head field if present in calculator (for multi-head models)
-    if hasattr(calc, 'head') and calc.head is not None:
-        # Map head name to index
-        if hasattr(calc, 'heads') and calc.heads is not None:
-            head_idx = calc.heads.index(calc.head) if calc.head in calc.heads else 0
-        else:
-            head_idx = 0
-        # Head should be an array with one value per atom in the batch
-        batch["head"] = torch.full((len(atoms),), head_idx, dtype=torch.long, device=device)
-    elif "head" not in batch:
-        # Default head is 0
-        batch["head"] = torch.zeros(len(atoms), dtype=torch.long, device=device)
+#     # Add head field if present in calculator (for multi-head models)
+#     if hasattr(calc, 'head') and calc.head is not None:
+#         # Map head name to index
+#         if hasattr(calc, 'heads') and calc.heads is not None:
+#             head_idx = calc.heads.index(calc.head) if calc.head in calc.heads else 0
+#         else:
+#             head_idx = 0
+#         # Head should be an array with one value per atom in the batch
+#         batch["head"] = torch.full((len(atoms),), head_idx, dtype=torch.long, device=device)
+#     elif "head" not in batch:
+#         # Default head is 0
+#         batch["head"] = torch.zeros(len(atoms), dtype=torch.long, device=device)
     
-    # Forward pass - disable computing forces in the model output
-    model.eval()
+#     # Forward pass - disable computing forces in the model output
+#     model.eval()
     
-    # We need to recompute with fresh gradients
-    # Don't use model's internal force computation
-    with torch.enable_grad():
-        # Ensure positions require grad
-        positions.requires_grad_(True)
+#     # We need to recompute with fresh gradients
+#     # Don't use model's internal force computation
+#     with torch.enable_grad():
+#         # Ensure positions require grad
+#         positions.requires_grad_(True)
         
-        # Update batch with fresh positions
-        batch["positions"] = positions
+#         # Update batch with fresh positions
+#         batch["positions"] = positions
         
-        # Forward pass through model
-        output = model(batch, training=False, compute_force=False)
+#         # Forward pass through model
+#         output = model(batch, training=False, compute_force=False)
         
-        # Extract energy
-        energy = output["energy"]
-        # Ensure energy is a scalar for gradient computation
-        if energy.dim() > 0:
-            energy = energy.sum()
+#         # Extract energy
+#         energy = output["energy"]
+#         # Ensure energy is a scalar for gradient computation
+#         if energy.dim() > 0:
+#             energy = energy.sum()
         
-        # Compute forces as negative gradient
-        forces = -torch.autograd.grad(
-            outputs=energy,
-            inputs=positions,
-            retain_graph=True,
-            create_graph=False
-        )[0]
+#         # Compute forces as negative gradient
+#         forces = -torch.autograd.grad(
+#             outputs=energy,
+#             inputs=positions,
+#             retain_graph=True,
+#             create_graph=False
+#         )[0]
     
-    return energy, forces, positions
+#     return energy, forces, positions
 
 
-def backprop_step(energy, positions, loss_fn=None):
-    """Perform backpropagation to compute gradients.
+# def backprop_step(energy, positions, loss_fn=None):
+#     """Perform backpropagation to compute gradients.
     
-    .. deprecated::
-        Use FGSM_MACE.compute_gradient() instead. This function is kept for backward compatibility.
+#     .. deprecated::
+#         Use FGSM_MACE.compute_gradient() instead. This function is kept for backward compatibility.
     
-    Parameters
-    ----------
-    energy : torch.Tensor
-        Energy tensor from forward pass (requires_grad=True)
-    positions : torch.Tensor
-        Position tensor from forward pass (requires_grad=True)
-    loss_fn : Callable, optional
-        Optional loss function to apply to energy before backprop.
-        If None, backprop directly on energy, by default None
+#     Parameters
+#     ----------
+#     energy : torch.Tensor
+#         Energy tensor from forward pass (requires_grad=True)
+#     positions : torch.Tensor
+#         Position tensor from forward pass (requires_grad=True)
+#     loss_fn : Callable, optional
+#         Optional loss function to apply to energy before backprop.
+#         If None, backprop directly on energy, by default None
     
-    Returns
-    -------
-    torch.Tensor
-        Gradient of loss w.r.t. positions (dL/dr)
-    """
-    # Apply loss function if provided
-    if loss_fn is not None:
-        loss = loss_fn(energy)
-    else:
-        loss = energy
+#     Returns
+#     -------
+#     torch.Tensor
+#         Gradient of loss w.r.t. positions (dL/dr)
+#     """
+#     # Apply loss function if provided
+#     if loss_fn is not None:
+#         loss = loss_fn(energy)
+#     else:
+#         loss = energy
     
-    # Perform backpropagation
-    loss.backward(retain_graph=True)
+#     # Perform backpropagation
+#     loss.backward(retain_graph=True)
     
-    # Get gradients w.r.t. positions
-    grad_positions = positions.grad
+#     # Get gradients w.r.t. positions
+#     grad_positions = positions.grad
     
-    return grad_positions
+#     return grad_positions
 
 
 def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original, 
@@ -316,7 +322,7 @@ def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original,
     
     # Save to npz file
     np.savez_compressed(save_path, **data)
-    print(f"Saved perturbation data to {save_path}")
+    print(f"Saved perturbation data to {save_path}.npz")
     
     return save_path
 
@@ -410,69 +416,69 @@ def load_perturbation(load_path):
     return result
 
 
-def adversarial_attack_step(atoms, device="cpu", epsilon=0.01, target_energy=None):
-    """Perform one step of adversarial attack on atomic positions.
+# def adversarial_attack_step(atoms, device="cpu", epsilon=0.01, target_energy=None):
+#     """Perform one step of adversarial attack on atomic positions.
     
-    .. deprecated::
-        Use FGSM_MACE.attack_step() instead. This function is kept for backward compatibility.
+#     .. deprecated::
+#         Use FGSM_MACE.attack_step() instead. This function is kept for backward compatibility.
     
-    Parameters
-    ----------
-    atoms : ase.Atoms
-        ASE Atoms object with MACE calculator attached
-    device : str, optional
-        Device to run on, by default "cpu"
-    epsilon : float, optional
-        Step size for perturbation, by default 0.01
-    target_energy : float or None, optional
-        Optional target energy for attack. If None, maximize energy, by default None
+#     Parameters
+#     ----------
+#     atoms : ase.Atoms
+#         ASE Atoms object with MACE calculator attached
+#     device : str, optional
+#         Device to run on, by default "cpu"
+#     epsilon : float, optional
+#         Step size for perturbation, by default 0.01
+#     target_energy : float or None, optional
+#         Optional target energy for attack. If None, maximize energy, by default None
     
-    Returns
-    -------
-    tuple
-        A tuple containing:
+#     Returns
+#     -------
+#     tuple
+#         A tuple containing:
         
-        - perturbed_atoms : ase.Atoms
-            Atoms with perturbed positions
-        - energy : float
-            Original energy
-        - perturbed_energy : float
-            Energy after perturbation
-        - grad_positions : torch.Tensor
-            Gradients used for perturbation
-    """
-    # Forward pass with gradients
-    energy, forces, positions = forward_pass_with_gradients(atoms, device=device)
+#         - perturbed_atoms : ase.Atoms
+#             Atoms with perturbed positions
+#         - energy : float
+#             Original energy
+#         - perturbed_energy : float
+#             Energy after perturbation
+#         - grad_positions : torch.Tensor
+#             Gradients used for perturbation
+#     """
+#     # Forward pass with gradients
+#     energy, forces, positions = forward_pass_with_gradients(atoms, device=device)
     
-    # Define loss (maximize or target energy)
-    if target_energy is not None:
-        # Try to reach target energy
-        loss = (energy - target_energy) ** 2
-    else:
-        # Maximize energy (for adversarial attack)
-        loss = -energy
+#     # Define loss (maximize or target energy)
+#     if target_energy is not None:
+#         # Try to reach target energy
+#         loss = (energy - target_energy) ** 2
+#     else:
+#         # Maximize energy (for adversarial attack)
+#         loss = -energy
     
-    # Backprop to get gradients w.r.t. positions
-    loss.backward()
-    grad_positions = positions.grad
+#     # Backprop to get gradients w.r.t. positions
+#     loss.backward()
+#     grad_positions = positions.grad
     
-    # Compute perturbation (gradient ascent to maximize energy)
-    perturbation = epsilon * torch.sign(grad_positions)
+#     # Compute perturbation (gradient ascent to maximize energy)
+#     perturbation = epsilon * torch.sign(grad_positions)
     
-    # Apply perturbation
-    perturbed_positions = positions.detach() + perturbation
+#     # Apply perturbation
+#     perturbed_positions = positions.detach() + perturbation
     
-    # Create new atoms with perturbed positions
-    perturbed_atoms = atoms.copy()
-    perturbed_atoms.set_positions(perturbed_positions.cpu().numpy())
+#     # Create new atoms with perturbed positions
+#     perturbed_atoms = atoms.copy()
+#     perturbed_atoms.set_positions(perturbed_positions.cpu().numpy())
     
-    # Set calculator on perturbed atoms
-    perturbed_atoms.calc = atoms.calc
+#     # Set calculator on perturbed atoms
+#     perturbed_atoms.calc = atoms.calc
     
-    # Compute energy of perturbed structure
-    perturbed_energy_np = perturbed_atoms.get_potential_energy()
+#     # Compute energy of perturbed structure
+#     perturbed_energy_np = perturbed_atoms.get_potential_energy()
     
-    return perturbed_atoms, energy.item(), perturbed_energy_np, grad_positions.detach()
+#     return perturbed_atoms, energy.item(), perturbed_energy_np, grad_positions.detach()
 
 
 def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None):
