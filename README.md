@@ -135,3 +135,15 @@ visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
 ## License
 
 See LICENSE file for details.
+
+## Citation
+If you use this library in your research, please consider citing:
+
+```bibtex
+@software{mlff_attack,
+  title = {MLFF Attack: A library for attacking MLFF models},
+  author = {Ashley S. Dale AND Hao Wan},
+  url = {https://github.com/Trustworthy-AI-Tools-for-Science/mlff_attack},
+  year = {2025}
+}
+```

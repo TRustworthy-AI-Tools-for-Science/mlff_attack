@@ -23,7 +23,6 @@ Key Features
 
 * **FGSM (Fast Gradient Sign Method)**: Single-step adversarial perturbations
 * **PGD (Projected Gradient Descent)**: Iterative attack with bounded perturbations
-* **Gradient-based attacks**: Compute gradients with respect to atomic positions
 * **Attack history tracking**: Monitor energy changes, forces, and perturbations during attacks
 * **Structure analysis**: Visualize perturbation effects on atomic structures
 * **Trajectory visualization**: Analyze relaxation convergence and energy landscapes
@@ -37,7 +36,7 @@ From source (development mode):
 
    git clone https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack.git
    cd mlff_attack
-   pip install -e .
+   pip install -e ."[dev]"
 
 Quick Start
 -----------
@@ -93,6 +92,7 @@ Contents
 .. toctree::
    :maxdepth: 2
 
+   attacks
    examples
    modules
 
