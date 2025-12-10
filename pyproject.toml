@@ -7,7 +7,7 @@ name = "mlff_attack"
 version = "0.1.0"
 description = "Attacks against MLFF Models"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Trustworthy AI Tools for Science"}
@@ -30,6 +30,9 @@ dependencies = [
     "torch>=2.0.0",
     "matplotlib>=3.5.0",
     "numpy>=1.20.0",
+    "spglib",
+    "mp_api",
+    "seaborn"
 ]
 
 [project.optional-dependencies]
