@@ -303,19 +303,24 @@ class FGSM_MACE(MLFFAttack):
         # Execute attack
         perturbed_atoms = atoms.copy()
         perturbed_atoms.calc = atoms.calc  # Ensure calculator is attached
-        for step in trange(n_steps):
-            perturbed_atoms = self.attack_step(perturbed_atoms, step)
-            
-            # Check if target energy is reached
-            if self.target_energy is not None:
-                try:
-                    current_energy = perturbed_atoms.get_potential_energy()
-                    energy_diff = abs(current_energy - self.target_energy)
-                    if energy_diff < 0.01:  # Within 0.01 eV of target
-                        print(f"Target energy reached at step {step+1}: {current_energy:.4f} eV (target: {self.target_energy:.4f} eV)")
-                        break
-                except Exception:
-                    pass
+        if n_steps > 1:
+            print(f"Starting iterative FGSM attack for {n_steps} steps...")
+            for step in trange(n_steps):
+                perturbed_atoms = self.attack_step(perturbed_atoms, step)
+                
+                # Check if target energy is reached
+                if self.target_energy is not None:
+                    try:
+                        current_energy = perturbed_atoms.get_potential_energy()
+                        energy_diff = abs(current_energy - self.target_energy)
+                        if energy_diff < 0.01:  # Within 0.01 eV of target
+                            print(f"Target energy reached at step {step+1}: {current_energy:.4f} eV (target: {self.target_energy:.4f} eV)")
+                            break
+                    except Exception:
+                        pass
+
+        else:
+            perturbed_atoms = self.attack_step(perturbed_atoms, n_steps)
 
         self._perturbed_positions = perturbed_atoms.get_positions().copy()
         
