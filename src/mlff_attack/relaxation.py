@@ -34,7 +34,7 @@ def load_structure(input_path):
         return None
 
 
-def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64"):
+def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64", verbose=False):
     """Initialize and attach MACE calculator to atoms object.
     
     Parameters
@@ -47,6 +47,8 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64"):
         Device to use (cuda or cpu), by default "cuda"
     dtype_str : str, optional
         Data type for calculations ("float32" or "float64"), by default "float64"
+    verbose : bool, optional
+        Whether to print detailed information, by default False
         
     Returns
     -------
@@ -57,15 +59,18 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64"):
 
 
         if isinstance(model_path, mace.calculators.mace.MACECalculator):
-            print("[INFO] Model is already a MACECalculator")
+            if verbose:
+                print("[INFO] Model is already a MACECalculator")
             atoms.calc = model_path
         else:
+            # Patch to prevent atoms and models from having different datatypes
             if dtype_str == "float32":
                 dtype = torch.float32
             else:
                 dtype = "float64"
-            
-            print(f"[INFO] Loading MACE model: {model_path} on {device}")
+
+            if verbose:
+                print(f"[INFO] Loading MACE model: {model_path} on {device}")
             atoms.calc = mace_calculator.MACECalculator(
                 model_paths=model_path, 
                 device=device, 
@@ -97,7 +102,16 @@ def get_optimizer_class(optimizer_name):
     return optimizers.get(optimizer_name, LBFGS)
 
 
-def run_relaxation(atoms, traj_path, fmax=0.01, max_steps=300, optimizer="LBFGS"):
+def run_relaxation(
+    atoms, 
+    traj_path, 
+    fmax=0.01, 
+    max_steps=300, 
+    optimizer="LBFGS", 
+    verbose=True,
+    checkpoint_interval=None,
+    checkpoint_dir=None,
+    ):
     """Run structural relaxation.
     
     Parameters
@@ -112,6 +126,12 @@ def run_relaxation(atoms, traj_path, fmax=0.01, max_steps=300, optimizer="LBFGS"
         Maximum number of optimization steps, by default 300
     optimizer : str, optional
         Name of optimizer to use ("BFGS" or "LBFGS"), by default "LBFGS"
+    verbose : bool, optional
+        Whether to print detailed information, by default True
+    checkpoint_interval : int, optional
+        Save checkpoint every N steps. If None, no checkpoints are saved.
+    checkpoint_dir : str or Path, optional
+        Directory to save checkpoints. If None, uses same directory as traj_path.
         
     Returns
     -------
@@ -119,13 +139,45 @@ def run_relaxation(atoms, traj_path, fmax=0.01, max_steps=300, optimizer="LBFGS"
         True if relaxation completed successfully, False otherwise
     """
     try:
-        print(f"[INFO] Starting relaxation with {optimizer} optimizer")
-        print(f"[INFO] Convergence criterion: fmax = {fmax} eV/Å")
-        print(f"[INFO] Maximum steps: {max_steps}")
+        if verbose:
+            print(f"[INFO] Starting relaxation with {optimizer} optimizer")
+            print(f"[INFO] Convergence criterion: fmax = {fmax} eV/Å")
+            print(f"[INFO] Maximum steps: {max_steps}")
+        
+        # Setup checkpoint directory
+        if checkpoint_interval is not None:
+            if checkpoint_dir is None:
+                checkpoint_dir = Path(traj_path).parent / f"{Path(traj_path).stem}_ckpts"
+            else:
+                checkpoint_dir = Path(checkpoint_dir)
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+            if verbose:
+                print(f"[INFO] Checkpoints will be saved every {checkpoint_interval} steps to {checkpoint_dir}")
         
         opt_cls = get_optimizer_class(optimizer)
         opt = opt_cls(atoms, trajectory=str(traj_path), logfile=None)
-        opt.run(fmax=fmax, steps=max_steps)
+        
+        # Run relaxation with checkpointing
+        if checkpoint_interval is not None:
+            for step in range(0, max_steps, checkpoint_interval):
+                steps_to_run = min(checkpoint_interval, max_steps - step)
+                opt.run(fmax=fmax, steps=steps_to_run)
+                
+                # Save checkpoint
+                checkpoint_path = checkpoint_dir / f"checkpoint_step_{opt.nsteps}.cif"
+                write(checkpoint_path, atoms)
+                if verbose:
+                    forces = atoms.get_forces()
+                    max_force = max([sum(f**2)**0.5 for f in forces])
+                    print(f"[INFO] Checkpoint saved at step {opt.nsteps}, max force: {max_force:.6f} eV/Å")
+                
+                # Check if converged
+                final_forces = atoms.get_forces()
+                max_force = max([sum(f**2)**0.5 for f in final_forces])
+                if max_force < fmax:
+                    break
+        else:
+            opt.run(fmax=fmax, steps=max_steps)
         
         # Get final forces
         final_forces = atoms.get_forces()
@@ -133,8 +185,9 @@ def run_relaxation(atoms, traj_path, fmax=0.01, max_steps=300, optimizer="LBFGS"
         
         converged = max_force < fmax
         status = "CONVERGED" if converged else "NOT CONVERGED"
-        print(f"[INFO] Relaxation {status} after {opt.nsteps} steps")
-        print(f"[INFO] Final maximum force: {max_force:.6f} eV/Å")
+        if verbose:
+            print(f"[INFO] Relaxation {status} after {opt.nsteps} steps")
+            print(f"[INFO] Final maximum force: {max_force:.6f} eV/Å")
         
         return True
     except Exception as e:
@@ -143,6 +196,7 @@ def run_relaxation(atoms, traj_path, fmax=0.01, max_steps=300, optimizer="LBFGS"
 
 
 def save_results(atoms, output_dir, base_name="relaxed"):
+
     """Save relaxed structure to output files.
     
     Parameters
