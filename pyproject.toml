@@ -32,7 +32,9 @@ dependencies = [
     "numpy>=1.20.0",
     "spglib",
     "mp_api",
-    "seaborn"
+    "seaborn",
+    "ipywidgets",
+    "jupyterlab"
 ]
 
 [project.optional-dependencies]
