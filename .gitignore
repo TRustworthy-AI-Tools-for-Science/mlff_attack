@@ -211,3 +211,5 @@ tests/data
 pytest.ini
 *.traj
 *.cif
+output*/
+*.npz
