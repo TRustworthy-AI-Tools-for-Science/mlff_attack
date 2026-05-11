@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from ase.io import read, write
 from mlff_attack.relaxation import setup_calculator
 
-def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, clip=False):
+def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, clip=False, verbose=True):
     """Perform an adversarial attack on the given atomic structure using a MACE model.
     
     This is a convenience wrapper around the FGSM_MACE class.
@@ -51,9 +51,10 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
     from mlff_attack.grad_based.fgsm import FGSM_MACE
 
     # Setup calculator
-    print(f"\nSetting up MACE calculator")
-    print(f"   Model: {model_path}")
-    print(f"   Device: {device}")
+    if verbose:
+        print(f"\nSetting up MACE calculator")
+        print(f"   Model: {model_path}")
+        print(f"   Device: {device}")
     atoms = setup_calculator(atoms, model_path, device)
     if atoms is None:
         raise RuntimeError("Failed to set up calculator")
@@ -62,14 +63,15 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
     orig_energy = atoms.get_potential_energy()
     
     # Create FGSM attack
-    print(f"\nPerforming FGSM adversarial attack")
-    print(f"   Epsilon: {epsilon} Å")
-    if target_energy is not None:
-        print(f"   Target energy: {target_energy} eV")
-    else:
-        print(f"   Mode: Maximize energy")
+    if verbose:
+        print(f"\nPerforming FGSM adversarial attack")
+        print(f"   Epsilon: {epsilon} Å")
+        if target_energy is not None:
+            print(f"   Target energy: {target_energy} eV")
+        else:
+            print(f"   Mode: Maximize energy")
     
-    if attack_type == "fgsm":
+    if attack_type in ["fgsm", "ifgsm"]:
         attack = FGSM_MACE(
             model=atoms.calc,
             epsilon=epsilon,
@@ -91,26 +93,34 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
     else:
         raise NotImplementedError(f"Attack type '{attack_type}' not implemented yet.")
     
-    # Execute attack (single step for FGSM)
+    # Execute attack
     perturbed_atoms = attack.attack(atoms, n_steps=n_steps, clip=clip)
+
+    if perturbed_atoms is None:
+        raise RuntimeError("Attack failed, no perturbed structure returned")
+    if perturbed_atoms.get_positions().shape != atoms.get_positions().shape:
+        raise RuntimeError("Perturbed structure has incorrect shape")
     
     # Get perturbed energy
     pert_energy = perturbed_atoms.get_potential_energy()
     energy_change = pert_energy - orig_energy
-    
-    print(f"   Original energy:  {orig_energy:.4f} eV")
-    print(f"   Perturbed energy: {pert_energy:.4f} eV")
-    print(f"   Energy change:    {energy_change:+.4f} eV")
+    if verbose:
+        print(f"   Original energy:  {orig_energy:.4f} eV")
+        print(f"   Perturbed energy: {pert_energy:.4f} eV")
+        print(f"   Energy change:    {energy_change:+.4f} eV")
     
     # Calculate displacement statistics
     stats = attack.get_perturbation_stats()
-    print(f"   Mean displacement: {stats['mean_displacement']:.4f} Å")
-    print(f"   Max displacement:  {stats['max_displacement']:.4f} Å")
+    if verbose:
+        print(f"   Mean displacement: {stats['mean_displacement']:.4f} Å")
+        print(f"   Max displacement:  {stats['max_displacement']:.4f} Å")
     
     # Save perturbed structure
-    print(f"\nSaving perturbed structure to: {output_cif}")
+    if verbose:
+        print(f"\nSaving perturbed structure to: {output_cif}")
     write(output_cif, perturbed_atoms)
-    print(f"   Successfully saved!")
+    if verbose:
+        print(f"   Successfully saved!")
 
     return str(output_cif), perturbed_atoms, attack.attack_history
 
