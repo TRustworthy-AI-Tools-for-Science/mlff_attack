@@ -152,10 +152,10 @@ class MLFFAttack(ABC):
         
         # Clip per-atom displacement magnitude
         magnitudes = np.linalg.norm(perturbations, axis=1, keepdims=True)
-        mask = magnitudes > self.epsilon
-        
+        mask = magnitudes.squeeze() > self.epsilon # fix fgsm clipping for when multiple atoms exceed epsilon - DC
+
         if np.any(mask):
-            perturbations[mask.squeeze()] *= (self.epsilon / magnitudes[mask])
+            perturbations[mask] *= self.epsilon / magnitudes[mask] # fix fgsm clipping - DC
             atoms.set_positions(self._original_positions + perturbations)
     
     def save_perturbation(

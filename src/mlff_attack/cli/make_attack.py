@@ -85,10 +85,24 @@ def parse_args():
         "--type",
         type=str,
         default="fgsm",
-        choices=["fgsm", "pgd", "bim"],
+        choices=["fgsm", "pgd"], # Removed "bim" from choices because bim = i-fgsm with n_steps > 1 - DC
         help="Type of adversarial attack to perform"
     )
-    
+
+    # added --n-steps argument for parsing - DC
+    parser.add_argument(
+        "--n-steps",
+        type=int,
+        default=1,
+        help="Number of FGSM attack iterations",
+    )
+    # added --clip argument for parsing - DC
+    parser.add_argument(
+        "--clip",
+        action="store_true",
+        default=False,
+        help="Clip total perturbation displacements to epsilon",
+    )
     return parser.parse_args()
 
 
@@ -105,6 +119,8 @@ def main():
     epsilon = args.epsilon
     target_energy = args.target_energy
     attack_type = args.type
+    n_steps = args.n_steps
+    clip = args.clip
     
     # Determine output path
     if args.outdir is not None:
@@ -128,7 +144,9 @@ def main():
         epsilon=epsilon,
         target_energy=target_energy,
         output_cif=output_cif,
-        attack_type=attack_type
+        attack_type=attack_type,
+        n_steps=n_steps, # added n_steps=n_steps and clip=clip - DC
+        clip=clip
     )
 
     # Visualize perturbation

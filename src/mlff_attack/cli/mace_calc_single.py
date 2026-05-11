@@ -38,6 +38,7 @@ def main():
 
     # Setup calculator
     atoms = setup_calculator(atoms, args.model, args.device)
+    # store fmax - DC
     if atoms is None:
         print(f"[ERROR] Failed to setup calculator with model {args.model}.")
         return 1
