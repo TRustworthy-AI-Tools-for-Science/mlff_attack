@@ -4,6 +4,8 @@ MACE relaxation functionality.
 """
 
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 from ase.io import read, write
 from ase.optimize import BFGS, LBFGS
 from mace.calculators import mace as mace_calculator
@@ -25,12 +27,12 @@ def load_structure(input_path):
     """
     try:
         atoms = read(input_path)
-        print(f"[INFO] Loaded structure: {input_path}")
-        print(f"[INFO] Number of atoms: {len(atoms)}")
-        print(f"[INFO] Chemical formula: {atoms.get_chemical_formula()}")
+        logger.info(f"[INFO] Loaded structure: {input_path}")
+        logger.info(f"[INFO] Number of atoms: {len(atoms)}")
+        logger.info(f"[INFO] Chemical formula: {atoms.get_chemical_formula()}")
         return atoms
     except Exception as e:
-        print(f"[ERROR] Failed to load structure from {input_path}: {e}")
+        logger.info(f"[ERROR] Failed to load structure from {input_path}: {e}")
         return None
 
 
@@ -60,7 +62,7 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64", verb
 
         if isinstance(model_path, mace.calculators.mace.MACECalculator):
             if verbose:
-                print("[INFO] Model is already a MACECalculator")
+                logger.info("[INFO] Model is already a MACECalculator")
             atoms.calc = model_path
         else:
             # Patch to prevent atoms and models from having different datatypes
@@ -70,7 +72,7 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64", verb
                 dtype = "float64"
 
             if verbose:
-                print(f"[INFO] Loading MACE model: {model_path} on {device}")
+                logger.info(f"[INFO] Loading MACE model: {model_path} on {device}")
             atoms.calc = mace_calculator.MACECalculator(
                 model_paths=model_path, 
                 device=device, 
@@ -78,7 +80,7 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64", verb
             )
         return atoms
     except Exception as e:
-        print(f"[ERROR] Failed to setup MACE calculator: {e}")
+        logger.info(f"[ERROR] Failed to setup MACE calculator: {e}")
         return None
 
 
@@ -140,9 +142,9 @@ def run_relaxation(
     """
     try:
         atoms.info["fmax"] = fmax # store fmax for visualize-traj CHANGE THIS - DC
-        print(f"[INFO] Starting relaxation with {optimizer} optimizer") # CHANGE ALL PRINT TO LOGGER - DC
-        print(f"[INFO] Convergence criterion: fmax = {fmax} eV/Å")
-        print(f"[INFO] Maximum steps: {max_steps}")
+        logger.info(f"[INFO] Starting relaxation with {optimizer} optimizer") # CHANGE ALL PRINT TO LOGGER - DC
+        logger.info(f"[INFO] Convergence criterion: fmax = {fmax} eV/Å")
+        logger.info(f"[INFO] Maximum steps: {max_steps}")
         
         # Setup checkpoint directory
         if checkpoint_interval is not None:
@@ -152,7 +154,7 @@ def run_relaxation(
                 checkpoint_dir = Path(checkpoint_dir)
             checkpoint_dir.mkdir(parents=True, exist_ok=True)
             if verbose:
-                print(f"[INFO] Checkpoints will be saved every {checkpoint_interval} steps to {checkpoint_dir}")
+                logger.info(f"[INFO] Checkpoints will be saved every {checkpoint_interval} steps to {checkpoint_dir}")
         
         opt_cls = get_optimizer_class(optimizer)
         opt = opt_cls(atoms, trajectory=str(traj_path), logfile=None)
@@ -169,7 +171,7 @@ def run_relaxation(
                 if verbose:
                     forces = atoms.get_forces()
                     max_force = max([sum(f**2)**0.5 for f in forces])
-                    print(f"[INFO] Checkpoint saved at step {opt.nsteps}, max force: {max_force:.6f} eV/Å")
+                    logger.info(f"[INFO] Checkpoint saved at step {opt.nsteps}, max force: {max_force:.6f} eV/Å")
                 
                 # Check if converged
                 final_forces = atoms.get_forces()
@@ -186,12 +188,12 @@ def run_relaxation(
         converged = max_force < fmax
         status = "CONVERGED" if converged else "NOT CONVERGED"
         if verbose:
-            print(f"[INFO] Relaxation {status} after {opt.nsteps} steps")
-            print(f"[INFO] Final maximum force: {max_force:.6f} eV/Å")
+            logger.info(f"[INFO] Relaxation {status} after {opt.nsteps} steps")
+            logger.info(f"[INFO] Final maximum force: {max_force:.6f} eV/Å")
         
         return True
     except Exception as e:
-        print(f"[ERROR] Relaxation failed: {e}")
+        logger.info(f"[ERROR] Relaxation failed: {e}")
         return False
 
 
@@ -219,9 +221,9 @@ def save_results(atoms, output_dir, base_name="relaxed"):
         
         cif_path = output_dir / f"{base_name}.cif"
         write(cif_path, atoms)
-        print(f"[INFO] Saved relaxed structure to: {cif_path}")
+        logger.info(f"[INFO] Saved relaxed structure to: {cif_path}")
         
         return cif_path
     except Exception as e:
-        print(f"[ERROR] Failed to save results: {e}")
+        logger.info(f"[ERROR] Failed to save results: {e}")
         return None

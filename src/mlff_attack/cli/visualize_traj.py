@@ -5,6 +5,8 @@ CLI entry point for trajectory visualization.
 
 import argparse
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 from mlff_attack.visualization import (
     load_trajectory,
     create_visualization
@@ -12,6 +14,14 @@ from mlff_attack.visualization import (
 
 
 def main():
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    logging.basicConfig(
+        filename=log_dir / "visualize_traj.log",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
     """Main entry point for trajectory visualization."""
     parser = argparse.ArgumentParser(description="Visualize MACE relaxation trajectory.")
     parser.add_argument("--traj", required=True, help="Path to trajectory file (.traj)")
@@ -23,7 +33,7 @@ def main():
     # Load trajectory
     traj = load_trajectory(args.traj)
     if traj is None:
-        print(f"Error: Could not load trajectory from {args.traj}")
+        logger.error(f"Error: Could not load trajectory from {args.traj}")
         return 1
 
     # Create output directory
@@ -40,7 +50,7 @@ def main():
     )
     
     if output_file:
-        print(f"Visualization saved to {output_file}")
+        logger.info(f"Visualization saved to {output_file}")
         return 0
     else:
         return 1

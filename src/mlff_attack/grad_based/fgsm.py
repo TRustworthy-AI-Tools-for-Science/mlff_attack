@@ -5,6 +5,8 @@ This module implements the FGSM attack specifically for MACE models,
 extending the base MLFFAttack class.
 """
 
+import logging
+logger = logging.getLogger(__name__)
 from typing import Optional, Callable, Any
 import numpy as np
 import torch
@@ -306,7 +308,7 @@ class FGSM_MACE(MLFFAttack):
         perturbed_atoms = atoms.copy()
         perturbed_atoms.calc = atoms.calc  # Ensure calculator is attached
         if n_steps > 1:
-            print(f"Starting iterative FGSM attack for {n_steps} steps...")
+            logger.info(f"Starting iterative FGSM attack for {n_steps} steps...")
             for step in trange(n_steps):
                 perturbed_atoms = self.attack_step(perturbed_atoms, step) # add n_steps to attack_step parameters to scale epsilon - DC
                 if clip: # - DC
@@ -317,7 +319,7 @@ class FGSM_MACE(MLFFAttack):
                             current_energy = perturbed_atoms.get_potential_energy()
                             energy_diff = abs(current_energy - self.target_energy)
                             if energy_diff < 0.01:  # Within 0.01 eV of target
-                                print(f"Target energy reached at step {step+1}: {current_energy:.4f} eV (target: {self.target_energy:.4f} eV)")
+                                logger.info(f"Target energy reached at step {step+1}: {current_energy:.4f} eV (target: {self.target_energy:.4f} eV)")
                                 break
                         except Exception:
                             pass

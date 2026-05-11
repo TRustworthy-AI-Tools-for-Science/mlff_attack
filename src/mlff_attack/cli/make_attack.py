@@ -8,7 +8,8 @@ from pathlib import Path
 import torch
 import numpy as np
 import argparse
-
+import logging
+logger = logging.getLogger(__name__)
 
 import matplotlib.pyplot as plt
 from mlff_attack.relaxation import (
@@ -16,6 +17,7 @@ from mlff_attack.relaxation import (
     setup_calculator,
 )
 from mlff_attack.attacks import make_attack, visualize_perturbation
+
 
 def parse_args():
     """Parse command line arguments."""
@@ -108,6 +110,13 @@ def parse_args():
 
 
 def main():
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    logging.basicConfig(
+        filename=log_dir / "make_attack.log",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
 
     # Parse command line arguments
     args = parse_args()
@@ -129,14 +138,14 @@ def main():
         output_cif = Path(input_cif).with_name(Path(input_cif).stem + "_perturbed.cif")
 
     # Load structure
-    print(f"\nLoading structure from: {input_cif}")
+    logger.info(f"\nLoading structure from: {input_cif}")
     atoms = load_structure(input_cif)
     if atoms is None:
         raise RuntimeError(f"Failed to load structure from {input_cif}")
-    print(f"   Loaded {len(atoms)} atoms: {atoms.get_chemical_formula()}")
+    logger.info(f"   Loaded {len(atoms)} atoms: {atoms.get_chemical_formula()}")
 
     # Generate perturbed structure
-    print(f"\nGenerating perturbed structure with epsilon={epsilon} Å")
+    logger.info(f"\nGenerating perturbed structure with epsilon={epsilon} Å")
     output_file, perturbed_atoms, attack_details = make_attack(
         atoms=atoms,
         model_path=model_path,
@@ -151,7 +160,7 @@ def main():
 
     # Visualize perturbation
     if args.visualize:
-        print(f"\nVisualizing perturbation")
+        logger.info(f"\nVisualizing perturbation")
         # Store output filename in atoms info for visualization
         perturbed_atoms.info['filename'] = str(output_cif)
         fig = visualize_perturbation(atoms, perturbed_atoms, epsilon=epsilon, outdir=Path(output_cif).parent)

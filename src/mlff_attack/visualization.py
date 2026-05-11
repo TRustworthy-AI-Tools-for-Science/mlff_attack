@@ -4,6 +4,8 @@ Trajectory visualization functionality.
 """
 
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 import matplotlib.pyplot as plt
 from ase.io import read
 import numpy as np
@@ -24,16 +26,16 @@ def load_trajectory(traj_path):
     """
     traj_path = Path(traj_path)
     if not traj_path.exists():
-        print(f"[ERROR] Trajectory file not found: {traj_path}")
+        logger.info(f"[ERROR] Trajectory file not found: {traj_path}")
         return None
 
-    print(f"[INFO] Reading trajectory: {traj_path}")
+    logger.info(f"[INFO] Reading trajectory: {traj_path}")
     try:
         traj = read(traj_path, index=":")
-        print(f"[INFO] Trajectory contains {len(traj)} frames")
+        logger.info(f"[INFO] Trajectory contains {len(traj)} frames")
         return traj
     except Exception as e:
-        print(f"[ERROR] Failed to read trajectory: {e}")
+        logger.info(f"[ERROR] Failed to read trajectory: {e}")
         return None
 
 
@@ -361,7 +363,7 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
     # Save figure
     output_file = outdir / f"relaxation_analysis.{output_format}"
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
-    print(f"[INFO] Plot saved to: {output_file}")
+    logger.info(f"[INFO] Plot saved to: {output_file}")
     
     # Show plot if requested
     if show:
@@ -370,9 +372,9 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
         plt.close()
     
     # Print summary to console
-    print("\n" + "="*50)
-    print(summary_text)
-    print("="*50)
+    logger.info("\n" + "="*50)
+    logger.info(summary_text)
+    logger.info("="*50)
 
     # Save data to CSV if requested
     if save_to_csv:
@@ -386,7 +388,7 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
         df = pd.DataFrame(data)
         csv_file = outdir / f"relaxation_data.csv"
         df.to_csv(csv_file, index=False)
-        print(f"[INFO] Data saved to CSV: {csv_file}")
+        logger.info(f"[INFO] Data saved to CSV: {csv_file}")
 
         noise = {
             'Frequency (1/steps)': freq,
@@ -395,6 +397,6 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
         df_noise = pd.DataFrame(noise)
         csv_noise_file = outdir / f"noise_spectrum.csv"
         df_noise.to_csv(csv_noise_file, index=False)
-        print(f"[INFO] Noise spectrum data saved to CSV: {csv_noise_file}")
+        logger.info(f"[INFO] Noise spectrum data saved to CSV: {csv_noise_file}")
 
     return str(output_file)

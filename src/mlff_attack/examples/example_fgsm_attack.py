@@ -10,6 +10,8 @@ This script shows:
 """
 
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 import ase
 from ase.io import read, write
 from mlff_attack.relaxation import setup_calculator, load_structure
@@ -18,11 +20,12 @@ from mlff_attack.attacks import visualize_perturbation
 from ase import build
 from mace.calculators import mace_mp
 
+
 def basic_fgsm_example():
     """Example 1: Basic FGSM attack (single step)."""
-    print("=" * 70)
-    print("EXAMPLE 1: Basic FGSM Attack (Single Step)")
-    print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("EXAMPLE 1: Basic FGSM Attack (Single Step)")
+    logger.info("=" * 70)
     
     # Load structure
     # atoms = load_structure("initial_cifs/chemistry_value_isovalent_0_05_18_traj.cif")
@@ -35,7 +38,7 @@ def basic_fgsm_example():
 
     # Get original energy
     orig_energy = atoms.get_potential_energy()
-    print(f"\nOriginal energy: {orig_energy:.4f} eV")
+    logger.info(f"\nOriginal energy: {orig_energy:.4f} eV")
     
     # Create FGSM attack
     fgsm = FGSM_MACE(
@@ -51,20 +54,20 @@ def basic_fgsm_example():
     
     # Get results
     pert_energy = perturbed_atoms.get_potential_energy()
-    print(f"Perturbed energy: {pert_energy:.4f} eV")
-    print(f"Energy change: {pert_energy - orig_energy:+.4f} eV")
+    logger.info(f"Perturbed energy: {pert_energy:.4f} eV")
+    logger.info(f"Energy change: {pert_energy - orig_energy:+.4f} eV")
     
     # Print statistics
-    print("\nPerturbation Statistics:")
+    logger.info("\nPerturbation Statistics:")
     stats = fgsm.get_perturbation_stats()
     for key, value in stats.items():
-        print(f"  {key}: {value}")
+        logger.info(f"  {key}: {value}")
     
     # Get attack summary
-    print("\nAttack Summary:")
+    logger.info("\nAttack Summary:")
     summary = fgsm.get_attack_summary()
     for key, value in summary.items():
-        print(f"  {key}: {value}")
+        logger.info(f"  {key}: {value}")
     
     # Save perturbed structure
     output_dir = Path("example_outputs")
@@ -77,7 +80,7 @@ def basic_fgsm_example():
         atoms_original=atoms,
         atoms_perturbed=perturbed_atoms
     )
-    print(f"\nSaved outputs to {output_dir}/")
+    logger.info(f"\nSaved outputs to {output_dir}/")
     
     # Visualize
     visualize_perturbation(atoms, perturbed_atoms, epsilon=0.05, outdir=output_dir)
@@ -87,9 +90,9 @@ def basic_fgsm_example():
 
 def iterative_fgsm_example():
     """Example 2: Iterative FGSM (I-FGSM) attack."""
-    print("\n" + "=" * 70)
-    print("EXAMPLE 2: Iterative FGSM (I-FGSM) Attack (5 Steps)")
-    print("=" * 70)
+    logger.info("\n" + "=" * 70)
+    logger.info("EXAMPLE 2: Iterative FGSM (I-FGSM) Attack (5 Steps)")
+    logger.info("=" * 70)
     
     # Load structure
     atoms = build.molecule("H2O")  # Using a simple molecule for demonstration
@@ -100,7 +103,7 @@ def iterative_fgsm_example():
     atoms = setup_calculator(atoms, model, device)
     
     orig_energy = atoms.get_potential_energy()
-    print(f"\nOriginal energy: {orig_energy:.4f} eV")
+    logger.info(f"\nOriginal energy: {orig_energy:.4f} eV")
     
     # Create I-FGSM attack (smaller epsilon per step)
     attack = FGSM_MACE(
@@ -116,17 +119,17 @@ def iterative_fgsm_example():
     perturbed_atoms = attack.attack(atoms, n_steps=n_steps, clip=True)
     
     pert_energy = perturbed_atoms.get_potential_energy()
-    print(f"Perturbed energy: {pert_energy:.4f} eV")
-    print(f"Energy change: {pert_energy - orig_energy:+.4f} eV")
+    logger.info(f"Perturbed energy: {pert_energy:.4f} eV")
+    logger.info(f"Energy change: {pert_energy - orig_energy:+.4f} eV")
     
     # Show energy progression
-    print(f"\nEnergy progression over {n_steps} steps:")
+    logger.info(f"\nEnergy progression over {n_steps} steps:")
     for i, energy in enumerate(attack.attack_history['energies'], 1):
-        print(f"  Step {i}: {energy:.4f} eV")
+        logger.info(f"  Step {i}: {energy:.4f} eV")
     
     # Print statistics
     stats = attack.get_perturbation_stats()
-    print(f"\nFinal displacement: {stats['max_displacement']:.4f} Å (max)")
+    logger.info(f"\nFinal displacement: {stats['max_displacement']:.4f} Å (max)")
     
     # Save outputs
     output_dir = Path("example_outputs")
@@ -137,16 +140,16 @@ def iterative_fgsm_example():
         atoms_original=atoms,
         atoms_perturbed=perturbed_atoms
     )
-    print(f"\nSaved outputs to {output_dir}/")
+    logger.info(f"\nSaved outputs to {output_dir}/")
     
     return atoms, perturbed_atoms, attack
 
 
 def targeted_attack_example():
     """Example 3: Targeted attack (reach specific energy)."""
-    print("\n" + "=" * 70)
-    print("EXAMPLE 3: Targeted Energy Attack")
-    print("=" * 70)
+    logger.info("\n" + "=" * 70)
+    logger.info("EXAMPLE 3: Targeted Energy Attack")
+    logger.info("=" * 70)
     
     # Load structure
     atoms = build.molecule("H2O")  # Using a simple molecule for demonstration
@@ -159,8 +162,8 @@ def targeted_attack_example():
     orig_energy = atoms.get_potential_energy()
     target_energy = orig_energy + 2.0  # Try to increase energy by 2 eV
     
-    print(f"\nOriginal energy: {orig_energy:.4f} eV")
-    print(f"Target energy: {target_energy:.4f} eV")
+    logger.info(f"\nOriginal energy: {orig_energy:.4f} eV")
+    logger.info(f"Target energy: {target_energy:.4f} eV")
     
     # Create targeted attack
     attack = FGSM_MACE(
@@ -175,8 +178,8 @@ def targeted_attack_example():
     perturbed_atoms = attack.attack(atoms, n_steps=10, clip=True)
     
     pert_energy = perturbed_atoms.get_potential_energy()
-    print(f"Perturbed energy: {pert_energy:.4f} eV")
-    print(f"Distance to target: {abs(pert_energy - target_energy):.4f} eV")
+    logger.info(f"Perturbed energy: {pert_energy:.4f} eV")
+    logger.info(f"Distance to target: {abs(pert_energy - target_energy):.4f} eV")
     
     # Save outputs
     output_dir = Path("example_outputs")
@@ -189,9 +192,9 @@ def targeted_attack_example():
 
 def load_and_analyze_example():
     """Example 4: Load saved perturbation and analyze."""
-    print("\n" + "=" * 70)
-    print("EXAMPLE 4: Load and Analyze Saved Perturbation")
-    print("=" * 70)
+    logger.info("\n" + "=" * 70)
+    logger.info("EXAMPLE 4: Load and Analyze Saved Perturbation")
+    logger.info("=" * 70)
     
     # Load perturbation data
     attack = FGSM_MACE(
@@ -202,18 +205,18 @@ def load_and_analyze_example():
     
     data = attack.load_perturbation("example_outputs/fgsm_perturbation.npz")
     
-    print("\nLoaded perturbation data:")
+    logger.info("\nLoaded perturbation data:")
     for key in data.keys():
-        print(f"  {key}")
+        logger.info(f"  {key}")
     
     # Analyze
     if 'energy_original' in data and 'energy_perturbed' in data:
-        print(f"\nEnergy change: {data['energy_change']:.4f} eV")
+        logger.info(f"\nEnergy change: {data['energy_change']:.4f} eV")
     
     stats = attack.get_perturbation_stats()
-    print("\nDisplacement statistics:")
+    logger.info("\nDisplacement statistics:")
     for key, value in stats.items():
-        print(f"  {key}: {value}")
+        logger.info(f"  {key}: {value}")
 
 
 if __name__ == "__main__":
@@ -239,17 +242,17 @@ if __name__ == "__main__":
         # Example 4: Load and analyze
         load_and_analyze_example()
         
-        print("\n" + "=" * 70)
-        print("All examples completed successfully!")
-        print("=" * 70)
+        logger.info("\n" + "=" * 70)
+        logger.info("All examples completed successfully!")
+        logger.info("=" * 70)
         
     except FileNotFoundError as e:
-        print(f"\nError: {e}")
-        print("Make sure you're running this from the repository root directory")
-        print("and that the required files exist.")
+        logger.error(f"\nError: {e}")
+        logger.info("Make sure you're running this from the repository root directory")
+        logger.info("and that the required files exist.")
         sys.exit(1)
     except Exception as e:
-        print(f"\nError: {e}")
+        logger.error(f"\nError: {e}")
         import traceback
-        traceback.print_exc()
+        traceback.logger.info_exc()
         sys.exit(1)

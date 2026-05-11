@@ -26,6 +26,7 @@ def dummy_model():
     assert isinstance(model, mace.calculators.mace.MACECalculator)
     return model
 
+
 def test_make_attack():
     from mlff_attack.attacks import make_attack
 
@@ -99,31 +100,6 @@ def test_save_load_perturbation():
 
     # Clean up
     os.remove(save_file)
-
-
-def test_save_perturbation():
-    """Verify FGSM save_perturbation saves positions and metadata. - DC"""
-    model = dummy_model()
-    atoms = create_dummy_atoms()
-
-    fgsm = FGSM_MACE(model, epsilon=0.1)
-
-    fgsm._original_positions = atoms.get_positions().copy()
-    fgsm._perturbed_positions = atoms.get_positions().copy()
-
-    save_file = "test_perturbation.npz"
-    fgsm.save_perturbation(save_file, include_metadata=True)
-    pass
-    # data = np.load(save_file)
-
-    # assert "original_positions" in data
-    # assert "perturbed_positions" in data
-    # assert "displacement" in data
-    # assert "epsilon" in data
-    # assert "device" in data
-
-    # data.close()
-    # os.remove(save_file)
 
 
 def test_init():
