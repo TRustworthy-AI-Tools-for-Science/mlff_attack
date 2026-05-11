@@ -90,6 +90,31 @@ def test_cli_make_attack():
         import shutil
         shutil.rmtree(outdir)
 
+# added --n-steps and --clip - DC
+@pytest.mark.cli
+def test_cli_fgsm():
+    """Verify that make-attack CLI accepts all FGSM arguments."""
+    cmd = [
+        "python",
+        "src/mlff_attack/cli/make_attack.py",
+        "--input", "does_not_exist.cif",
+        "--model", "does_not_exist.model",
+        "--device", "cpu",
+        "--epsilon", "0.05",
+        "--outdir", "tests/output/make_attack_test",
+        "--target-energy", "1.5",
+        "--type", "fgsm",
+        "--n-steps", "3",
+        "--clip",
+        "--no-visualize",
+    ]
+
+    # Run the CLI command
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    # Check that the command executed successfully
+    assert result.returncode == 1, f"CLI failed with error: {result.stderr}"
+    assert "unrecognized arguments" not in result.stderr
+
 
 @pytest.mark.cli
 def test_cli_visualize_traj():

@@ -79,14 +79,14 @@ def test_save_load_perturbation():
 
     save_file = os.path.join(cwd, "test_perturbation.npz")
     assert Path(save_file).exists()
-    data = np.load(save_file, allow_pickle=True)
-    assert 'positions_original' in data
-    assert 'positions_perturbed' in data
-    assert 'epsilon' in data
-    assert 'energy_original' in data
-    assert 'energy_perturbed' in data
-    assert 'gradients' in data
-    assert 'meta_test_key' in data   
+    with np.load(save_file, allow_pickle=True) as data: # fixed permission error - DC
+        assert 'positions_original' in data
+        assert 'positions_perturbed' in data
+        assert 'epsilon' in data
+        assert 'energy_original' in data
+        assert 'energy_perturbed' in data
+        assert 'gradients' in data
+        assert 'meta_test_key' in data   
 
     loaded_data = load_perturbation(save_file)
     assert loaded_data['atoms_original'] == atoms
