@@ -119,7 +119,8 @@ def run_relaxation(atoms, traj_path, fmax=0.01, max_steps=300, optimizer="LBFGS"
         True if relaxation completed successfully, False otherwise
     """
     try:
-        print(f"[INFO] Starting relaxation with {optimizer} optimizer")
+        atoms.info["fmax"] = fmax # store fmax for visualize-traj CHANGE THIS - DC
+        print(f"[INFO] Starting relaxation with {optimizer} optimizer") # CHANGE ALL PRINT TO LOGGER - DC
         print(f"[INFO] Convergence criterion: fmax = {fmax} eV/Å")
         print(f"[INFO] Maximum steps: {max_steps}")
         

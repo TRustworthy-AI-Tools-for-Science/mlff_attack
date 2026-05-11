@@ -77,6 +77,17 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
             track_history=True,
             target_energy=target_energy,
     )
+    
+    # TODO: when PGD is implemented, import PGD_MACE" - DC
+    # if attack_type == "pgd":
+    #     attack = PGD_MACE(
+    #         model=atoms.calc,
+    #         epsilon=epsilon,
+    #         device=device,
+    #         track_history=True,
+    #         target_energy=target_energy,
+    # )
+
     else:
         raise NotImplementedError(f"Attack type '{attack_type}' not implemented yet.")
     
