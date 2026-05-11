@@ -103,6 +103,8 @@ make-attack --type fgsm --input structure.cif --model mace-model.model --outdir 
 # Perform an I-FGSM attack
 make-attack --type fgsm --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --n-steps 10
 
+# Perform a PGD attack with 10 steps
+make-attack --type pgd --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --n-steps 10
 
 ```
 
