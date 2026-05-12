@@ -222,11 +222,11 @@ class FGSM_MACE(MLFFAttack):
         
         return self._last_gradients
     
-    # TODO: add n_steps in parameters to scale epsilon - DC
     def attack_step(
         self,
         atoms: Any,
-        step: int = 0
+        step: int = 0,
+        n_steps: int = 1,
     ) -> Any:
         """Perform one step of FGSM attack.
         
@@ -245,9 +245,9 @@ class FGSM_MACE(MLFFAttack):
         # Compute gradients
         gradients = self.compute_gradient(atoms)
         
-        # FGSM: perturbation is epsilon * sign of gradient
-        # TODO: epsilon should scaled by the number of steps and not hardcoded, not implemented with I-FGSM - DC
-        perturbation = self.epsilon * np.sign(gradients)
+        # FGSM: perturbation is step size * sign of gradient
+        step_size = self.epsilon / n_steps
+        perturbation = step_size * np.sign(gradients)
         
         # Apply perturbation
         current_positions = atoms.get_positions()
@@ -310,7 +310,7 @@ class FGSM_MACE(MLFFAttack):
         if n_steps > 1:
             logger.info(f"Starting iterative FGSM attack for {n_steps} steps...")
             for step in trange(n_steps):
-                perturbed_atoms = self.attack_step(perturbed_atoms, step) # add n_steps to attack_step parameters to scale epsilon - DC
+                perturbed_atoms = self.attack_step(perturbed_atoms, step, n_steps)
                 if clip: # - DC
                     self._clip_perturbations(perturbed_atoms)
                     # Check if target energy is reached
@@ -325,7 +325,9 @@ class FGSM_MACE(MLFFAttack):
                             pass
 
         else:
-            perturbed_atoms = self.attack_step(perturbed_atoms, n_steps)
+            perturbed_atoms = self.attack_step(perturbed_atoms, step=0, n_steps=n_steps)
+            if clip:
+                self._clip_perturbations(perturbed_atoms)
 
         self._perturbed_positions = perturbed_atoms.get_positions().copy()
         

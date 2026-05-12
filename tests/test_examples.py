@@ -11,7 +11,6 @@ from mlff_attack.grad_based.fgsm import FGSM_MACE
 
 @pytest.mark.smoke
 def test_example_fgsm_attack():
-    """Test example FGSM attack runs without error."""
     atoms, perturbed, attack = basic_fgsm_example()
 
     assert isinstance(atoms, Atoms)
@@ -26,7 +25,6 @@ def test_example_fgsm_attack():
 
 @pytest.mark.smoke
 def test_example_iterative_fgsm_attack():
-    """Test example iterative FGSM attack runs without error."""
     atoms, perturbed, attack = iterative_fgsm_example()
 
     assert isinstance(atoms, Atoms)
@@ -40,8 +38,7 @@ def test_example_iterative_fgsm_attack():
     assert not os.path.exists("example_outputs")
 
 @pytest.mark.smoke
-def test_example_targeted_attack():
-    """Test example targeted FGSM attack runs without error."""
+def test_example_targeted_fgsm_attack():
     atoms, perturbed, attack = targeted_attack_example()
 
     assert isinstance(atoms, Atoms)

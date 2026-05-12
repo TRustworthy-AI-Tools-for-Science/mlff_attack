@@ -131,8 +131,7 @@ def test_epsilon_scaling():
     assert np.all(np.abs(perturbation) <= 0.5 + 1e-6)
 
 
-def test_attack_step():
-    """Verify that attack_step scales epsilon by n_steps - DC"""
+def test_attack_step_scales_epsilon_by_n_steps():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
@@ -162,9 +161,10 @@ def test_n_steps():
 def test_displacements_are_clipped_to_epsilon():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
-    # force test so that displacements are always > epsilon - DC
-    fgsm = FGSM_MACE(atoms.calc, epsilon=0.1, device="cpu")
+
+    fgsm = FGSM_MACE(atoms.calc, epsilon=0.01, device="cpu")
     n_steps = 5
+
     perturbed_atoms = fgsm.attack(atoms, n_steps, clip=True)
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
     displacement_magnitudes = np.linalg.norm(displacement, axis=1)
@@ -175,9 +175,10 @@ def test_displacements_are_clipped_to_epsilon():
 def test_displacements_are_not_clipped_to_epsilon():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
-    # force test so that displacements are always > epsilon - DC
-    fgsm = FGSM_MACE(atoms.calc, epsilon=0.1, device="cpu")
+
+    fgsm = FGSM_MACE(atoms.calc, epsilon=0.01, device="cpu")
     n_steps = 5
+
     perturbed_atoms = fgsm.attack(atoms, n_steps, clip=False)
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
     displacement_magnitudes = np.linalg.norm(displacement, axis=1)
@@ -203,9 +204,31 @@ def test_forward_pass():
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
     fgsm = FGSM_MACE(atoms.calc, epsilon=0.1, device="cpu")
-
     energy, forces, positions = fgsm._forward_pass_with_gradients(atoms)
 
     assert energy is not None
     assert forces.shape == atoms.get_positions().shape
     assert positions.shape == atoms.get_positions().shape
+
+
+def test_compute_gradient():
+    model = dummy_model()
+    atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
+
+    fgsm = FGSM_MACE(atoms.calc, epsilon=0.1, device="cpu")
+    gradients = fgsm.compute_gradient(atoms)
+
+    assert gradients.shape == atoms.get_positions().shape
+    assert np.all(np.isfinite(gradients))
+
+
+def test_compute_gradient_uses_loss_function():
+    model = dummy_model()
+    atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
+
+    fgsm = FGSM_MACE(atoms.calc, epsilon=0.1, device="cpu")
+
+    default_gradients = fgsm.compute_gradient(atoms)
+    custom_gradients = fgsm.compute_gradient(atoms, loss_fn=lambda energy: energy)
+
+    assert np.allclose(custom_gradients, -default_gradients, atol=1e-5)

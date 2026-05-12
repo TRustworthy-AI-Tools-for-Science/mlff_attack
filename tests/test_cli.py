@@ -5,9 +5,6 @@ from pathlib import Path
 
 @pytest.mark.cli
 def test_cli_mace_calc_single():
-    """Test the MACE single structure relaxation CLI."""
-
-
     # Define input parameters
     input_cif = 'does_not_exist.cif'  # Intentionally incorrect path
     model_path = 'does_not_exist.model'  # Intentionally incorrect path
@@ -50,8 +47,6 @@ def test_cli_mace_calc_single():
 
 @pytest.mark.cli
 def test_cli_make_attack():
-    """Test make-attack CLI."""
-
     # Define input parameters
     input_cif = 'does_not_exist.cif'  # Intentionally incorrect path
     model_path = 'does_not_exist.model'  # Intentionally incorrect path
@@ -92,8 +87,7 @@ def test_cli_make_attack():
 
 # added --n-steps and --clip - DC
 @pytest.mark.cli
-def test_cli_fgsm():
-    """Verify that make-attack CLI accepts all FGSM arguments."""
+def test_cli_fgsm_accepts_all_arguments():
     cmd = [
         "python",
         "src/mlff_attack/cli/make_attack.py",
@@ -118,8 +112,6 @@ def test_cli_fgsm():
 
 @pytest.mark.cli
 def test_cli_visualize_traj():
-    """Test visualize-traj CLI."""
-
     # Define input parameters
     perturbation_npz = 'does_not_exist.traj'  # Intentionally incorrect path
     output_plot = "tests/output/visualize_traj_test"

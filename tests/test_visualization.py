@@ -48,8 +48,6 @@ def clean_up_example_traj(traj_file):
             pass
 
 def test_load_trajectory():
-    """Test loading a trajectory file."""
-
     traj_file = create_example_traj()
 
     traj = visualization.load_trajectory(traj_file)
@@ -61,8 +59,6 @@ def test_load_trajectory():
     clean_up_example_traj(traj_file)
 
 def test_extract_trajectory_data():
-    """Test extracting data from trajectory."""
-    
     traj_file = create_example_traj()
     traj = visualization.load_trajectory(traj_file)
     steps, energies, max_forces, volumes = visualization.extract_trajectory_data(traj)
@@ -75,9 +71,7 @@ def test_extract_trajectory_data():
     # cleanup created trajectory file and data directory if empty
     clean_up_example_traj(traj_file)
 
-def test_calculate_statistics():
-    """Test calculation of statistics from trajectory data."""
-    
+def test_calculate_statistics_from_traj_data():
     traj_file = create_example_traj()
     traj = visualization.load_trajectory(traj_file)
     steps, energies, max_forces, volumes = visualization.extract_trajectory_data(traj)
@@ -102,8 +96,7 @@ def test_calculate_statistics():
     clean_up_example_traj(traj_file)
 
 
-def test_converged_when_final_force_below_fmax():
-    """Verify relaxation summary in visualize-traj displays "converged" using custom fmax - DC"""
+def test_relaxation_summary_displays_converged():
     energies = [3, 2, 1]
     max_forces = [0.1, 0.05, 0.015]
     volumes = [100, 100, 100]
@@ -117,8 +110,7 @@ def test_converged_when_final_force_below_fmax():
     assert "Converged" in summary_text
     assert "Yes" in summary_text
 
-def test_not_converged_when_final_force_above_fmax():
-    """Test that relaxation summary in visualize-traj displays "not converged" using custom fmax - DC"""
+def test_relaxation__summary_displays_not_converged():
     energies = [3, 2, 1]
     max_forces = [0.1, 0.05, 0.015]
     volumes = [100.0, 100.0, 100.0]
@@ -132,8 +124,7 @@ def test_not_converged_when_final_force_above_fmax():
     assert stats["converged"] is False
     assert f"Converged (fmax<{fmax}): No\n\n" in summary_text
 
-def test_plot_displays_custom_fmax_line():
-    """Test that the plot displays a horizontal line at the custom fmax value - DC"""
+def test_plot_displays_horizontal_fmax_line():
     steps = [0, 1, 2]
     max_forces = [0.1, 0.05, 0.015]
     fmax = 0.03
@@ -149,8 +140,7 @@ def test_plot_displays_custom_fmax_line():
     assert list(fmax_line.get_ydata()) == [fmax, fmax]
     assert fmax_line.get_label() == f"fmax={fmax:g} eV/Å"
 
-def test_plot_energy():
-    """Verify plot_energy draws a line through steps and energies - DC"""
+def test_plot_energy_draws_a_line_through_points():
     steps = [0, 1, 2]
     energies = [3, 2, 1]
 
@@ -164,8 +154,7 @@ def test_plot_energy():
     assert list(energy_line.get_ydata()) == energies
 
 
-def test_plot_volume():
-    """Verify plot_volume draws a line through steps and volumes - DC"""
+def test_plot_volume_draws_a_line_through_points():
     steps = [0, 1, 2]
     volumes = [100, 200, 300]
 
@@ -179,8 +168,7 @@ def test_plot_volume():
     assert list(volume_line.get_ydata()) == volumes
 
     
-def test_plot_noise():
-    """Verify plot_noise draws a line through freq and spectrum - DC"""
+def test_plot_noise_draws_a_line_through_points():
     freq = [0, 1, 2]
     spectrum = [0, 1, 2]
 
@@ -204,8 +192,7 @@ def test_calculate_noise_spectrum():
     assert np.all(spectrum >= 0)
 
 
-def test_create_visualization():
-    """Verify create_visualization saves a relaxation plot - DC"""
+def test_create_visualization_saves_a_relaxation_plot():
     traj_file = create_example_traj()
     traj = visualization.load_trajectory(traj_file)
     outdir = Path(traj_file).parent

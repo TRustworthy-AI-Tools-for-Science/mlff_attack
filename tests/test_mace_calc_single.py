@@ -11,7 +11,6 @@ def test_load_mace_model():
     assert isinstance(calc, mace.calculators.mace.MACECalculator)
 
 def test_load_structure():
-    """Test loading a structure file."""
     from ase import Atoms
     from ase.io import write, read
     from pathlib import Path
@@ -33,9 +32,7 @@ def test_load_structure():
     except OSError:
         pass
 
-def test_setup_calculator():
-    """Test setting up MACE calculator."""
-
+def test_setup_mace_calculator():
     # Create a dummy atoms object
     atoms = build.molecule("H2O")
                 
@@ -53,7 +50,6 @@ def test_setup_calculator():
     
 
 def test_get_optimizer_class():
-    """Test getting optimizer class."""
     opt_class = relaxation.get_optimizer_class("BFGS")
     assert opt_class is not None
 
@@ -61,7 +57,6 @@ def test_get_optimizer_class():
     assert opt_class is not None
 
 def test_run_relaxation():
-    """Test running relaxation (mocked)."""
     from ase import Atoms
     from unittest.mock import patch, MagicMock
     from pathlib import Path
@@ -105,10 +100,7 @@ def test_run_relaxation():
         pass
 
 
-
-
-def test_save_results():
-    """Test saving results to files."""
+def test_saving_results_to_files():
     from ase import Atoms
     from pathlib import Path
 
