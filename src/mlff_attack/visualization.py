@@ -170,7 +170,8 @@ def plot_energy(ax, steps, energies):
         Energy values at each step
     """
     if not all(np.isnan(energies)):
-        ax.plot(steps, energies, 'b-o', markersize=4)
+        ax.plot(steps, energies, 'b-o', markersize=4, label="Energy")
+        ax.legend()
         ax.set_xlabel('Step')
         ax.set_ylabel('Energy (eV)')
         ax.set_title('Total Energy')
@@ -193,7 +194,7 @@ def plot_forces(ax, steps, max_forces, fmax=0.01):
         Maximum force values at each step
     """
     if not all(np.isnan(max_forces)):
-        ax.plot(steps, max_forces, 'r-o', markersize=4)
+        ax.plot(steps, max_forces, 'r-o', markersize=4, label="Max Force")
         default_fmax_values = [0.01, 0.05]
         for value in default_fmax_values:
             color = 'orange' if fmax == value else 'g' # user fmax choice is orange, default values are green - DC
@@ -303,7 +304,8 @@ def plot_noise(ax, freq, spectrum):
     """
 
     if not all(np.isnan(spectrum)):
-        ax.plot(freq, spectrum, 'm-')
+        ax.plot(freq, spectrum, 'm-', label="Noise Spectrum")
+        ax.legend()
         ax.set_xlabel('Frequency (1/steps)')
         ax.set_ylabel('Power Spectrum')
         ax.set_title('Noise Spectrum of Max Forces')

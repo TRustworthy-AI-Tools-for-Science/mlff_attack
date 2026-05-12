@@ -87,9 +87,9 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 - `--input`: Path to the input structure file (CIF format) (required).
 - `--model`: Path to the MACE model file (.model) (required).
 - `--outdir`: Directory to save the results (required).
-- `--epsilon`: Perturbation step size for the attack (default: 0.05).  <!-- epsilon default changed to 0.05 instead of 0.01 - DC>
+- `--epsilon`: Perturbation step size for the attack (default: 0.05).
 - `--n-steps`: Number of attack iterations (default: 1 for FGSM, >1 for PGD).
-- `--clip`: Whether to clip perturbations to the epsilon bound (default: False). <!-- clip default changed to False instead of True - DC>
+- `--clip`: Whether to clip perturbations to the epsilon bound (default: False).
 - `--device`: Device to use for computations (cuda or cpu, default: cuda).
 
 #### Example usage
