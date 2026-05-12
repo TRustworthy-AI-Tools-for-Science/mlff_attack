@@ -48,10 +48,12 @@ def main():
 
     # Setup calculator
     atoms = setup_calculator(atoms, args.model, args.device)
-    # store fmax - DC
     if atoms is None:
         logger.info(f"[ERROR] Failed to setup calculator with model {args.model}.")
         return 1
+    
+    # Store fmax for visualize-traj CHANGE THIS- DC
+    atoms.info["fmax"] = args.fmax
 
     # Run relaxation
     success = run_relaxation(

@@ -85,7 +85,6 @@ def test_cli_make_attack():
         import shutil
         shutil.rmtree(outdir)
 
-# added --n-steps and --clip - DC
 @pytest.mark.cli
 def test_cli_fgsm_accepts_all_arguments():
     cmd = [

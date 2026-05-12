@@ -311,7 +311,7 @@ class FGSM_MACE(MLFFAttack):
             logger.info(f"Starting iterative FGSM attack for {n_steps} steps...")
             for step in trange(n_steps):
                 perturbed_atoms = self.attack_step(perturbed_atoms, step, n_steps)
-                if clip: # - DC
+                if clip:
                     self._clip_perturbations(perturbed_atoms)
                     # Check if target energy is reached
                     if self.target_energy is not None:

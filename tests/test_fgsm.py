@@ -27,12 +27,18 @@ def dummy_model():
     return model
 
 
+def test_init():
+    model = dummy_model()
+    attack = FGSM_MACE(model, epsilon=0.1)
+    assert attack.model == model
+    assert attack.epsilon == 0.1
+
+
 def test_make_attack():
     from mlff_attack.attacks import make_attack
 
-    atoms = create_dummy_atoms()
     model = dummy_model()
-    atoms = setup_calculator(atoms, model, device="cpu", dtype_str="float32")
+    atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
     output_path, perturbed_atoms, attack_details = make_attack(
         model_path=model,
@@ -80,7 +86,7 @@ def test_save_load_perturbation():
 
     save_file = os.path.join(cwd, "test_perturbation.npz")
     assert Path(save_file).exists()
-    with np.load(save_file, allow_pickle=True) as data: # fixed permission error - DC
+    with np.load(save_file, allow_pickle=True) as data:
         assert 'positions_original' in data
         assert 'positions_perturbed' in data
         assert 'epsilon' in data
@@ -100,13 +106,6 @@ def test_save_load_perturbation():
 
     # Clean up
     os.remove(save_file)
-
-
-def test_init():
-    model = dummy_model()
-    attack = FGSM_MACE(model, epsilon=0.1)
-    assert attack.epsilon == 0.1
-    assert attack.model == model
 
 
 def test_attack_basic():
@@ -151,7 +150,7 @@ def test_n_steps():
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
     fgsm = FGSM_MACE(atoms.calc, epsilon=0.5, device="cpu")
     n_steps = 3
-    perturbed_atoms = fgsm.attack(atoms, n_steps, clip=False)
+    perturbed_atoms = fgsm.attack(atoms, n_steps=3)
 
     assert perturbed_atoms.get_positions().shape == atoms.get_positions().shape
     assert len(fgsm.attack_history["perturbations"]) == n_steps

@@ -87,18 +87,17 @@ def parse_args():
         "--type",
         type=str,
         default="fgsm",
-        choices=["fgsm", "pgd"], # Removed "bim" from choices because bim = i-fgsm with n_steps > 1 - DC
+        choices=["fgsm", "pgd"],
         help="Type of adversarial attack to perform"
     )
 
-    # added --n-steps argument for parsing - DC
     parser.add_argument(
         "--n-steps",
         type=int,
         default=1,
         help="Number of FGSM attack iterations",
     )
-    # added --clip argument for parsing - DC
+
     parser.add_argument(
         "--clip",
         action="store_true",
@@ -154,7 +153,7 @@ def main():
         target_energy=target_energy,
         output_cif=output_cif,
         attack_type=attack_type,
-        n_steps=n_steps, # added n_steps=n_steps and clip=clip - DC
+        n_steps=n_steps,
         clip=clip
     )
 

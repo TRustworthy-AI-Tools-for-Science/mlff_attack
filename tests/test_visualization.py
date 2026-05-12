@@ -76,7 +76,7 @@ def test_calculate_statistics_from_traj_data():
     traj = visualization.load_trajectory(traj_file)
     steps, energies, max_forces, volumes = visualization.extract_trajectory_data(traj)
     
-    fmax = 0.03 # added fmax test - DC
+    fmax = 0.03
     stats = visualization.calculate_statistics(energies, max_forces, volumes, fmax)
     
     assert 'initial_energy' in stats
@@ -86,7 +86,7 @@ def test_calculate_statistics_from_traj_data():
     assert 'initial_force' in stats
     assert 'final_force' in stats
     assert 'converged' in stats
-    assert stats['converged'] == (stats['final_force'] < fmax) # test convergence result - DC
+    assert stats['converged'] == (stats['final_force'] < fmax)
 
     assert 'initial_volume' in stats
     assert 'final_volume' in stats

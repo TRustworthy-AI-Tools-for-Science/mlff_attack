@@ -79,7 +79,7 @@ def test_save_load_perturbation():
 
     save_file = os.path.join(cwd, "test_perturbation.npz")
     assert Path(save_file).exists()
-    with np.load(save_file, allow_pickle=True) as data: # fixed permission error - DC
+    with np.load(save_file, allow_pickle=True) as data:
         assert 'positions_original' in data
         assert 'positions_perturbed' in data
         assert 'epsilon' in data
