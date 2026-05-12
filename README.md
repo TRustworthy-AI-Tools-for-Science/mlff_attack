@@ -95,7 +95,6 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 #### Example usage
 
 
-<!--Changed outdir perturbed_structure.cif to output_perturbed/ - DC-->
 ```bash
 # Perform an FGSM attack
 make-attack --type fgsm --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1
