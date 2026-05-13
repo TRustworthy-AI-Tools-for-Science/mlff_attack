@@ -148,6 +148,7 @@ def test_attack_step_scales_epsilon_by_n_steps():
 def test_n_steps():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
+    
     fgsm = FGSM_MACE(atoms.calc, epsilon=0.5, device="cpu")
     n_steps = 3
     perturbed_atoms = fgsm.attack(atoms, n_steps=3)
@@ -161,28 +162,32 @@ def test_displacements_are_clipped_to_epsilon():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
-    fgsm = FGSM_MACE(atoms.calc, epsilon=0.01, device="cpu")
-    n_steps = 5
+    epsilon = 0.01
+    fgsm = FGSM_MACE(atoms.calc, epsilon=epsilon, device="cpu")
+    fgsm.compute_gradient = lambda atoms: np.ones_like(atoms.get_positions())
 
-    perturbed_atoms = fgsm.attack(atoms, n_steps, clip=True)
+    assert np.linalg.norm([epsilon, epsilon, epsilon]) > epsilon
+
+    perturbed_atoms = fgsm.attack(atoms, n_steps=1, clip=True)
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
     displacement_magnitudes = np.linalg.norm(displacement, axis=1)
 
-    assert np.all(displacement_magnitudes <= fgsm.epsilon + 1e-6)
+    assert np.all(displacement_magnitudes <= epsilon + 1e-6)
 
 
 def test_displacements_are_not_clipped_to_epsilon():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
-    fgsm = FGSM_MACE(atoms.calc, epsilon=0.01, device="cpu")
-    n_steps = 5
+    epsilon = 0.01
+    fgsm = FGSM_MACE(atoms.calc, epsilon=epsilon, device="cpu")
+    fgsm.compute_gradient = lambda atoms: np.ones_like(atoms.get_positions())
 
-    perturbed_atoms = fgsm.attack(atoms, n_steps, clip=False)
+    perturbed_atoms = fgsm.attack(atoms, n_steps=1, clip=False)
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
     displacement_magnitudes = np.linalg.norm(displacement, axis=1)
 
-    assert np.max(displacement_magnitudes) > fgsm.epsilon + 1e-6
+    assert np.all(displacement_magnitudes > epsilon)
 
 
 def test_target_energy():

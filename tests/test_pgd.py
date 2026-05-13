@@ -78,14 +78,17 @@ def test_epsilon_ball_bounds_displacement():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
-    pgd = PGD_MACE(atoms.calc, epsilon=0.2, alpha=0.1, num_iter=3, device="cpu")
+    epsilon = 0.2
+    pgd = PGD_MACE(atoms.calc, epsilon=epsilon, alpha=0.2, num_iter=3, device="cpu")
+    pgd.compute_gradient = lambda atoms: np.ones_like(atoms.get_positions())
+
+    assert np.linalg.norm([pgd.alpha, pgd.alpha, pgd.alpha]) > epsilon
 
     perturbed_atoms = pgd.attack(atoms)
-
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
-    displacement_magnitudes = np.linalg.norm(displacement, axis=1)
 
-    assert np.all(displacement_magnitudes <= pgd.epsilon + 1e-6)
+    assert np.all(np.linalg.norm(displacement, axis=1) <= epsilon + 1e-6)
+
 
 def test_compute_gradient():
     model = dummy_model()
@@ -106,7 +109,6 @@ def test_attack_step():
 
     gradients = pgd.compute_gradient(atoms)
     perturbed_atoms = pgd.attack_step(atoms)
-
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
     expected_displacement = alpha * np.sign(gradients)
 
