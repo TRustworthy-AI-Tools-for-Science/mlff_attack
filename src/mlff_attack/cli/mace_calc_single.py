@@ -13,6 +13,7 @@ from mlff_attack.relaxation import (
     run_relaxation,
     save_results
 )
+from ase.io.trajectory import Trajectory
 
 
 def main():
@@ -52,17 +53,20 @@ def main():
         logger.info(f"[ERROR] Failed to setup calculator with model {args.model}.")
         return 1
     
-    # Store fmax for visualize-traj CHANGE THIS- DC
-    atoms.info["fmax"] = args.fmax
+    traj = Trajectory(str(traj_path), "w")
+    traj.set_description({"fmax": args.fmax})
 
     # Run relaxation
     success = run_relaxation(
         atoms=atoms,
-        traj_path=traj_path,
+        traj_path=traj,
         fmax=args.fmax,
         max_steps=args.max_steps,
         optimizer=args.optimizer
     )
+
+    traj.close()
+
     if not success:
         logger.info("[ERROR] Relaxation failed.")
         return 1

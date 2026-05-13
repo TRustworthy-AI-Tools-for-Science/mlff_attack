@@ -12,6 +12,7 @@ from mlff_attack.relaxation import setup_calculator
 from mlff_attack.attacks import save_perturbation, load_perturbation
 from pathlib import Path
 
+
 def create_dummy_atoms():
     """Create a dummy ASE Atoms object for testing."""
     return build.molecule("H2O")
@@ -77,11 +78,36 @@ def test_epsilon_ball_bounds_displacement():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
-    attack = PGD_MACE(atoms.calc, epsilon=0.2, alpha=0.1, num_iter=3, device="cpu")
+    pgd = PGD_MACE(atoms.calc, epsilon=0.2, alpha=0.1, num_iter=3, device="cpu")
 
-    perturbed_atoms = attack.attack(atoms)
+    perturbed_atoms = pgd.attack(atoms)
 
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
     displacement_magnitudes = np.linalg.norm(displacement, axis=1)
 
-    assert np.all(displacement_magnitudes <= attack.epsilon + 1e-6)
+    assert np.all(displacement_magnitudes <= pgd.epsilon + 1e-6)
+
+def test_compute_gradient():
+    model = dummy_model()
+    atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
+
+    pgd = PGD_MACE(atoms.calc, epsilon=0.1, alpha=0.01, num_iter=3, device="cpu")
+    gradients = pgd.compute_gradient(atoms)
+
+    assert gradients.shape == atoms.get_positions().shape
+    assert np.all(np.isfinite(gradients))
+
+def test_attack_step():
+    model = dummy_model()
+    atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
+
+    alpha = 0.01
+    pgd = PGD_MACE(atoms.calc, epsilon=0.1, alpha=alpha, num_iter=3, device="cpu")
+
+    gradients = pgd.compute_gradient(atoms)
+    perturbed_atoms = pgd.attack_step(atoms)
+
+    displacement = perturbed_atoms.get_positions() - atoms.get_positions()
+    expected_displacement = alpha * np.sign(gradients)
+
+    assert np.allclose(displacement, expected_displacement, atol=1e-6)

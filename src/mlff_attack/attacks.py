@@ -16,7 +16,7 @@ from ase.io import read, write
 from mlff_attack.relaxation import setup_calculator
 
 
-def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, clip=False, verbose=True):
+def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, alpha=None, clip=False, verbose=True):
     """Perform an adversarial attack on the given atomic structure using a MACE model.
     
     This is a convenience wrapper around the FGSM_MACE class.
@@ -39,6 +39,8 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
         Type of attack to perform, by default "fgsm"
     n_steps : int, optional
         Number of steps for iterative attacks (only used for I-FGSM/PGD), by default 1
+    alpha : float, optional
+        PGD step size. If not provided, use epsilon / n_steps
     clip : bool, optional
         Whether to clip the perturbations, by default False
         
@@ -52,6 +54,7 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
         Contains details and history of the attack
     """
     from mlff_attack.grad_based.fgsm import FGSM_MACE
+    from mlff_attack.grad_based.pgd import PGD_MACE
 
     # Setup calculator
     if verbose:
@@ -67,14 +70,14 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
     
     # Create FGSM attack
     if verbose:
-        logger.info(f"\nPerforming FGSM adversarial attack")
+        logger.info(f"\nPerforming {attack_type.upper()} adversarial attack")
         logger.info(f"   Epsilon: {epsilon} Å")
         if target_energy is not None:
             logger.info(f"   Target energy: {target_energy} eV")
         else:
             logger.info(f"   Mode: Maximize energy")
     
-    if attack_type in ["fgsm", "ifgsm"]:
+    if attack_type == "fgsm":
         attack = FGSM_MACE(
             model=atoms.calc,
             epsilon=epsilon,
@@ -83,15 +86,18 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
             target_energy=target_energy,
     )
     
-    # TODO: when PGD is implemented, import PGD_MACE" - DC
-    # if attack_type == "pgd":
-    #     attack = PGD_MACE(
-    #         model=atoms.calc,
-    #         epsilon=epsilon,
-    #         device=device,
-    #         track_history=True,
-    #         target_energy=target_energy,
-    # )
+    elif attack_type == "pgd":
+        # if alpha is None:
+        #     alpha = epsilon / n_steps
+        attack = PGD_MACE(
+            model=atoms.calc,
+            epsilon=epsilon,
+            alpha=alpha,
+            num_iter=n_steps,
+            device=device,
+            track_history=True,
+            target_energy=target_energy,
+        )
 
     else:
         raise NotImplementedError(f"Attack type '{attack_type}' not implemented yet.")

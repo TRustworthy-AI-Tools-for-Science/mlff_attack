@@ -8,6 +8,7 @@ import logging
 logger = logging.getLogger(__name__)
 import matplotlib.pyplot as plt
 from ase.io import read
+from ase.io.trajectory import Trajectory
 import numpy as np
 
 
@@ -32,6 +33,9 @@ def load_trajectory(traj_path):
     logger.info(f"[INFO] Reading trajectory: {traj_path}")
     try:
         traj = read(traj_path, index=":")
+        if len(traj) == 0:
+            logger.error(f"[ERROR] Trajectory contains no frames: {traj_path}")
+            return None
         logger.info(f"[INFO] Trajectory contains {len(traj)} frames")
         return traj
     except Exception as e:
@@ -339,7 +343,10 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
     """
     # Extract data
     steps, energies, max_forces, volumes = extract_trajectory_data(traj)
-    fmax = traj[-1].info.get("fmax", 0.01) # get fmax from run_relaxation - DC
+    with Trajectory(str(traj_path), "r") as traj_reader:
+        description = getattr(traj_reader, "description", {}) or {}
+
+    fmax = float(description.get("fmax", fmax))
 
     # Calculate statistics
     stats = calculate_statistics(energies, max_forces, volumes, fmax)

@@ -141,8 +141,7 @@ def run_relaxation(
         True if relaxation completed successfully, False otherwise
     """
     try:
-        atoms.info["fmax"] = fmax # store fmax for visualize-traj CHANGE THIS - DC
-        logger.info(f"[INFO] Starting relaxation with {optimizer} optimizer") # CHANGE ALL PRINT TO LOGGER - DC
+        logger.info(f"[INFO] Starting relaxation with {optimizer} optimizer")
         logger.info(f"[INFO] Convergence criterion: fmax = {fmax} eV/Å")
         logger.info(f"[INFO] Maximum steps: {max_steps}")
         

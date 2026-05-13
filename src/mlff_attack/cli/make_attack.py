@@ -97,6 +97,13 @@ def parse_args():
         default=1,
         help="Number of FGSM attack iterations",
     )
+    
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=None,
+        help="PGD step size. If not provided, use epsilon / n_steps",
+    )
 
     parser.add_argument(
         "--clip",
@@ -104,8 +111,8 @@ def parse_args():
         default=False,
         help="Clip total perturbation displacements to epsilon",
     )
-    return parser.parse_args()
 
+    return parser.parse_args()
 
 
 def main():
@@ -129,6 +136,7 @@ def main():
     attack_type = args.type
     n_steps = args.n_steps
     clip = args.clip
+    alpha = args.alpha
     
     # Determine output path
     if args.outdir is not None:
@@ -154,6 +162,7 @@ def main():
         output_cif=output_cif,
         attack_type=attack_type,
         n_steps=n_steps,
+        alpha=alpha,
         clip=clip
     )
 

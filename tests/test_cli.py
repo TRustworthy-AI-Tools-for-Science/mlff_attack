@@ -109,6 +109,30 @@ def test_cli_fgsm_accepts_all_arguments():
     assert "unrecognized arguments" not in result.stderr
 
 
+def test_cli_pgd_accepts_all_arguments():
+    cmd = [
+        "python",
+        "src/mlff_attack/cli/make_attack.py",
+        "--input", "does_not_exist.cif",
+        "--model", "does_not_exist.model",
+        "--device", "cpu",
+        "--epsilon", "0.05",
+        "--alpha", "0.01",
+        "--outdir", "tests/output/make_attack_test",
+        "--target-energy", "1.5",
+        "--type", "pgd",
+        "--n-steps", "3",
+        "--clip",
+        "--no-visualize",
+    ]
+
+    # Run the CLI command
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    # Check that the command executed successfully
+    assert result.returncode == 1, f"CLI failed with error: {result.stderr}"
+    assert "unrecognized arguments" not in result.stderr
+
+
 @pytest.mark.cli
 def test_cli_visualize_traj():
     # Define input parameters
