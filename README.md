@@ -89,6 +89,7 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 - `--outdir`: Directory to save the results (required).
 - `--epsilon`: Perturbation step size for the attack (default: 0.05).
 - `--n-steps`: Number of attack iterations (default: 1 for FGSM, >1 for PGD).
+- `--alpha`: PGD step size. Only valid with `--type pgd`. If omitted for PGD, defaults to `epsilon / n_steps`.
 - `--clip`: Whether to clip perturbations to the epsilon bound (default: False).
 - `--device`: Device to use for computations (cuda or cpu, default: cuda).
 
@@ -102,8 +103,8 @@ make-attack --type fgsm --input structure.cif --model mace-model.model --outdir 
 # Perform an I-FGSM attack
 make-attack --type fgsm --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --n-steps 10
 
-# Perform a PGD attack with 10 steps
-make-attack --type pgd --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --n-steps 10
+# Perform a PGD attack
+make-attack --type pgd --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --n-steps 10 --alpha 0.01
 
 ```
 

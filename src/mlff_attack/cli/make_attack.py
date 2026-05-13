@@ -126,6 +126,9 @@ def main():
 
     # Parse command line arguments
     args = parse_args()
+
+    if args.type != "pgd" and args.alpha is not None:
+        raise SystemExit("--alpha can only be used with --type pgd")
     
     # Override configuration with command line arguments
     input_cif = args.input
