@@ -87,22 +87,25 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 - `--input`: Path to the input structure file (CIF format) (required).
 - `--model`: Path to the MACE model file (.model) (required).
 - `--outdir`: Directory to save the results (required).
-- `--epsilon`: Perturbation step size for the attack (default: 0.01).
+- `--epsilon`: Perturbation step size for the attack (default: 0.05).
 - `--n-steps`: Number of attack iterations (default: 1 for FGSM, >1 for PGD).
-- `--clip`: Whether to clip perturbations to the epsilon bound (default: True).
+- `--alpha`: PGD step size. Only valid with `--type pgd`. If omitted for PGD, defaults to `epsilon / n_steps`.
+- `--clip`: Whether to clip perturbations to the epsilon bound (default: False).
 - `--device`: Device to use for computations (cuda or cpu, default: cuda).
 
 #### Example usage
 
+
 ```bash
 # Perform an FGSM attack
-make-attack --type fgsm --input structure.cif --model mace-model.model --outdir perturbed_structure.cif --epsilon 0.1
+make-attack --type fgsm --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1
 
 # Perform an I-FGSM attack
-make-attack --type fgsm --input structure.cif --model mace-model.model --outdir perturbed_structure.cif --epsilon 0.1 --n-steps 10
+make-attack --type fgsm --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --n-steps 10
 
-# Perform a PGD attack with 10 steps
-make-attack --type pgd --input structure.cif --model mace-model.model --outdir perturbed_structure.cif --epsilon 0.1 --n-steps 10
+# Perform a PGD attack
+make-attack --type pgd --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --n-steps 10 --alpha 0.01
+
 ```
 
 ### Example workflow
@@ -115,7 +118,7 @@ mace-calc-single --input structure.cif --model mace-model.model --outdir output/
 visualize-traj --traj output/relaxed.traj --outdir output/ --show
 
 # Generate an attack
-make-attack --type fgsm --input structure.cif --outdir perturbed_structure.cif
+make-attack --type fgsm --input structure.cif --outdir output_perturbed/
 
 # Run MACE relaxation on perturbed structure
 mace-calc-single --input perturbed_structure.cif --model mace-model.model --outdir output_perturbed/

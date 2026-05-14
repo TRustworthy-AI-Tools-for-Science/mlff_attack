@@ -4,8 +4,11 @@ Trajectory visualization functionality.
 """
 
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 import matplotlib.pyplot as plt
 from ase.io import read
+from ase.io.trajectory import Trajectory
 import numpy as np
 
 
@@ -24,16 +27,19 @@ def load_trajectory(traj_path):
     """
     traj_path = Path(traj_path)
     if not traj_path.exists():
-        print(f"[ERROR] Trajectory file not found: {traj_path}")
+        logger.info(f"[ERROR] Trajectory file not found: {traj_path}")
         return None
 
-    print(f"[INFO] Reading trajectory: {traj_path}")
+    logger.info(f"[INFO] Reading trajectory: {traj_path}")
     try:
         traj = read(traj_path, index=":")
-        print(f"[INFO] Trajectory contains {len(traj)} frames")
+        if len(traj) == 0:
+            logger.error(f"[ERROR] Trajectory contains no frames: {traj_path}")
+            return None
+        logger.info(f"[INFO] Trajectory contains {len(traj)} frames")
         return traj
     except Exception as e:
-        print(f"[ERROR] Failed to read trajectory: {e}")
+        logger.info(f"[ERROR] Failed to read trajectory: {e}")
         return None
 
 
@@ -111,8 +117,7 @@ def calculate_noise_spectrum(max_forces):
     spectrum = np.abs(np.fft.rfft(forces_array - np.mean(forces_array)))**2
     return freq, spectrum
 
-
-def calculate_statistics(energies, max_forces, volumes):
+def calculate_statistics(energies, max_forces, volumes, fmax=0.01):
     """Calculate summary statistics from trajectory data.
     
     Parameters
@@ -144,8 +149,7 @@ def calculate_statistics(energies, max_forces, volumes):
     final_force = max_forces[-1] if not np.isnan(max_forces[-1]) else None
     stats['initial_force'] = initial_force
     stats['final_force'] = final_force
-    stats['converged'] = final_force < 0.01 if final_force is not None else None
-    
+    stats['converged'] = final_force < fmax if final_force is not None else None
     # Volume statistics
     initial_volume = volumes[0]
     final_volume = volumes[-1]
@@ -169,7 +173,8 @@ def plot_energy(ax, steps, energies):
         Energy values at each step
     """
     if not all(np.isnan(energies)):
-        ax.plot(steps, energies, 'b-o', markersize=4)
+        ax.plot(steps, energies, 'b-o', markersize=4, label="Energy")
+        ax.legend()
         ax.set_xlabel('Step')
         ax.set_ylabel('Energy (eV)')
         ax.set_title('Total Energy')
@@ -179,7 +184,7 @@ def plot_energy(ax, steps, energies):
         ax.set_title('Total Energy')
 
 
-def plot_forces(ax, steps, max_forces):
+def plot_forces(ax, steps, max_forces, fmax=0.01):
     """Plot force convergence.
     
     Parameters
@@ -192,9 +197,23 @@ def plot_forces(ax, steps, max_forces):
         Maximum force values at each step
     """
     if not all(np.isnan(max_forces)):
-        ax.plot(steps, max_forces, 'r-o', markersize=4)
-        ax.axhline(y=0.01, color='g', linestyle='--', label='fmax=0.01 eV/Å')
-        ax.axhline(y=0.05, color='orange', linestyle='--', label='fmax=0.05 eV/Å')
+        ax.plot(steps, max_forces, 'r-o', markersize=4, label="Max Force")
+        default_fmax_values = [0.01, 0.05]
+        for value in default_fmax_values:
+            color = 'orange' if fmax == value else 'g'
+            ax.axhline(
+                y=value,
+                color=color,
+                linestyle='--',
+                label=f'fmax={value:g} eV/Å'
+            )
+        if fmax not in default_fmax_values:
+            ax.axhline(
+                y=fmax,
+                color='orange',
+                linestyle='--',
+                label=f'fmax={fmax:g} eV/Å'
+            )
         ax.set_xlabel('Step')
         ax.set_ylabel('Max Force (eV/Å)')
         ax.set_title('Maximum Force')
@@ -225,7 +244,7 @@ def plot_volume(ax, steps, volumes):
     ax.grid(True, alpha=0.3)
 
 
-def plot_summary(ax, stats, n_frames):
+def plot_summary(ax, stats, n_frames, fmax=0.01):
     """Plot summary statistics.
     
     Parameters
@@ -259,7 +278,7 @@ def plot_summary(ax, stats, n_frames):
         summary_text += f"Initial max force: {stats['initial_force']:.6f} eV/Å\n"
         summary_text += f"Final max force: {stats['final_force']:.6f} eV/Å\n"
         converged = "Yes" if stats['converged'] else "No"
-        summary_text += f"Converged (fmax<0.01): {converged}\n\n"
+        summary_text += f"Converged (fmax<{fmax}): {converged}\n\n"
     else:
         summary_text += "Forces: Not available\n\n"
     
@@ -288,7 +307,8 @@ def plot_noise(ax, freq, spectrum):
     """
 
     if not all(np.isnan(spectrum)):
-        ax.plot(freq, spectrum, 'm-')
+        ax.plot(freq, spectrum, 'm-', label="Noise Spectrum")
+        ax.legend()
         ax.set_xlabel('Frequency (1/steps)')
         ax.set_ylabel('Power Spectrum')
         ax.set_title('Noise Spectrum of Max Forces')
@@ -298,7 +318,7 @@ def plot_noise(ax, freq, spectrum):
         ax.set_title('Noise Spectrum of Max Forces')  
 
 
-def create_visualization(traj, traj_path, outdir, output_format='png', show=False, save_to_csv=True):
+def create_visualization(traj, traj_path, outdir, output_format='png', show=False, save_to_csv=True, fmax=0.01):
     """Create visualization plots for trajectory data.
     
     Parameters
@@ -323,11 +343,15 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
     """
     # Extract data
     steps, energies, max_forces, volumes = extract_trajectory_data(traj)
-    
-    # Calculate statistics
-    stats = calculate_statistics(energies, max_forces, volumes)
+    with Trajectory(str(traj_path), "r") as traj_reader:
+        description = getattr(traj_reader, "description", {}) or {}
 
-    # callculate noise spectrum
+    fmax = float(description.get("fmax", fmax))
+
+    # Calculate statistics
+    stats = calculate_statistics(energies, max_forces, volumes, fmax)
+
+    # Calculate noise spectrum
     freq, spectrum = calculate_noise_spectrum(max_forces)
     
     # Create figure
@@ -336,18 +360,18 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
     
     # Create plots
     plot_energy(axes[0, 0], steps, energies)
-    plot_forces(axes[0, 1], steps, max_forces)
+    plot_forces(axes[0, 1], steps, max_forces, fmax)
     # plot_volume(axes[1, 0], steps, volumes)
     plot_noise(axes[1, 0], freq, spectrum)
 
-    summary_text = plot_summary(axes[1, 1], stats, len(traj))
+    summary_text = plot_summary(axes[1, 1], stats, len(traj) - 1, fmax)
     
     plt.tight_layout()
     
     # Save figure
     output_file = outdir / f"relaxation_analysis.{output_format}"
     plt.savefig(output_file, dpi=300, bbox_inches='tight')
-    print(f"[INFO] Plot saved to: {output_file}")
+    logger.info(f"[INFO] Plot saved to: {output_file}")
     
     # Show plot if requested
     if show:
@@ -356,9 +380,9 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
         plt.close()
     
     # Print summary to console
-    print("\n" + "="*50)
-    print(summary_text)
-    print("="*50)
+    logger.info("\n" + "="*50)
+    logger.info(summary_text)
+    logger.info("="*50)
 
     # Save data to CSV if requested
     if save_to_csv:
@@ -372,7 +396,7 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
         df = pd.DataFrame(data)
         csv_file = outdir / f"relaxation_data.csv"
         df.to_csv(csv_file, index=False)
-        print(f"[INFO] Data saved to CSV: {csv_file}")
+        logger.info(f"[INFO] Data saved to CSV: {csv_file}")
 
         noise = {
             'Frequency (1/steps)': freq,
@@ -381,6 +405,6 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
         df_noise = pd.DataFrame(noise)
         csv_noise_file = outdir / f"noise_spectrum.csv"
         df_noise.to_csv(csv_noise_file, index=False)
-        print(f"[INFO] Noise spectrum data saved to CSV: {csv_noise_file}")
+        logger.info(f"[INFO] Noise spectrum data saved to CSV: {csv_noise_file}")
 
     return str(output_file)

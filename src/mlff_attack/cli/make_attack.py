@@ -8,7 +8,8 @@ from pathlib import Path
 import torch
 import numpy as np
 import argparse
-
+import logging
+logger = logging.getLogger(__name__)
 
 import matplotlib.pyplot as plt
 from mlff_attack.relaxation import (
@@ -16,6 +17,7 @@ from mlff_attack.relaxation import (
     setup_calculator,
 )
 from mlff_attack.attacks import make_attack, visualize_perturbation
+
 
 def parse_args():
     """Parse command line arguments."""
@@ -85,18 +87,48 @@ def parse_args():
         "--type",
         type=str,
         default="fgsm",
-        choices=["fgsm", "pgd", "bim"],
+        choices=["fgsm", "pgd"],
         help="Type of adversarial attack to perform"
     )
+
+    parser.add_argument(
+        "--n-steps",
+        type=int,
+        default=1,
+        help="Number of FGSM attack iterations",
+    )
     
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=None,
+        help="PGD step size. If not provided, use epsilon / n_steps",
+    )
+
+    parser.add_argument(
+        "--clip",
+        action="store_true",
+        default=False,
+        help="Clip total perturbation displacements to epsilon",
+    )
+
     return parser.parse_args()
 
 
-
 def main():
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    logging.basicConfig(
+        filename=log_dir / "make_attack.log",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
 
     # Parse command line arguments
     args = parse_args()
+
+    if args.type != "pgd" and args.alpha is not None:
+        raise SystemExit("--alpha can only be used with --type pgd")
     
     # Override configuration with command line arguments
     input_cif = args.input
@@ -105,6 +137,9 @@ def main():
     epsilon = args.epsilon
     target_energy = args.target_energy
     attack_type = args.type
+    n_steps = args.n_steps
+    clip = args.clip
+    alpha = args.alpha
     
     # Determine output path
     if args.outdir is not None:
@@ -113,14 +148,14 @@ def main():
         output_cif = Path(input_cif).with_name(Path(input_cif).stem + "_perturbed.cif")
 
     # Load structure
-    print(f"\nLoading structure from: {input_cif}")
+    logger.info(f"\nLoading structure from: {input_cif}")
     atoms = load_structure(input_cif)
     if atoms is None:
         raise RuntimeError(f"Failed to load structure from {input_cif}")
-    print(f"   Loaded {len(atoms)} atoms: {atoms.get_chemical_formula()}")
+    logger.info(f"   Loaded {len(atoms)} atoms: {atoms.get_chemical_formula()}")
 
     # Generate perturbed structure
-    print(f"\nGenerating perturbed structure with epsilon={epsilon} Å")
+    logger.info(f"\nGenerating perturbed structure with epsilon={epsilon} Å")
     output_file, perturbed_atoms, attack_details = make_attack(
         atoms=atoms,
         model_path=model_path,
@@ -128,12 +163,15 @@ def main():
         epsilon=epsilon,
         target_energy=target_energy,
         output_cif=output_cif,
-        attack_type=attack_type
+        attack_type=attack_type,
+        n_steps=n_steps,
+        alpha=alpha,
+        clip=clip
     )
 
     # Visualize perturbation
     if args.visualize:
-        print(f"\nVisualizing perturbation")
+        logger.info(f"\nVisualizing perturbation")
         # Store output filename in atoms info for visualization
         perturbed_atoms.info['filename'] = str(output_cif)
         fig = visualize_perturbation(atoms, perturbed_atoms, epsilon=epsilon, outdir=Path(output_cif).parent)

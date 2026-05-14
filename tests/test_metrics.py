@@ -3,8 +3,6 @@ from mlff_attack import metrics
 import numpy as np
 
 def test_calculate_spectral_flatness():
-    """Test the calculate_spectral_flatness function."""
-    
     # Test with a simple signal
     signal = [1, 2, 3, 4, 5]
     sf = metrics.calculate_spectral_flatness(signal)

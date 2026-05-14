@@ -1,13 +1,11 @@
 import pytest
 import subprocess
 import os
+import sys
 from pathlib import Path
 
 @pytest.mark.cli
 def test_cli_mace_calc_single():
-    """Test the MACE single structure relaxation CLI."""
-
-
     # Define input parameters
     input_cif = 'does_not_exist.cif'  # Intentionally incorrect path
     model_path = 'does_not_exist.model'  # Intentionally incorrect path
@@ -50,8 +48,6 @@ def test_cli_mace_calc_single():
 
 @pytest.mark.cli
 def test_cli_make_attack():
-    """Test make-attack CLI."""
-
     # Define input parameters
     input_cif = 'does_not_exist.cif'  # Intentionally incorrect path
     model_path = 'does_not_exist.model'  # Intentionally incorrect path
@@ -90,11 +86,75 @@ def test_cli_make_attack():
         import shutil
         shutil.rmtree(outdir)
 
+@pytest.mark.cli
+def test_cli_fgsm_accepts_all_arguments():
+    cmd = [
+        "python",
+        "src/mlff_attack/cli/make_attack.py",
+        "--input", "does_not_exist.cif",
+        "--model", "does_not_exist.model",
+        "--device", "cpu",
+        "--epsilon", "0.05",
+        "--outdir", "tests/output/make_attack_test",
+        "--target-energy", "1.5",
+        "--type", "fgsm",
+        "--n-steps", "3",
+        "--clip",
+        "--no-visualize",
+    ]
+
+    # Run the CLI command
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    # Check that the command executed successfully
+    assert result.returncode == 1, f"CLI failed with error: {result.stderr}"
+    assert "unrecognized arguments" not in result.stderr
+
+def test_cli_fgsm_rejects_alpha():
+    cmd = [
+        sys.executable,
+        "src/mlff_attack/cli/make_attack.py",
+        "--input", "does_not_exist.cif",
+        "--model", "does_not_exist.model",
+        "--device", "cpu",
+        "--epsilon", "0.05",
+        "--alpha", "0.01",
+        "--outdir", "tests/output/make_attack_test",
+        "--type", "fgsm",
+        "--no-visualize",
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert result.returncode != 0
+    assert "--alpha can only be used with --type pgd" in result.stderr
+
+
+def test_cli_pgd_accepts_all_arguments():
+    cmd = [
+        "python",
+        "src/mlff_attack/cli/make_attack.py",
+        "--input", "does_not_exist.cif",
+        "--model", "does_not_exist.model",
+        "--device", "cpu",
+        "--epsilon", "0.05",
+        "--alpha", "0.01",
+        "--outdir", "tests/output/make_attack_test",
+        "--target-energy", "1.5",
+        "--type", "pgd",
+        "--n-steps", "3",
+        "--clip",
+        "--no-visualize",
+    ]
+
+    # Run the CLI command
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    # Check that the command executed successfully
+    assert result.returncode == 1, f"CLI failed with error: {result.stderr}"
+    assert "unrecognized arguments" not in result.stderr
+
 
 @pytest.mark.cli
 def test_cli_visualize_traj():
-    """Test visualize-traj CLI."""
-
     # Define input parameters
     perturbation_npz = 'does_not_exist.traj'  # Intentionally incorrect path
     output_plot = "tests/output/visualize_traj_test"

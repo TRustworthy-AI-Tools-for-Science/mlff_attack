@@ -5,15 +5,26 @@ CLI entry point for MACE single structure relaxation.
 
 import argparse
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 from mlff_attack.relaxation import (
     load_structure,
     setup_calculator,
     run_relaxation,
     save_results
 )
+from ase.io.trajectory import Trajectory
 
 
 def main():
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    logging.basicConfig(
+        filename=log_dir / "mace_calc_single.log",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
     """Main entry point for MACE single structure relaxation."""
     parser = argparse.ArgumentParser(description="Relax a single CIF with MACE.")
     parser.add_argument("--input", required=True, help="Input CIF file")
@@ -33,25 +44,31 @@ def main():
     # Load structure
     atoms = load_structure(args.input)
     if atoms is None:
-        print(f"[ERROR] Failed to load input structure for {args.input}.")
+        logger.info(f"[ERROR] Failed to load input structure for {args.input}.")
         return 1
 
     # Setup calculator
     atoms = setup_calculator(atoms, args.model, args.device)
     if atoms is None:
-        print(f"[ERROR] Failed to setup calculator with model {args.model}.")
+        logger.info(f"[ERROR] Failed to setup calculator with model {args.model}.")
         return 1
+    
+    traj = Trajectory(str(traj_path), "w")
+    traj.set_description({"fmax": args.fmax})
 
     # Run relaxation
     success = run_relaxation(
         atoms=atoms,
-        traj_path=traj_path,
+        traj_path=traj,
         fmax=args.fmax,
         max_steps=args.max_steps,
         optimizer=args.optimizer
     )
+
+    traj.close()
+
     if not success:
-        print("[ERROR] Relaxation failed.")
+        logger.info("[ERROR] Relaxation failed.")
         return 1
 
     # Save results
@@ -59,7 +76,7 @@ def main():
     if cif_path is None:
         return 1
 
-    print(f"[DONE] Relaxation complete. Trajectory → {traj_path}, CIF → {cif_path}")
+    logger.info(f"[DONE] Relaxation complete. Trajectory → {traj_path}, CIF → {cif_path}")
     return 0
 
 

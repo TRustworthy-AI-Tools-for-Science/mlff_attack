@@ -5,6 +5,8 @@ This module implements the FGSM attack specifically for MACE models,
 extending the base MLFFAttack class.
 """
 
+import logging
+logger = logging.getLogger(__name__)
 from typing import Optional, Callable, Any
 import numpy as np
 import torch
@@ -223,7 +225,8 @@ class FGSM_MACE(MLFFAttack):
     def attack_step(
         self,
         atoms: Any,
-        step: int = 0
+        step: int = 0,
+        n_steps: int = 1,
     ) -> Any:
         """Perform one step of FGSM attack.
         
@@ -242,8 +245,9 @@ class FGSM_MACE(MLFFAttack):
         # Compute gradients
         gradients = self.compute_gradient(atoms)
         
-        # FGSM: perturbation is epsilon * sign of gradient
-        perturbation = self.epsilon * np.sign(gradients)
+        # FGSM: perturbation is step size * sign of gradient
+        step_size = self.epsilon / n_steps
+        perturbation = step_size * np.sign(gradients)
         
         # Apply perturbation
         current_positions = atoms.get_positions()
@@ -304,23 +308,26 @@ class FGSM_MACE(MLFFAttack):
         perturbed_atoms = atoms.copy()
         perturbed_atoms.calc = atoms.calc  # Ensure calculator is attached
         if n_steps > 1:
-            print(f"Starting iterative FGSM attack for {n_steps} steps...")
+            logger.info(f"Starting iterative FGSM attack for {n_steps} steps...")
             for step in trange(n_steps):
-                perturbed_atoms = self.attack_step(perturbed_atoms, step)
-                
-                # Check if target energy is reached
-                if self.target_energy is not None:
-                    try:
-                        current_energy = perturbed_atoms.get_potential_energy()
-                        energy_diff = abs(current_energy - self.target_energy)
-                        if energy_diff < 0.01:  # Within 0.01 eV of target
-                            print(f"Target energy reached at step {step+1}: {current_energy:.4f} eV (target: {self.target_energy:.4f} eV)")
-                            break
-                    except Exception:
-                        pass
+                perturbed_atoms = self.attack_step(perturbed_atoms, step, n_steps)
+                if clip:
+                    self._clip_perturbations(perturbed_atoms)
+                    # Check if target energy is reached
+                    if self.target_energy is not None:
+                        try:
+                            current_energy = perturbed_atoms.get_potential_energy()
+                            energy_diff = abs(current_energy - self.target_energy)
+                            if energy_diff < 0.01:  # Within 0.01 eV of target
+                                logger.info(f"Target energy reached at step {step+1}: {current_energy:.4f} eV (target: {self.target_energy:.4f} eV)")
+                                break
+                        except Exception:
+                            pass
 
         else:
-            perturbed_atoms = self.attack_step(perturbed_atoms, n_steps)
+            perturbed_atoms = self.attack_step(perturbed_atoms, step=0, n_steps=n_steps)
+            if clip:
+                self._clip_perturbations(perturbed_atoms)
 
         self._perturbed_positions = perturbed_atoms.get_positions().copy()
         

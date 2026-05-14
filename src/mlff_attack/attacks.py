@@ -4,16 +4,19 @@
 Contains implementation for FGSM, I-FGSM, and PGD attacks on MLFF models.
 """
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 import numpy as np
 
 from datetime import datetime
-    
+
 import torch
 import matplotlib.pyplot as plt
 from ase.io import read, write
 from mlff_attack.relaxation import setup_calculator
 
-def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, clip=False, verbose=True):
+
+def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, alpha=None, clip=False, verbose=True):
     """Perform an adversarial attack on the given atomic structure using a MACE model.
     
     This is a convenience wrapper around the FGSM_MACE class.
@@ -36,6 +39,8 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
         Type of attack to perform, by default "fgsm"
     n_steps : int, optional
         Number of steps for iterative attacks (only used for I-FGSM/PGD), by default 1
+    alpha : float, optional
+        PGD step size. If not provided, use epsilon / n_steps
     clip : bool, optional
         Whether to clip the perturbations, by default False
         
@@ -49,12 +54,13 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
         Contains details and history of the attack
     """
     from mlff_attack.grad_based.fgsm import FGSM_MACE
+    from mlff_attack.grad_based.pgd import PGD_MACE
 
     # Setup calculator
     if verbose:
-        print(f"\nSetting up MACE calculator")
-        print(f"   Model: {model_path}")
-        print(f"   Device: {device}")
+        logger.info("Setting up MACE calculator")
+        logger.info(f"Model: {model_path}")
+        logger.info(f"Device: {device}")
     atoms = setup_calculator(atoms, model_path, device)
     if atoms is None:
         raise RuntimeError("Failed to set up calculator")
@@ -64,14 +70,14 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
     
     # Create FGSM attack
     if verbose:
-        print(f"\nPerforming FGSM adversarial attack")
-        print(f"   Epsilon: {epsilon} Å")
+        logger.info(f"\nPerforming {attack_type.upper()} adversarial attack")
+        logger.info(f"   Epsilon: {epsilon} Å")
         if target_energy is not None:
-            print(f"   Target energy: {target_energy} eV")
+            logger.info(f"   Target energy: {target_energy} eV")
         else:
-            print(f"   Mode: Maximize energy")
+            logger.info(f"   Mode: Maximize energy")
     
-    if attack_type in ["fgsm", "ifgsm"]:
+    if attack_type == "fgsm":
         attack = FGSM_MACE(
             model=atoms.calc,
             epsilon=epsilon,
@@ -79,6 +85,20 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
             track_history=True,
             target_energy=target_energy,
     )
+    
+    elif attack_type == "pgd":
+        # if alpha is None:
+        #     alpha = epsilon / n_steps
+        attack = PGD_MACE(
+            model=atoms.calc,
+            epsilon=epsilon,
+            alpha=alpha,
+            num_iter=n_steps,
+            device=device,
+            track_history=True,
+            target_energy=target_energy,
+        )
+
     else:
         raise NotImplementedError(f"Attack type '{attack_type}' not implemented yet.")
     
@@ -94,22 +114,22 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
     pert_energy = perturbed_atoms.get_potential_energy()
     energy_change = pert_energy - orig_energy
     if verbose:
-        print(f"   Original energy:  {orig_energy:.4f} eV")
-        print(f"   Perturbed energy: {pert_energy:.4f} eV")
-        print(f"   Energy change:    {energy_change:+.4f} eV")
+        logger.info(f"   Original energy:  {orig_energy:.4f} eV")
+        logger.info(f"   Perturbed energy: {pert_energy:.4f} eV")
+        logger.info(f"   Energy change:    {energy_change:+.4f} eV")
     
     # Calculate displacement statistics
     stats = attack.get_perturbation_stats()
     if verbose:
-        print(f"   Mean displacement: {stats['mean_displacement']:.4f} Å")
-        print(f"   Max displacement:  {stats['max_displacement']:.4f} Å")
+        logger.info(f"   Mean displacement: {stats['mean_displacement']:.4f} Å")
+        logger.info(f"   Max displacement:  {stats['max_displacement']:.4f} Å")
     
     # Save perturbed structure
     if verbose:
-        print(f"\nSaving perturbed structure to: {output_cif}")
+        logger.info(f"\nSaving perturbed structure to: {output_cif}")
     write(output_cif, perturbed_atoms)
     if verbose:
-        print(f"   Successfully saved!")
+        logger.info(f"   Successfully saved!")
 
     return str(output_cif), perturbed_atoms, attack.attack_history
 
@@ -332,7 +352,7 @@ def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original,
     
     # Save to npz file
     np.savez_compressed(save_path, **data)
-    print(f"Saved perturbation data to {save_path}.npz")
+    logger.info(f"Saved perturbation data to {save_path}.npz")
     
     return save_path
 
@@ -417,11 +437,11 @@ def load_perturbation(load_path):
         'metadata': metadata
     }
     
-    print(f"Loaded perturbation data from {load_path}")
-    print(f"  Timestamp: {result['timestamp']}")
-    print(f"  Atoms: {len(atoms_original)}")
-    print(f"  Epsilon: {result['epsilon']:.4f} Å")
-    print(f"  Energy change: {result['energy_change']:+.4f} eV")
+    logger.info(f"Loaded perturbation data from {load_path}")
+    logger.info(f"  Timestamp: {result['timestamp']}")
+    logger.info(f"  Atoms: {len(atoms_original)}")
+    logger.info(f"  Epsilon: {result['epsilon']:.4f} Å")
+    logger.info(f"  Energy change: {result['energy_change']:+.4f} eV")
     
     return result
 
@@ -649,6 +669,6 @@ Displacement Distribution:
         
         save_path = outdir / f'{base_name}.png'
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        print(f"Saved visualization to {save_path}")
+        logger.info(f"Saved visualization to {save_path}")
     
     return fig
