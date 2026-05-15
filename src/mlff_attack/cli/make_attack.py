@@ -116,14 +116,6 @@ def parse_args():
 
 
 def main():
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    logging.basicConfig(
-        filename=log_dir / "make_attack.log",
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    )
-
     # Parse command line arguments
     args = parse_args()
 
@@ -138,14 +130,21 @@ def main():
     target_energy = args.target_energy
     attack_type = args.type
     n_steps = args.n_steps
-    clip = args.clip
     alpha = args.alpha
+    clip = args.clip
     
     # Determine output path
     if args.outdir is not None:
         output_cif = Path(args.outdir) / (Path(input_cif).stem + "_perturbed.cif")
     else:
         output_cif = Path(input_cif).with_name(Path(input_cif).stem + "_perturbed.cif")
+    
+    output_cif.parent.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        filename=output_cif.parent / "make_attack.log",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
 
     # Load structure
     logger.info(f"\nLoading structure from: {input_cif}")

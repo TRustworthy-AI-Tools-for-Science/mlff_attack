@@ -105,10 +105,15 @@ class FGSM_MACE(MLFFAttack):
         # Convert to dict
         batch = atomic_data.to_dict()
         
+        # Get the dtype from the model's parameters
+        model_dtype = next(model.parameters()).dtype
         # Move everything to the right device first
         for key in batch:
             if torch.is_tensor(batch[key]):
                 batch[key] = batch[key].to(self.device)
+                # match floating tensors to the model dtype - DC
+                if torch.is_floating_point(batch[key]):
+                    batch[key] = batch[key].to(model_dtype)
         
         # Add batch indexing if not present (on correct device)
         if "batch" not in batch:
@@ -117,8 +122,6 @@ class FGSM_MACE(MLFFAttack):
             batch["ptr"] = torch.tensor([0, len(atoms)], dtype=torch.long, device=self.device)
         
         # Replace positions with gradient-enabled version (match model dtype)
-        # Get the dtype from the model's parameters
-        model_dtype = next(model.parameters()).dtype
         positions = torch.tensor(
             positions_np, dtype=model_dtype, device=self.device, requires_grad=True
         )
