@@ -16,7 +16,7 @@ from ase.io import read, write
 from mlff_attack.relaxation import setup_calculator
 
 
-def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, alpha=None, clip=False, verbose=True):
+def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, alpha=None, clip=None, verbose=True):
     """Perform an adversarial attack on the given atomic structure using a MACE model.
     
     This is a convenience wrapper around the FGSM_MACE class.
@@ -42,9 +42,9 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
     alpha : float, optional
         PGD step size. If not provided, use epsilon / n_steps
     clip : bool, optional
-        Whether to clip the perturbations, by default False
+        Whether to clip the perturbations, by default False for FGSM and True for PGD
         
-    Returns
+    Return
     -------
     str
         Path to the saved perturbed CIF file
@@ -78,17 +78,22 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
             logger.info(f"   Mode: Maximize energy")
     
     if attack_type == "fgsm":
+        if clip is None:
+            clip = False
         attack = FGSM_MACE(
             model=atoms.calc,
             epsilon=epsilon,
             device=device,
             track_history=True,
             target_energy=target_energy,
-    )
+        )
     
     elif attack_type == "pgd":
-        # if alpha is None:
-        #     alpha = epsilon / n_steps
+        if alpha is None:
+            alpha = epsilon / n_steps
+        if clip is False:
+            raise ValueError("PGD requires clip=True.")
+        clip = True # requirement for PGD - DC
         attack = PGD_MACE(
             model=atoms.calc,
             epsilon=epsilon,

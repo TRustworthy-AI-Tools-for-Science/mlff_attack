@@ -108,7 +108,7 @@ def parse_args():
     parser.add_argument(
         "--clip",
         action="store_true",
-        default=False,
+        default=None,
         help="Clip total perturbation displacements to epsilon",
     )
 

@@ -239,6 +239,7 @@ def test_compute_gradient_uses_loss_function():
     fgsm = FGSM_MACE(atoms.calc, epsilon=0.1, device="cpu")
 
     default_gradients = fgsm.compute_gradient(atoms)
-    custom_gradients = fgsm.compute_gradient(atoms, loss_fn=lambda energy: energy)
-
+    loss_function = lambda energy: energy
+    custom_gradients = fgsm.compute_gradient(atoms, loss_fn=loss_function)
+    
     assert np.allclose(custom_gradients, -default_gradients, atol=1e-5)
