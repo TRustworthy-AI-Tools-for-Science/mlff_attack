@@ -14,14 +14,6 @@ from mlff_attack.visualization import (
 
 
 def main():
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    logging.basicConfig(
-        filename=log_dir / "visualize_traj.log",
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    )
-
     """Main entry point for trajectory visualization."""
     parser = argparse.ArgumentParser(description="Visualize MACE relaxation trajectory.")
     parser.add_argument("--traj", required=True, help="Path to trajectory file (.traj)")
@@ -39,6 +31,11 @@ def main():
     # Create output directory
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        filename=outdir / "visualize_traj.log",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
 
     # Create visualization
     output_file = create_visualization(

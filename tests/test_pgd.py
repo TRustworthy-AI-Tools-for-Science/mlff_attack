@@ -80,7 +80,10 @@ def test_epsilon_ball_bounds_displacement():
 
     epsilon = 0.2
     pgd = PGD_MACE(atoms.calc, epsilon=epsilon, alpha=0.2, num_iter=3, device="cpu")
-    pgd.compute_gradient = lambda atoms: np.ones_like(atoms.get_positions())
+    fake_gradient = lambda a: np.ones_like(a)
+    atoms_positions = atoms.get_positions()
+    temp_g = fake_gradient(atoms_positions)
+    pgd.compute_gradient = lambda a: temp_g
 
     assert np.linalg.norm([pgd.alpha, pgd.alpha, pgd.alpha]) > epsilon
 

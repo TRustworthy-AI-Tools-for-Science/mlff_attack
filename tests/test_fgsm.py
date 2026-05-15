@@ -164,7 +164,10 @@ def test_displacements_are_clipped_to_epsilon():
 
     epsilon = 0.01
     fgsm = FGSM_MACE(atoms.calc, epsilon=epsilon, device="cpu")
-    fgsm.compute_gradient = lambda atoms: np.ones_like(atoms.get_positions())
+    fake_gradient = lambda a: np.ones_like(a)
+    atoms_positions = atoms.get_positions()
+    temp_g = fake_gradient(atoms_positions)
+    fgsm.compute_gradient = lambda a: temp_g
 
     assert np.linalg.norm([epsilon, epsilon, epsilon]) > epsilon
 
@@ -181,8 +184,11 @@ def test_displacements_are_not_clipped_to_epsilon():
 
     epsilon = 0.01
     fgsm = FGSM_MACE(atoms.calc, epsilon=epsilon, device="cpu")
-    fgsm.compute_gradient = lambda atoms: np.ones_like(atoms.get_positions())
-
+    fake_gradient = lambda a: np.ones_like(a)
+    atoms_positions = atoms.get_positions()
+    temp_g = fake_gradient(atoms_positions)
+    fgsm.compute_gradient = lambda a: temp_g
+    
     perturbed_atoms = fgsm.attack(atoms, n_steps=1, clip=False)
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
     displacement_magnitudes = np.linalg.norm(displacement, axis=1)

@@ -17,14 +17,6 @@ from ase.io.trajectory import Trajectory
 
 
 def main():
-    log_dir = Path("logs")
-    log_dir.mkdir(exist_ok=True)
-    logging.basicConfig(
-        filename=log_dir / "mace_calc_single.log",
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-    )
-
     """Main entry point for MACE single structure relaxation."""
     parser = argparse.ArgumentParser(description="Relax a single CIF with MACE.")
     parser.add_argument("--input", required=True, help="Input CIF file")
@@ -39,6 +31,11 @@ def main():
     # Setup output paths
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        filename=outdir / "mace_calc_single.log",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
     traj_path = outdir / "relaxed.traj"
 
     # Load structure
@@ -53,19 +50,16 @@ def main():
         logger.info(f"[ERROR] Failed to setup calculator with model {args.model}.")
         return 1
     
-    traj = Trajectory(str(traj_path), "w")
-    traj.set_description({"fmax": args.fmax})
+    atoms.info["fmax"] = args.fmax
 
     # Run relaxation
     success = run_relaxation(
         atoms=atoms,
-        traj_path=traj,
+        traj_path=traj_path,
         fmax=args.fmax,
         max_steps=args.max_steps,
         optimizer=args.optimizer
     )
-
-    traj.close()
 
     if not success:
         logger.info("[ERROR] Relaxation failed.")

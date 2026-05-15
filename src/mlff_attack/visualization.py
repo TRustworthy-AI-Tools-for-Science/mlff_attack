@@ -343,10 +343,7 @@ def create_visualization(traj, traj_path, outdir, output_format='png', show=Fals
     """
     # Extract data
     steps, energies, max_forces, volumes = extract_trajectory_data(traj)
-    with Trajectory(str(traj_path), "r") as traj_reader:
-        description = getattr(traj_reader, "description", {}) or {}
-
-    fmax = float(description.get("fmax", fmax))
+    fmax = float(traj[-1].info.get("fmax", fmax))
 
     # Calculate statistics
     stats = calculate_statistics(energies, max_forces, volumes, fmax)
