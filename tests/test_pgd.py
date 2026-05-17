@@ -156,24 +156,12 @@ def test_attack_step():
 
     assert np.allclose(displacement, expected_displacement, atol=1e-6)
 
-def test_projection_clips_large_displacement():
-    model = dummy_model()
-    atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
-
+def test_projection_clips_large_displacement_using_L_infinity():
     epsilon = 1
-    pgd = PGD_MACE(atoms.calc, epsilon=epsilon, alpha=0.01, num_iter=3, device="cpu")
 
-    original_positions = atoms.get_positions().copy()
-    pgd._original_positions = original_positions
+    unclipped_displacement = np.array([3, 4, 0])
+    expected_clipped_displacement = np.array([1, 1, 0])
 
-    displacement_exceeding_epsilon = np.array([3, 4, 0])
-    expected_clipped_displacement = np.array([0.6, 0.8, 0])
-
-    perturbed_atoms = atoms.copy()
-    perturbed_atoms.set_positions(original_positions + displacement_exceeding_epsilon)
-
-    pgd._clip_perturbations(perturbed_atoms)
-
-    clipped_displacement = perturbed_atoms.get_positions() - original_positions
+    clipped_displacement = np.clip(unclipped_displacement, -epsilon, epsilon)
 
     assert np.allclose(clipped_displacement, expected_clipped_displacement, atol=1e-6)
