@@ -91,8 +91,6 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
     elif attack_type == "pgd":
         if alpha is None:
             alpha = epsilon / n_steps
-        if clip is False:
-            raise ValueError("PGD requires clip=True.")
         clip = True # requirement for PGD - DC
         attack = PGD_MACE(
             model=atoms.calc,
