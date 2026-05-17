@@ -134,12 +134,12 @@ def test_random_start_is_within_epsilon():
     epsilon = 0.1
     pgd = PGD_MACE(atoms.calc, epsilon=epsilon, alpha=0.01, num_iter=3, device="cpu")
 
-    atoms.get_positions() = atoms.get_positions().copy()
-    perturbed_atoms = pgd._random_start(atoms) # should start in random position within epsilon - DC
+    perturbed_atoms = pgd._random_start(atoms)
 
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
     displacement_magnitudes = np.linalg.norm(displacement, axis=1)
 
+    assert not np.allclose(perturbed_atoms.get_positions(), atoms.get_positions(), atol=1e-6)
     assert np.all(displacement_magnitudes <= epsilon + 1e-6)
 
 def test_attack_step():

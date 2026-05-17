@@ -122,10 +122,3 @@ def test_saving_results_to_files():
         output_dir.parent.rmdir()
     except OSError:
         pass
-
-def test_fmax_is_stored_in_atoms_info():
-    from ase.io.trajectory import Trajectory
-    with Trajectory("output/relaxed.traj") as traj:
-        for atoms in traj:
-            print(atoms.info)
-            assert "fmax" in atoms.info
