@@ -1,15 +1,17 @@
+"""Base abstractions for gradient-based MLFF attacks."""
+
 from abc import ABC, abstractmethod
-from typing import Optional, Callable, Dict, Any
-from pathlib import Path
+from typing import Any, Callable, Dict, Optional
+
 import numpy as np
 
 
 class MLFFAttack(ABC):
     """Base class for adversarial attacks on Machine Learning Force Fields.
-    
+
     This abstract class defines the interface for implementing various attack
     strategies on MLFF models like MACE, ALIGNN, etc.
-    
+
     Attributes
     ----------
     model : Any
@@ -22,16 +24,16 @@ class MLFFAttack(ABC):
         Dictionary storing attack trajectory information including energies,
         forces, perturbations, and gradients
     """
-    
+
     def __init__(
-        self, 
-        model: Any, 
+        self,
+        model: Any,
         epsilon: float,
         device: str = 'cpu',
         track_history: bool = True
     ):
         """Initialize the attack.
-        
+
         Parameters
         ----------
         model : Any
@@ -55,29 +57,29 @@ class MLFFAttack(ABC):
         } if track_history else None
         self._original_positions = None
         self._perturbed_positions = None
-    
+
     @abstractmethod
     def compute_gradient(
-        self, 
+        self,
         atoms: Any,
         loss_fn: Optional[Callable] = None
     ) -> np.ndarray:
         """Compute gradient of loss with respect to atomic positions.
-        
+
         Parameters
         ----------
         atoms : Any
             ASE Atoms object or equivalent structure
         loss_fn : Optional[Callable], optional
             Optional custom loss function (default: maximize energy), by default None
-            
+
         Returns
         -------
         np.ndarray
             Gradient array with shape (n_atoms, 3)
         """
-        pass
-    
+        raise NotImplementedError
+
     @abstractmethod
     def attack_step(
         self,
@@ -85,29 +87,29 @@ class MLFFAttack(ABC):
         step: int = 0
     ) -> Any:
         """Perform one step of the adversarial attack.
-        
+
         Parameters
         ----------
         atoms : Any
             Current atomic structure
         step : int, optional
             Current iteration number, by default 0
-            
+
         Returns
         -------
         Any
             Updated atoms object with perturbed positions
         """
-        pass
-    
+        raise NotImplementedError
+
     def attack(
-        self, 
+        self,
         atoms: Any,
         n_steps: int = 1,
         clip: bool = True
     ) -> Any:
         """Execute the complete attack.
-        
+
         Parameters
         ----------
         atoms : Any
@@ -116,7 +118,7 @@ class MLFFAttack(ABC):
             Number of attack iterations, by default 1
         clip : bool, optional
             Whether to clip perturbations to epsilon bound, by default True
-            
+
         Returns
         -------
         Any
@@ -124,21 +126,21 @@ class MLFFAttack(ABC):
         """
         if self._original_positions is None:
             self._original_positions = atoms.get_positions().copy()
-        
+
         perturbed_atoms = atoms.copy()
-        
+
         for step in range(n_steps):
             perturbed_atoms = self.attack_step(perturbed_atoms, step)
-            
+
             if clip:
                 self._clip_perturbations(perturbed_atoms)
-        
+
         self._perturbed_positions = perturbed_atoms.get_positions().copy()
         return perturbed_atoms
-    
+
     def _clip_perturbations(self, atoms: Any) -> None:
         """Ensure perturbations stay within epsilon bound.
-        
+
         Parameters
         ----------
         atoms : Any
@@ -146,10 +148,10 @@ class MLFFAttack(ABC):
         """
         if self._original_positions is None:
             return
-            
+
         current_pos = atoms.get_positions()
         perturbations = current_pos - self._original_positions
-        
+
         # Clip per-atom displacement magnitude
         magnitudes = np.linalg.norm(perturbations, axis=1, keepdims=True)
         mask = magnitudes.squeeze() > self.epsilon
@@ -157,14 +159,14 @@ class MLFFAttack(ABC):
         if np.any(mask):
             perturbations[mask] *= self.epsilon / magnitudes[mask]
             atoms.set_positions(self._original_positions + perturbations)
-    
+
     def save_perturbation(
-        self, 
+        self,
         filepath: str,
         include_metadata: bool = True
     ) -> None:
         """Save perturbation data to file.
-        
+
         Parameters
         ----------
         filepath : str
@@ -174,32 +176,32 @@ class MLFFAttack(ABC):
         """
         if self._original_positions is None or self._perturbed_positions is None:
             raise ValueError("No attack has been performed yet")
-        
+
         data = {
             'original_positions': self._original_positions,
             'perturbed_positions': self._perturbed_positions,
             'perturbations': self._perturbed_positions - self._original_positions,
         }
-        
+
         if include_metadata:
             data['epsilon'] = self.epsilon
             data['device'] = self.device
-            
+
         if self.track_history and self.attack_history:
             for key, value in self.attack_history.items():
                 if value:  # Only save non-empty lists
                     data[f'history_{key}'] = np.array(value)
-        
+
         np.savez(filepath, **data)
-    
+
     def load_perturbation(self, filepath: str) -> Dict[str, np.ndarray]:
         """Load perturbation data from file.
-        
+
         Parameters
         ----------
         filepath : str
             Input file path (.npz format)
-            
+
         Returns
         -------
         Dict[str, np.ndarray]
@@ -209,7 +211,7 @@ class MLFFAttack(ABC):
         self._original_positions = data['original_positions']
         self._perturbed_positions = data['perturbed_positions']
         return {key: data[key] for key in data.files}
-    
+
     def reset(self) -> None:
         """Reset attack state."""
         self._original_positions = None
@@ -217,10 +219,10 @@ class MLFFAttack(ABC):
         if self.attack_history:
             for key in self.attack_history:
                 self.attack_history[key] = []
-    
+
     def get_perturbation_stats(self) -> Dict[str, float]:
         """Get statistics about the current perturbation.
-        
+
         Returns
         -------
         Dict[str, float]
@@ -228,10 +230,10 @@ class MLFFAttack(ABC):
         """
         if self._original_positions is None or self._perturbed_positions is None:
             return {}
-        
+
         perturbations = self._perturbed_positions - self._original_positions
         magnitudes = np.linalg.norm(perturbations, axis=1)
-        
+
         return {
             'mean_displacement': float(np.mean(magnitudes)),
             'max_displacement': float(np.max(magnitudes)),

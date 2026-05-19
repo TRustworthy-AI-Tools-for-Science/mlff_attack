@@ -4,28 +4,38 @@ CLI entry point for MACE single structure relaxation.
 """
 
 import argparse
-from pathlib import Path
 import logging
-logger = logging.getLogger(__name__)
+from pathlib import Path
+import sys
+
 from mlff_attack.relaxation import (
     load_structure,
     setup_calculator,
     run_relaxation,
     save_results
 )
-from ase.io.trajectory import Trajectory
+
+logger = logging.getLogger(__name__)
 
 
 def main():
     """Main entry point for MACE single structure relaxation."""
     parser = argparse.ArgumentParser(description="Relax a single CIF with MACE.")
     parser.add_argument("--input", required=True, help="Input CIF file")
-    parser.add_argument("--model", required=True, help="Path to MACE model file (.model)")
+    parser.add_argument(
+        "--model", required=True, help="Path to MACE model file (.model)"
+    )
     parser.add_argument("--outdir", required=True, help="Output directory")
     parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"], help="Device")
-    parser.add_argument("--fmax", type=float, default=0.01, help="Force convergence criterion (eV/Å)")
+    parser.add_argument(
+        "--fmax", type=float, default=0.01,
+        help="Force convergence criterion (eV/Å)"
+    )
     parser.add_argument("--max-steps", type=int, default=300, help="Maximum relaxation steps")
-    parser.add_argument("--optimizer", default="LBFGS", choices=["BFGS", "LBFGS"], help="ASE optimizer")
+    parser.add_argument(
+        "--optimizer", default="LBFGS", choices=["BFGS", "LBFGS"],
+        help="ASE optimizer"
+    )
     args = parser.parse_args()
 
     # Setup output paths
@@ -41,15 +51,15 @@ def main():
     # Load structure
     atoms = load_structure(args.input)
     if atoms is None:
-        logger.info(f"[ERROR] Failed to load input structure for {args.input}.")
+        logger.info("[ERROR] Failed to load input structure for %s.", args.input)
         return 1
 
     # Setup calculator
     atoms = setup_calculator(atoms, args.model, args.device)
     if atoms is None:
-        logger.info(f"[ERROR] Failed to setup calculator with model {args.model}.")
+        logger.info("[ERROR] Failed to setup calculator with model %s.", args.model)
         return 1
-    
+
     atoms.info["fmax"] = args.fmax
 
     # Run relaxation
@@ -70,9 +80,13 @@ def main():
     if cif_path is None:
         return 1
 
-    logger.info(f"[DONE] Relaxation complete. Trajectory → {traj_path}, CIF → {cif_path}")
+    logger.info(
+        "[DONE] Relaxation complete. Trajectory -> %s, CIF -> %s",
+        traj_path,
+        cif_path,
+    )
     return 0
 
 
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

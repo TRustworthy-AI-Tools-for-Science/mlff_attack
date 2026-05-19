@@ -4,19 +4,15 @@ CLI entry point for MACE single structure attack.
 """
 
 import argparse
-from pathlib import Path
-import torch
-import numpy as np
-import argparse
 import logging
-logger = logging.getLogger(__name__)
+from pathlib import Path
+import sys
 
 import matplotlib.pyplot as plt
-from mlff_attack.relaxation import (
-    load_structure,
-    setup_calculator,
-)
 from mlff_attack.attacks import make_attack, visualize_perturbation
+from mlff_attack.relaxation import load_structure
+
+logger = logging.getLogger(__name__)
 
 
 def parse_args():
@@ -25,21 +21,21 @@ def parse_args():
         description="Perform adversarial attack on atomic structures using MACE model",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    
+
     parser.add_argument(
         "--input",
         type=str,
         default="initial_cifs/chemistry_value_isovalent_0_05_18_traj.cif",
         help="Path to input CIF file"
     )
-    
+
     parser.add_argument(
         "--model",
         type=str,
         default="mace-mpa-0-medium.model",
         help="Path to MACE model file"
     )
-    
+
     parser.add_argument(
         "--device",
         type=str,
@@ -47,35 +43,38 @@ def parse_args():
         choices=["cpu", "cuda"],
         help="Device to run model on"
     )
-    
+
     parser.add_argument(
         "--epsilon",
         type=float,
         default=0.05,
         help="Perturbation step size in Angstroms"
     )
-    
+
     parser.add_argument(
         "--outdir",
         type=str,
         default=None,
-        help="Path to output directory (default: auto-generated from input with '_perturbed' suffix)"
+        help=(
+            "Path to output directory "
+            "(default: auto-generated from input with '_perturbed' suffix)"
+        )
     )
-    
+
     parser.add_argument(
         "--target-energy",
         type=float,
         default=None,
         help="Target energy for attack (if None, maximize energy)"
     )
-    
+
     parser.add_argument(
         "--visualize",
         action="store_true",
         default=True,
         help="Generate visualization plot"
     )
-    
+
     parser.add_argument(
         "--no-visualize",
         action="store_false",
@@ -97,7 +96,7 @@ def parse_args():
         default=1,
         help="Number of FGSM attack iterations",
     )
-    
+
     parser.add_argument(
         "--alpha",
         type=float,
@@ -115,13 +114,15 @@ def parse_args():
     return parser.parse_args()
 
 
+# pylint: disable=too-many-locals
 def main():
+    """Run the MACE adversarial attack CLI."""
     # Parse command line arguments
     args = parse_args()
 
     if args.type != "pgd" and args.alpha is not None:
         raise SystemExit("--alpha can only be used with --type pgd")
-    
+
     # Override configuration with command line arguments
     input_cif = args.input
     model_path = args.model
@@ -132,13 +133,13 @@ def main():
     n_steps = args.n_steps
     alpha = args.alpha
     clip = args.clip
-    
+
     # Determine output path
     if args.outdir is not None:
         output_cif = Path(args.outdir) / (Path(input_cif).stem + "_perturbed.cif")
     else:
         output_cif = Path(input_cif).with_name(Path(input_cif).stem + "_perturbed.cif")
-    
+
     output_cif.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         filename=output_cif.parent / "make_attack.log",
@@ -147,15 +148,15 @@ def main():
     )
 
     # Load structure
-    logger.info(f"\nLoading structure from: {input_cif}")
+    logger.info("\nLoading structure from: %s", input_cif)
     atoms = load_structure(input_cif)
     if atoms is None:
         raise RuntimeError(f"Failed to load structure from {input_cif}")
-    logger.info(f"   Loaded {len(atoms)} atoms: {atoms.get_chemical_formula()}")
+    logger.info("   Loaded %s atoms: %s", len(atoms), atoms.get_chemical_formula())
 
     # Generate perturbed structure
-    logger.info(f"\nGenerating perturbed structure with epsilon={epsilon} Å")
-    output_file, perturbed_atoms, attack_details = make_attack(
+    logger.info("\nGenerating perturbed structure with epsilon=%s Å", epsilon)
+    output_file, perturbed_atoms, _attack_details = make_attack(
         atoms=atoms,
         model_path=model_path,
         device=device,
@@ -170,17 +171,21 @@ def main():
 
     # Visualize perturbation
     if args.visualize:
-        logger.info(f"\nVisualizing perturbation")
+        logger.info("\nVisualizing perturbation")
         # Store output filename in atoms info for visualization
         perturbed_atoms.info['filename'] = str(output_cif)
-        fig = visualize_perturbation(atoms, perturbed_atoms, epsilon=epsilon, outdir=Path(output_cif).parent)
+        fig = visualize_perturbation(
+            atoms,
+            perturbed_atoms,
+            epsilon=epsilon,
+            outdir=Path(output_cif).parent,
+        )
         plt.close(fig)
 
     if output_file:
         return 0
-    else:
-        return 1
+    return 1
 
-    
+
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())
