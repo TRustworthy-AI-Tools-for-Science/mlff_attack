@@ -128,35 +128,36 @@ class TestFGSM_MACE:
         perturbation = perturbed_atoms.get_positions() - atoms.get_positions()
         assert np.all(np.abs(perturbation) <= 0.5 + 1e-6)
 
-@pytest.mark.skip(reason="Test not yet implemented")
-class TestPGD:
-    def test_init(self):
-        model = dummy_model()
-        attack = PGD_MACE(model, epsilon=0.1, alpha=0.01, num_iter=10)
-        assert attack.epsilon == 0.1
-        assert attack.alpha == 0.01
-        assert attack.num_iter == 10
+# PGD tests moved to test_pgd.py - DC
+# class TestPGD:
+#     def test_init(self):
+#         model = dummy_model()
+#         attack = PGD_MACE(model, epsilon=0.1, alpha=0.01, num_iter=10)
+#         assert attack.epsilon == 0.1
+#         assert attack.alpha == 0.01
+#         assert attack.num_iter == 10
 
-    def test_attack_iterations(self):
-        model = dummy_model()
+#     def test_attack_iterations(self):
+#         model = dummy_model()
 
-        attack = PGD_MACE(model, epsilon=0.1, alpha=0.01, num_iter=5)
-        atoms = create_dummy_atoms()
-        atoms.calc = [model]
+#         attack = PGD_MACE(model, epsilon=0.1, alpha=0.01, num_iter=5)
+#         atoms = create_dummy_atoms()
+#         atoms.calc = [model]
 
-        perturbed = attack.attack(atoms)
-        assert perturbed.shape == atoms.get_positions().shape
+#         perturbed = attack.attack(atoms)
+#         assert perturbed.shape == atoms.get_positions().shape
 
-    def test_projection_bounds(self):
-        model = dummy_model()
+#     def test_projection_bounds(self):
+#         model = dummy_model()
 
-        attack = PGD_MACE(model, epsilon=0.2, alpha=0.1, num_iter=3)
-        positions = torch.zeros((5, 3), requires_grad=True)
+#         attack = PGD_MACE(model, epsilon=0.2, alpha=0.1, num_iter=3)
+#         positions = torch.zeros((5, 3), requires_grad=True)
 
-        perturbed = attack.attack(positions)
-        perturbation = perturbed - positions
-        assert torch.all(torch.abs(perturbation) <= 0.2 + 1e-6)
+#         perturbed = attack.attack(positions)
+#         perturbation = perturbed - positions
+#         assert torch.all(torch.abs(perturbation) <= 0.2 + 1e-6)
 
+# BIM/I-FGSM tests moved to test_fgsm.py - DC
 # @pytest.mark.skip(reason="Test not yet implemented")
 # class TestBIM:
 #     def test_init(self):
