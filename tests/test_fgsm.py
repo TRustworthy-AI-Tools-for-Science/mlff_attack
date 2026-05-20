@@ -93,7 +93,7 @@ def test_save_load_perturbation():
         assert 'energy_original' in data
         assert 'energy_perturbed' in data
         assert 'gradients' in data
-        assert 'meta_test_key' in data   
+        assert 'meta_test_key' in data
 
     loaded_data = load_perturbation(save_file)
     assert loaded_data['atoms_original'] == atoms
@@ -120,7 +120,7 @@ def test_attack_basic():
 
 def test_epsilon_scaling():
     model = dummy_model()
-    
+
     fgsm = FGSM_MACE(model, epsilon=0.5)
     atoms = create_dummy_atoms()
     atoms = setup_calculator(atoms, model, device="cpu")
@@ -148,7 +148,7 @@ def test_attack_step_scales_epsilon_by_n_steps():
 def test_n_steps():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
-    
+
     fgsm = FGSM_MACE(atoms.calc, epsilon=0.5, device="cpu")
     n_steps = 3
     perturbed_atoms = fgsm.attack(atoms, n_steps=3)
@@ -156,7 +156,7 @@ def test_n_steps():
     assert perturbed_atoms.get_positions().shape == atoms.get_positions().shape
     assert len(fgsm.attack_history["perturbations"]) == n_steps
     assert len(fgsm.attack_history["gradients"]) == n_steps
-    
+
 
 def test_displacements_are_clipped_to_epsilon():
     model = dummy_model()
@@ -241,5 +241,5 @@ def test_compute_gradient_uses_loss_function():
     default_gradients = fgsm.compute_gradient(atoms)
     loss_function = lambda energy: energy
     custom_gradients = fgsm.compute_gradient(atoms, loss_fn=loss_function)
-    
+
     assert np.allclose(custom_gradients, -default_gradients, atol=1e-5)

@@ -35,7 +35,7 @@ def test_load_structure():
 def test_setup_mace_calculator():
     # Create a dummy atoms object
     atoms = build.molecule("H2O")
-                
+
     # Use a non-existent model path for testing
     model_path = Path(__file__).parent / "data" / "non_existent_model.pth"
 
@@ -47,7 +47,7 @@ def test_setup_mace_calculator():
     atoms_with_mace = relaxation.setup_calculator(atoms, model, device="cpu", dtype_str="float32")
 
     assert atoms_with_mace is not None
-    
+
 
 def test_get_optimizer_class():
     opt_class = relaxation.get_optimizer_class("BFGS")
@@ -63,7 +63,7 @@ def test_run_relaxation():
 
     atoms = build.molecule("H2O")
     atoms.calc = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
-    
+
     traj_path = Path(__file__).parent / "data" / "test_traj.traj"
     traj_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -72,25 +72,25 @@ def test_run_relaxation():
         mock_opt_instance = MagicMock()
         mock_opt_instance.run = MagicMock()
         mock_opt_instance.nsteps = 5
-        
+
         # Create a mock optimizer class that returns the instance when called
         mock_opt_class = MagicMock(return_value=mock_opt_instance)
         mock_get_opt.return_value = mock_opt_class
-        
+
         success = relaxation.run_relaxation(atoms, str(traj_path), optimizer="BFGS", fmax=0.01, max_steps=10)
-        
+
         # Verify the optimizer class getter was called with correct optimizer name
         mock_get_opt.assert_called_once_with("BFGS")
-        
+
         # Verify the optimizer class was instantiated
         mock_opt_class.assert_called_once()
-        
+
         # Verify the optimizer's run method was called
         mock_opt_instance.run.assert_called_once_with(fmax=0.01, steps=10)
-        
+
         # The function should return True on success
         assert success == True
-    
+
     # Cleanup
     if traj_path.exists():
         traj_path.unlink()

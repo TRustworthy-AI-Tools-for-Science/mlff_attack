@@ -114,7 +114,6 @@ def parse_args():
     return parser.parse_args()
 
 
-# pylint: disable=too-many-locals
 def main():
     """Run the MACE adversarial attack CLI."""
     # Parse command line arguments
