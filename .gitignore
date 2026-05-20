@@ -213,3 +213,4 @@ pytest.ini
 *.cif
 output*/
 *.npz
+figures*/
