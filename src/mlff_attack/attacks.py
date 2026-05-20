@@ -573,10 +573,10 @@ def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None)
                  arrow_length_ratio=0.2, color='black', linewidth=0.5)
 
     # Set labels and title
-    ax_3d.set_xlabel('X (Ã…)', fontsize=12)
-    ax_3d.set_ylabel('Y (Ã…)', fontsize=12)
-    ax_3d.set_zlabel('Z (Ã…)', fontsize=12)
-    ax_3d.set_title(f'Atomic Displacement Visualization (Îµ={epsilon} Ã…)', fontsize=14, fontweight='bold')
+    ax_3d.set_xlabel('X (Å)', fontsize=12)
+    ax_3d.set_ylabel('Y (Å)', fontsize=12)
+    ax_3d.set_zlabel('Z (Å)', fontsize=12)
+    ax_3d.set_title(f'Atomic Displacement Visualization (ε={epsilon} Å)', fontsize=14, fontweight='bold')
 
     # Add legend for atom types
     legend_elements = [plt.Line2D([0], [0], marker='o', color='w',
@@ -606,7 +606,7 @@ def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None)
         energy_text = f"""Energy:
   Original:  {energy_before:.4f} eV
   Perturbed: {energy_after:.4f} eV
-  Î”E:        {delta_e:+.4f} eV
+  ΔE:        {delta_e:+.4f} eV
 """
     except ValueError:
         energy_text = "Energy: Calculation failed\n"
@@ -617,7 +617,7 @@ def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None)
         mask = np.array([s == sym for s in symbols])
         mean_disp = displacement_mag[mask].mean()
         max_disp = displacement_mag[mask].max()
-        element_stats += f"  {sym:>2s}: mean={mean_disp:.4f} Ã…, max={max_disp:.4f} Ã…\n"
+        element_stats += f"  {sym:>2s}: mean={mean_disp:.4f} Å, max={max_disp:.4f} Å\n"
 
     stats_text = f"""PERTURBATION ANALYSIS
 {'='*40}
@@ -625,26 +625,26 @@ def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None)
 System:
   Total atoms:     {len(atoms_before)}
   Element types:   {', '.join(unique_symbols)}
-  Epsilon:         {epsilon} Ã…
+  Epsilon:         {epsilon} Å
 
 {energy_text}
 Displacement Statistics:
-  Mean:      {displacement_mag.mean():.4f} Ã…
-  Median:    {np.median(displacement_mag):.4f} Ã…
-  Max:       {displacement_mag.max():.4f} Ã…
-  Min:       {displacement_mag.min():.4f} Ã…
-  Std Dev:   {displacement_mag.std():.4f} Ã…
+  Mean:      {displacement_mag.mean():.4f} Å
+  Median:    {np.median(displacement_mag):.4f} Å
+  Max:       {displacement_mag.max():.4f} Å
+  Min:       {displacement_mag.min():.4f} Å
+  Std Dev:   {displacement_mag.std():.4f} Å
 
 Component Mean Displacement:
-  X: {displacement[:, 0].mean():+.4f} Â± {displacement[:, 0].std():.4f} Ã…
-  Y: {displacement[:, 1].mean():+.4f} Â± {displacement[:, 1].std():.4f} Ã…
-  Z: {displacement[:, 2].mean():+.4f} Â± {displacement[:, 2].std():.4f} Ã…
+  X: {displacement[:, 0].mean():+.4f} ± {displacement[:, 0].std():.4f} Å
+  Y: {displacement[:, 1].mean():+.4f} ± {displacement[:, 1].std():.4f} Å
+  Z: {displacement[:, 2].mean():+.4f} ± {displacement[:, 2].std():.4f} Å
 {element_stats}
 Displacement Distribution:
-  < 0.01 Ã…:  {np.sum(displacement_mag < 0.01)} atoms ({100*np.sum(displacement_mag < 0.01)/len(atoms_before):.1f}%)
-  < 0.05 Ã…:  {np.sum(displacement_mag < 0.05)} atoms ({100*np.sum(displacement_mag < 0.05)/len(atoms_before):.1f}%)
-  < 0.10 Ã…:  {np.sum(displacement_mag < 0.10)} atoms ({100*np.sum(displacement_mag < 0.10)/len(atoms_before):.1f}%)
-  â‰¥ 0.10 Ã…:  {np.sum(displacement_mag >= 0.10)} atoms ({100*np.sum(displacement_mag >= 0.10)/len(atoms_before):.1f}%)
+  < 0.01 Å:  {np.sum(displacement_mag < 0.01)} atoms ({100*np.sum(displacement_mag < 0.01)/len(atoms_before):.1f}%)
+  < 0.05 Å:  {np.sum(displacement_mag < 0.05)} atoms ({100*np.sum(displacement_mag < 0.05)/len(atoms_before):.1f}%)
+  < 0.10 Å:  {np.sum(displacement_mag < 0.10)} atoms ({100*np.sum(displacement_mag < 0.10)/len(atoms_before):.1f}%)
+  ≥ 0.10 Å:  {np.sum(displacement_mag >= 0.10)} atoms ({100*np.sum(displacement_mag >= 0.10)/len(atoms_before):.1f}%)
 """
 
     ax_stats.text(0.05, 0.98, stats_text, transform=ax_stats.transAxes,

@@ -123,7 +123,7 @@ def run_relaxation(
     traj_path : str or Path
         Path to save trajectory file
     fmax : float, optional
-        Force convergence criterion (eV/Ã…), by default 0.01
+        Force convergence criterion (eV/Å), by default 0.01
     max_steps : int, optional
         Maximum number of optimization steps, by default 300
     optimizer : str, optional
@@ -142,7 +142,7 @@ def run_relaxation(
     """
     try:
         logger.info("[INFO] Starting relaxation with %s optimizer", optimizer)
-        logger.info("[INFO] Convergence criterion: fmax = %s eV/Ã…", fmax)
+        logger.info("[INFO] Convergence criterion: fmax = %s eV/Å", fmax)
         logger.info("[INFO] Maximum steps: %s", max_steps)
 
         # Setup checkpoint directory
@@ -198,7 +198,7 @@ def run_relaxation(
         status = "CONVERGED" if converged else "NOT CONVERGED"
         if verbose:
             logger.info("[INFO] Relaxation %s after %s steps", status, opt.nsteps)
-            logger.info("[INFO] Final maximum force: %.6f eV/Ã…", max_force)
+            logger.info("[INFO] Final maximum force: %.6f eV/Å", max_force)
 
         return True
     except (OSError, ValueError, RuntimeError) as exc:
