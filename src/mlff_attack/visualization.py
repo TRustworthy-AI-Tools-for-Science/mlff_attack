@@ -334,7 +334,14 @@ def plot_noise(ax, freq, spectrum):
 
 
 def create_visualization(
-    traj, traj_path, outdir, output_format='png', show=False, save_to_csv=True, fmax=0.01
+    traj,
+    traj_path,
+    outdir,
+    *,
+    output_format='png',
+    show=False,
+    save_to_csv=True,
+    fmax=0.0
 ):
     """Create visualization plots for trajectory data.
 

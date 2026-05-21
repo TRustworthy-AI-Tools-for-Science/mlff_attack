@@ -42,14 +42,14 @@ def test_make_attack():
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
     output_path, perturbed_atoms, attack_details = make_attack(
+        atoms=atoms,
         model_path=model,
         device="cpu",
-        atoms=atoms,
-        epsilon=0.1,
-        target_energy=None,
         output_cif="perturbed_structure.cif",
         attack_type="pgd",
+        epsilon=0.1,
         n_steps=1,
+        target_energy=None,
         clip=True,
     )
 
@@ -71,11 +71,11 @@ def test_make_attack_defaults_clipping():
         model_path=model,
         device="cpu",
         atoms=atoms,
-        epsilon=epsilon,
-        target_energy=None,
         output_cif="perturbed_structure.cif",
         attack_type="pgd",
         n_steps=3,
+        epsilon=epsilon,
+        target_energy=None,
     )
 
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
@@ -83,6 +83,8 @@ def test_make_attack_defaults_clipping():
 
     assert Path(output_path).exists()
     assert np.all(displacement_magnitudes <= epsilon + 1e-6)
+
+    # delete file after finished with perturbed_structure.cif - DC
 
 
 def test_attack_iterations():
@@ -115,6 +117,18 @@ def test_epsilon_bounds_displacement():
     displacement_magnitudes = np.linalg.norm(displacement, axis=1)
 
     assert np.all(displacement_magnitudes <= epsilon + 1e-6)
+
+def test_target_energy():
+    model = dummy_model()
+    atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
+
+    target_energy = atoms.get_potential_energy()
+
+    pgd = PGD_MACE(atoms.calc, epsilon=0.001, alpha=0.2, num_iter=3, device="cpu", target_energy=target_energy)
+    perturbed_atoms = pgd.attack(atoms, n_steps=3, clip=True)
+
+    assert perturbed_atoms.get_positions().shape == atoms.get_positions().shape
+    assert pgd.target_energy == target_energy
 
 
 def test_compute_gradient():
@@ -152,10 +166,12 @@ def test_attack_step():
     gradients = pgd.compute_gradient(atoms)
     perturbed_atoms = pgd.attack_step(atoms)
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
+    # TODO: add fake gradient function - DC
     expected_displacement = alpha * np.sign(gradients)
 
     assert np.allclose(displacement, expected_displacement, atol=1e-6)
 
+# TODO: test production code not np.clip
 def test_projection_clips_large_displacement_using_L_infinity():
     epsilon = 1
 
@@ -165,6 +181,3 @@ def test_projection_clips_large_displacement_using_L_infinity():
     clipped_displacement = np.clip(unclipped_displacement, -epsilon, epsilon)
 
     assert np.allclose(clipped_displacement, expected_clipped_displacement, atol=1e-6)
-
-def test_target_energy():
-    pass

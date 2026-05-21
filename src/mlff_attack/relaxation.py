@@ -107,6 +107,7 @@ def get_optimizer_class(optimizer_name):
 def run_relaxation(
     atoms,
     traj_path,
+    *,
     fmax=0.01,
     max_steps=300,
     optimizer="LBFGS",

@@ -160,12 +160,12 @@ def main():
         atoms=atoms,
         model_path=model_path,
         device=device,
-        epsilon=epsilon,
-        target_energy=target_energy,
         output_cif=output_cif,
         attack_type=attack_type,
         n_steps=n_steps,
+        epsilon=epsilon,
         alpha=alpha,
+        target_energy=target_energy,
         clip=clip
     )
 

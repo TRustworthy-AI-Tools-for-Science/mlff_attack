@@ -34,14 +34,14 @@ def test_make_attack():
     atoms = setup_calculator(atoms, model, device="cpu", dtype_str="float32")
 
     output_path, perturbed_atoms, attack_details = make_attack(
+        atoms=atoms,
         model_path=model,
         device="cpu",
-        atoms=atoms,
-        epsilon=0.1,
-        target_energy=None,
         output_cif="perturbed_structure.cif",
         attack_type="fgsm",
         n_steps=1,
+        epsilon=0.1,
+        target_energy=None,
     )
 
     assert Path(output_path).exists()

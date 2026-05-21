@@ -21,24 +21,33 @@ logger = logging.getLogger(__name__)
 
 
 def make_attack(
-        model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, alpha=None, clip=None, verbose=True
-    ):
+    *,
+    atoms,
+    model_path,
+    device,
+    output_cif,
+    attack_type="fgsm",
+    epsilon,
+    n_steps=1,
+    alpha=None,
+    target_energy=None,
+    clip=None,
+    verbose=True
+):
     """Perform an adversarial attack on the given atomic structure using a MACE model.
 
     This is a convenience wrapper around the FGSM_MACE class.
 
     Parameters
     ----------
+    atoms : ase.Atoms
+        ASE Atoms object representing the structure to attack
     model_path : str or Path
         Path to the MACE model file
     device : str
         Device to run the model on ("cpu" or "cuda")
-    atoms : ase.Atoms
-        ASE Atoms object representing the structure to attack
     epsilon : float
         Perturbation step size in Angstroms
-    target_energy : float or None
-        Target energy for the attack (if None, maximize energy)
     output_cif : str or Path
         Path to save the perturbed CIF file
     attack_type : str, optional
@@ -47,6 +56,8 @@ def make_attack(
         Number of steps for iterative attacks (only used for I-FGSM/PGD), by default 1
     alpha : float, optional
         PGD step size. If not provided, use epsilon / n_steps
+    target_energy : float or None
+        Target energy for the attack (if None, maximize energy)
     clip : bool or None, optional
         Whether to clip perturbations. If None, defaults to False for FGSM and True for PGD.
 
@@ -120,20 +131,18 @@ def make_attack(
     # Get perturbed energy
     pert_energy = perturbed_atoms.get_potential_energy()
     energy_change = pert_energy - orig_energy
-    if verbose:
-        logger.info("   Original energy:  %.4f eV", orig_energy)
-        logger.info("   Perturbed energy: %.4f eV", pert_energy)
-        logger.info("   Energy change:    %+.4f eV", energy_change)
 
     # Calculate displacement statistics
     stats = attack.get_perturbation_stats()
     if verbose:
+        logger.info("   Original energy:  %.4f eV", orig_energy)
+        logger.info("   Perturbed energy: %.4f eV", pert_energy)
+        logger.info("   Energy change:    %+.4f eV", energy_change)
         logger.info("   Mean displacement: %.4f Å", stats["mean_displacement"])
         logger.info("   Max displacement:  %.4f Å", stats["max_displacement"])
-
-    # Save perturbed structure
-    if verbose:
+        # Save perturbed structure
         logger.info("\nSaving perturbed structure to: %s", output_cif)
+
     write(output_cif, perturbed_atoms)
     if verbose:
         logger.info("   Successfully saved!")
@@ -297,8 +306,16 @@ def make_attack(
 #     return grad_positions
 
 
-def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original,
-                     energy_perturbed, gradients, save_path, metadata=None):
+def save_perturbation(
+    atoms_original,
+    atoms_perturbed,
+    epsilon,
+    energy_original,
+    energy_perturbed,
+    gradients,
+    save_path,
+    metadata=None
+):
     """Save perturbation data to a file for later analysis.
 
     Parameters
