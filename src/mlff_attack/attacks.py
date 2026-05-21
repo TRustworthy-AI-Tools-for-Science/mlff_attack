@@ -90,6 +90,8 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
         )
 
     elif attack_type == "pgd":
+        if n_steps <= 0:
+            raise ValueError("n_steps must be a positive integer for PGD attacks")
         if alpha is None:
             alpha = epsilon / n_steps
         attack = PGD_MACE(
