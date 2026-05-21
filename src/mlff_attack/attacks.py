@@ -20,7 +20,9 @@ from mlff_attack.relaxation import setup_calculator
 logger = logging.getLogger(__name__)
 
 
-def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, alpha=None, clip=None, verbose=True):
+def make_attack(
+        model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, alpha=None, clip=None, verbose=True
+    ):
     """Perform an adversarial attack on the given atomic structure using a MACE model.
 
     This is a convenience wrapper around the FGSM_MACE class.
@@ -607,6 +609,7 @@ def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None)
   Original:  {energy_before:.4f} eV
   Perturbed: {energy_after:.4f} eV
   ΔE:        {delta_e:+.4f} eV
+
 """
     except ValueError:
         energy_text = "Energy: Calculation failed\n"
@@ -646,6 +649,7 @@ Displacement Distribution:
   < 0.10 Å:  {np.sum(displacement_mag < 0.10)} atoms ({100*np.sum(displacement_mag < 0.10)/len(atoms_before):.1f}%)
   ≥ 0.10 Å:  {np.sum(displacement_mag >= 0.10)} atoms ({100*np.sum(displacement_mag >= 0.10)/len(atoms_before):.1f}%)
 """
+    logger.info("\n%s", stats_text)
 
     ax_stats.text(0.05, 0.98, stats_text, transform=ax_stats.transAxes,
                   fontsize=10, verticalalignment='top', fontfamily='monospace',

@@ -45,6 +45,7 @@ def main():
         filename=outdir / "mace_calc_single.log",
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        encoding="utf-8",
     )
     traj_path = outdir / "relaxed.traj"
 

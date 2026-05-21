@@ -144,6 +144,7 @@ def main():
         filename=output_cif.parent / "make_attack.log",
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        encoding="utf-8",
     )
 
     # Load structure
