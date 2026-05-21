@@ -73,8 +73,8 @@ def test_make_attack_defaults_clipping():
         atoms=atoms,
         output_cif="perturbed_structure.cif",
         attack_type="pgd",
-        n_steps=3,
         epsilon=epsilon,
+        n_steps=3,
         target_energy=None,
     )
 

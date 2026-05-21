@@ -88,9 +88,9 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 - `--model`: Path to the MACE model file (.model) (required).
 - `--outdir`: Directory to save the results (required).
 - `--epsilon`: Perturbation step size for the attack (default: 0.05).
-- `--target-energy`: Target energy in eV (default: maximize the predicted energy).
-- `--n-steps`: Number of attack iterations (default: 1 for FGSM, >1 for PGD).
 - `--alpha`: PGD step size only valid with `--type pgd` (default: epsilon / n_steps).
+- `--n-steps`: Number of attack iterations (default: 1 for FGSM, >1 for PGD).
+- `--target-energy`: Target energy in eV (default: maximize the predicted energy).
 - `--clip`: Whether to clip perturbations to the epsilon bound (FGSM default: False, PGD: always True).
 - `--device`: Device to use for computations (cuda or cpu, default: cuda).
 
@@ -105,7 +105,7 @@ make-attack --type fgsm --input structure.cif --model mace-model.model --outdir 
 make-attack --type fgsm --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --n-steps 10
 
 # Perform a PGD attack
-make-attack --type pgd --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --n-steps 10 --alpha 0.01
+make-attack --type pgd --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --alpha 0.01 --n-steps 10
 
 ```
 

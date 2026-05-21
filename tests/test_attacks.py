@@ -39,8 +39,8 @@ def test_make_attack():
         device="cpu",
         output_cif="perturbed_structure.cif",
         attack_type="fgsm",
-        n_steps=1,
         epsilon=0.1,
+        n_steps=1,
         target_energy=None,
     )
 
