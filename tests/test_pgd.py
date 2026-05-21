@@ -49,7 +49,7 @@ def test_make_attack():
         output_cif=output_cif,
         attack_type="pgd",
         epsilon=0.1,
-        n_steps=1,
+        n_steps=2,
         target_energy=None,
         clip=True,
     )

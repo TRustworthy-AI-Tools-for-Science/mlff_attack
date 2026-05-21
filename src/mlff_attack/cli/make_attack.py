@@ -45,13 +45,6 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--epsilon",
-        type=float,
-        default=0.05,
-        help="Perturbation step size in Angstroms"
-    )
-
-    parser.add_argument(
         "--outdir",
         type=str,
         default=None,
@@ -59,13 +52,6 @@ def parse_args():
             "Path to output directory "
             "(default: auto-generated from input with '_perturbed' suffix)"
         )
-    )
-
-    parser.add_argument(
-        "--target-energy",
-        type=float,
-        default=None,
-        help="Target energy for attack (if None, maximize energy)"
     )
 
     parser.add_argument(
@@ -91,10 +77,10 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--n-steps",
-        type=int,
-        default=1,
-        help="Number of attack iterations",
+        "--epsilon",
+        type=float,
+        default=0.05,
+        help="Perturbation step size in Angstroms"
     )
 
     parser.add_argument(
@@ -102,6 +88,20 @@ def parse_args():
         type=float,
         default=None,
         help="PGD step size. If not provided, use epsilon / n_steps",
+    )
+
+    parser.add_argument(
+        "--n-steps",
+        type=int,
+        default=1,
+        help="Number of attack iterations",
+    )
+
+    parser.add_argument(
+        "--target-energy",
+        type=float,
+        default=None,
+        help="Target energy for attack (if None, maximize energy)"
     )
 
     parser.add_argument(
@@ -126,11 +126,11 @@ def main():
     input_cif = args.input
     model_path = args.model
     device = args.device
-    epsilon = args.epsilon
-    target_energy = args.target_energy
     attack_type = args.type
-    n_steps = args.n_steps
+    epsilon = args.epsilon
     alpha = args.alpha
+    n_steps = args.n_steps
+    target_energy = args.target_energy
     clip = args.clip
 
     # Determine output path

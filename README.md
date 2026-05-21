@@ -86,13 +86,15 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 - `--type`: Type of attack to perform (e.g., `fgsm`, `pgd`) (required).
 - `--input`: Path to the input structure file (CIF format) (required).
 - `--model`: Path to the MACE model file (.model) (required).
+- `--device`: Device to use for computations (cuda or cpu, default: cuda).
 - `--outdir`: Directory to save the results (required).
+- `--visualize`: Generate perturbation visualization plot (default: enabled).
+- `--no-visualize`: Skip perturbation visualization plot generation.
 - `--epsilon`: Perturbation step size for the attack (default: 0.05).
 - `--alpha`: PGD step size only valid with `--type pgd` (default: epsilon / n_steps).
 - `--n-steps`: Number of attack iterations (default: 1 for FGSM, >1 for PGD).
 - `--target-energy`: Target energy in eV (default: maximize the predicted energy).
 - `--clip`: Whether to clip perturbations to the epsilon bound (FGSM default: False, PGD: always True).
-- `--device`: Device to use for computations (cuda or cpu, default: cuda).
 
 #### Example usage
 

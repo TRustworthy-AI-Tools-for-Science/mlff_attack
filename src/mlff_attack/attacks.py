@@ -46,16 +46,16 @@ def make_attack(
         Path to the MACE model file
     device : str
         Device to run the model on ("cpu" or "cuda")
-    epsilon : float
-        Perturbation step size in Angstroms
     output_cif : str or Path
         Path to save the perturbed CIF file
     attack_type : str, optional
         Type of attack to perform, by default "fgsm"
-    n_steps : int, optional
-        Number of steps for iterative attacks (only used for I-FGSM/PGD), by default 1
+    epsilon : float
+        Perturbation step size in Angstroms
     alpha : float, optional
         PGD step size. If not provided, use epsilon / n_steps
+    n_steps : int, optional
+        Number of steps for iterative attacks (only used for I-FGSM/PGD), by default 1
     target_energy : float or None
         Target energy for the attack (if None, maximize energy)
     clip : bool or None, optional
@@ -78,6 +78,9 @@ def make_attack(
     atoms = setup_calculator(atoms, model_path, device)
     if atoms is None:
         raise RuntimeError("Failed to set up calculator")
+
+    if n_steps <= 0:
+        raise ValueError("n_steps must be a positive integer")
 
     # Get original energy
     orig_energy = atoms.get_potential_energy()
@@ -103,8 +106,8 @@ def make_attack(
         )
 
     elif attack_type == "pgd":
-        if n_steps <= 0:
-            raise ValueError("n_steps must be a positive integer for PGD attacks")
+        if n_steps <= 1:
+            raise ValueError("n_steps must be > 1 for PGD")
         if alpha is None:
             alpha = epsilon / n_steps
         attack = PGD_MACE(
