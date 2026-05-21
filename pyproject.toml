@@ -34,7 +34,8 @@ dependencies = [
     "mp_api",
     "seaborn",
     "ipywidgets",
-    "jupyterlab"
+    "jupyterlab",
+    "pandas"
 ]
 
 [project.optional-dependencies]
