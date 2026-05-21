@@ -45,10 +45,10 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
         Number of steps for iterative attacks (only used for I-FGSM/PGD), by default 1
     alpha : float, optional
         PGD step size. If not provided, use epsilon / n_steps
-    clip : bool, optional
-        Whether to clip the perturbations, by default False for FGSM and True for PGD
+    clip : bool or None, optional
+        Whether to clip perturbations. If None, defaults to False for FGSM and True for PGD.
 
-    Return
+    Returns
     -------
     str
         Path to the saved perturbed CIF file
