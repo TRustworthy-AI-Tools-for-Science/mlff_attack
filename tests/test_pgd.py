@@ -165,3 +165,6 @@ def test_projection_clips_large_displacement_using_L_infinity():
     clipped_displacement = np.clip(unclipped_displacement, -epsilon, epsilon)
 
     assert np.allclose(clipped_displacement, expected_clipped_displacement, atol=1e-6)
+
+def test_target_energy():
+    pass

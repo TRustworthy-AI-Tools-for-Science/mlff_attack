@@ -5,12 +5,14 @@ take a signed gradient step and project the perturbed input back into the
 allowed epsilon-neighborhood of the original input.
 """
 
+import logging
 from typing import Any, Callable, Optional
 
 import numpy as np
 
 from mlff_attack.grad_based.fgsm import FGSM_MACE
 
+logger = logging.getLogger(__name__)
 
 class PGD_MACE(FGSM_MACE):
     """Projected Gradient Descent attack for MACE force field models."""
@@ -170,7 +172,21 @@ class PGD_MACE(FGSM_MACE):
             )
             if clip:
                 self._clip_perturbations(perturbed_atoms)
-
+                if self.target_energy is not None:
+                    try:
+                        current_energy = perturbed_atoms.get_potential_energy()
+                        energy_diff = abs(current_energy - self.target_energy)
+                        if energy_diff < 0.01:  # Within 0.01 eV of target
+                            logger.info(
+                                "Target energy reached at step %s: %.4f eV "
+                                "(target: %.4f eV)",
+                                step + 1,
+                                current_energy,
+                                self.target_energy,
+                            )
+                            break
+                    except (ValueError, RuntimeError):
+                        pass
         self._perturbed_positions = perturbed_atoms.get_positions().copy()
         return perturbed_atoms
 
