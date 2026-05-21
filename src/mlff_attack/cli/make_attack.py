@@ -94,7 +94,7 @@ def parse_args():
         "--n-steps",
         type=int,
         default=1,
-        help="Number of FGSM attack iterations",
+        help="Number of attack iterations",
     )
 
     parser.add_argument(
