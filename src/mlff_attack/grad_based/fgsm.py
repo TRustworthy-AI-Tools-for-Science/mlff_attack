@@ -44,8 +44,7 @@ class FGSM_MACE(MLFFAttack):
         track_history: bool = True,
         target_energy: Optional[float] = None
     ):
-        """Initialize FGSM ,
-        clip_radius: Optional[float] = Noneattack for MACE models.
+        """Initialize the FGSM attack for MACE models.
 
         Parameters
         ----------
