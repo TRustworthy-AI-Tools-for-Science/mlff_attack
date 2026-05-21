@@ -39,12 +39,13 @@ def test_make_attack():
 
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
+    output_cif = "perturbed_structure.cif"
 
     output_path, perturbed_atoms, attack_details = make_attack(
         atoms=atoms,
         model_path=model,
         device="cpu",
-        output_cif="perturbed_structure.cif",
+        output_cif=output_cif,
         attack_type="fgsm",
         epsilon=0.1,
         n_steps=1,
@@ -59,6 +60,8 @@ def test_make_attack():
     assert 'max_forces' in attack_details
     assert 'perturbations' in attack_details
     assert 'gradients' in attack_details
+
+    os.remove(output_cif)
 
 
 def test_save_load_perturbation():

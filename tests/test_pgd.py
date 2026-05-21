@@ -40,12 +40,13 @@ def test_init():
 def test_make_attack():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
+    output_cif = "perturbed_structure.cif"
 
     output_path, perturbed_atoms, attack_details = make_attack(
         atoms=atoms,
         model_path=model,
         device="cpu",
-        output_cif="perturbed_structure.cif",
+        output_cif=output_cif,
         attack_type="pgd",
         epsilon=0.1,
         n_steps=1,
@@ -61,17 +62,20 @@ def test_make_attack():
     assert 'perturbations' in attack_details
     assert 'gradients' in attack_details
 
+    os.remove(output_cif)
+
 
 def test_make_attack_defaults_clipping():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
     epsilon = 0.1
+    output_cif = "perturbed_structure.cif"
 
     output_path, perturbed_atoms, attack_details = make_attack(
         model_path=model,
         device="cpu",
         atoms=atoms,
-        output_cif="perturbed_structure.cif",
+        output_cif=output_cif,
         attack_type="pgd",
         epsilon=epsilon,
         n_steps=3,
@@ -84,7 +88,7 @@ def test_make_attack_defaults_clipping():
     assert Path(output_path).exists()
     assert np.all(displacement_magnitudes <= epsilon + 1e-6)
 
-    # delete file after finished with perturbed_structure.cif - DC
+    os.remove(output_cif)
 
 
 def test_attack_iterations():
