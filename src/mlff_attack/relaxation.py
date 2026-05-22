@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MACE relaxation functionality.
+MACE and UMA relaxation functionality.
 """
 
 import logging
@@ -40,18 +40,23 @@ def load_structure(input_path):
 
 
 def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64", verbose=False):
-    """Initialize and attach MACE calculator to atoms object.
+    """Initialize and attach MACE or UMA calculator to atoms object.
+
+    This supports two model types:
+
+    - MACE models: pass a local model path, like "mace-mpa-0-medium.model"
+    - UMA models: pass a UMA model name, like "uma-s-1p2"
 
     Parameters
     ----------
     atoms : ase.Atoms
         ASE Atoms object
     model_path : str or Path or MACECalculator
-        Path to MACE model file or existing MACECalculator instance
+        Path to MACE model file or existing MACECalculator instance, or a UMA model name
     device : str, optional
         Device to use (cuda or cpu), by default "cuda"
     dtype_str : str, optional
-        Data type for calculations ("float32" or "float64"), by default "float64"
+        Data type for MACE calculations ("float32" or "float64"), by default "float64"
     verbose : bool, optional
         Whether to print detailed information, by default False
 

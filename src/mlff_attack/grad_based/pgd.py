@@ -10,11 +10,14 @@ from typing import Any, Callable, Optional
 
 import numpy as np
 
-from mlff_attack.grad_based.fgsm import FGSM_MACE
+import torch
+from mace.data import AtomicData, config_from_atoms
+
+from mlff_attack.grad_based.mlff_attack_class import MLFFAttack
 
 logger = logging.getLogger(__name__)
 
-class PGD_MACE(FGSM_MACE):
+class PGD_MACE(MLFFAttack):
     """Projected Gradient Descent attack for MACE force field models."""
 
     def __init__(
@@ -47,29 +50,110 @@ class PGD_MACE(FGSM_MACE):
             epsilon=epsilon,
             device=device,
             track_history=track_history,
-            target_energy=target_energy,
         )
         self.alpha = alpha
         self.num_iter = num_iter
+        self.target_energy = target_energy
+        self._last_energy = None
+        self._last_gradients = None
         self.random_start = random_start
         self.rng = rng if rng is not None else np.random.default_rng()
+
+    def _forward_pass_with_gradients(self, atoms: Any) -> tuple:
+        calc = atoms.calc
+        model = calc.models[0]
+        positions_np = atoms.get_positions()
+
+        config = config_from_atoms(atoms)
+        atomic_data = AtomicData.from_config(
+            config, z_table=calc.z_table, cutoff=calc.r_max
+        )
+        batch = atomic_data.to_dict()
+
+        model_dtype = next(model.parameters()).dtype
+        for key in batch:
+            if torch.is_tensor(batch[key]):
+                batch[key] = batch[key].to(self.device)
+                if torch.is_floating_point(batch[key]):
+                    batch[key] = batch[key].to(model_dtype)
+
+        if "batch" not in batch:
+            batch["batch"] = torch.zeros(len(atoms), dtype=torch.long, device=self.device)
+        if "ptr" not in batch:
+            batch["ptr"] = torch.tensor([0, len(atoms)], dtype=torch.long, device=self.device)
+
+        positions = torch.tensor(
+            positions_np, dtype=model_dtype, device=self.device, requires_grad=True
+        )
+        batch["positions"] = positions
+
+        if "natoms" in batch:
+            natoms_val = batch["natoms"]
+            if natoms_val.dim() == 0:
+                batch["natoms"] = torch.tensor(
+                    [len(atoms), len(atoms)], dtype=torch.long, device=self.device
+                )
+            elif natoms_val.dim() == 1 and len(natoms_val) < 2:
+                batch["natoms"] = torch.tensor(
+                    [len(atoms), len(atoms)], dtype=torch.long, device=self.device
+                )
+        else:
+            batch["natoms"] = torch.tensor(
+                [len(atoms), len(atoms)], dtype=torch.long, device=self.device
+            )
+
+        if hasattr(calc, "head") and calc.head is not None:
+            if hasattr(calc, "heads") and calc.heads is not None:
+                head_idx = calc.heads.index(calc.head) if calc.head in calc.heads else 0
+            else:
+                head_idx = 0
+            batch["head"] = torch.full(
+                (len(atoms),), head_idx, dtype=torch.long, device=self.device
+            )
+        elif "head" not in batch:
+            batch["head"] = torch.zeros(len(atoms), dtype=torch.long, device=self.device)
+
+        model.eval()
+
+        with torch.enable_grad():
+            positions.requires_grad_(True)
+            batch["positions"] = positions
+            output = model(batch, training=False, compute_force=False)
+
+            energy = output["energy"]
+            if energy.dim() > 0:
+                energy = energy.sum()
+
+            forces = -torch.autograd.grad(
+                outputs=energy,
+                inputs=positions,
+                retain_graph=True,
+                create_graph=False,
+            )[0]
+
+        return energy, forces, positions
 
     def compute_gradient(
         self,
         atoms: Any,
-        loss_fn: Optional[Callable] = None
+        loss_fn: Optional[Callable] = None,
     ) -> np.ndarray:
-        """Compute gradient of loss with respect to atomic positions.
+        energy, _forces, positions = self._forward_pass_with_gradients(atoms)
 
-        Args:
-            atoms: ASE Atoms object or equivalent structure
-            loss_fn: Optional custom loss function (default: maximize energy)
+        if loss_fn is not None:
+            loss = loss_fn(energy)
+        elif self.target_energy is not None:
+            loss = (energy - self.target_energy) ** 2
+        else:
+            loss = -energy
 
-        Returns:
-            Gradient array with shape (n_atoms, 3)
-        """
-        return super().compute_gradient(atoms, loss_fn=loss_fn)
+        loss.backward()
+        grad_positions = positions.grad
 
+        self._last_energy = energy.item()
+        self._last_gradients = grad_positions.detach().cpu().numpy()
+
+        return self._last_gradients
 
     def attack_step(
         self,
@@ -113,18 +197,12 @@ class PGD_MACE(FGSM_MACE):
         return perturbed_atoms
 
     def _random_start(self, atoms: Any) -> Any:
-        """Return a copy of atoms randomly initialized inside the epsilon ball."""
-        directions = self.rng.normal(size=atoms.get_positions().shape)
-        norms = np.linalg.norm(directions, axis=1, keepdims=True)
-        directions = np.divide(
-            directions,
-            norms,
-            out=np.zeros_like(directions),
-            where=norms > 0,
+        """Return a copy of atoms randomly initialized inside the L-infinity epsilon box."""
+        perturbation = self.rng.uniform(
+            low=-self.epsilon,
+            high=self.epsilon,
+            size=atoms.get_positions().shape,
         )
-
-        radii = self.rng.random((len(atoms), 1)) ** (1.0 / 3.0)
-        perturbation = self.epsilon * radii * directions
 
         perturbed_atoms = atoms.copy()
         perturbed_atoms.set_positions(atoms.get_positions() + perturbation)
@@ -155,8 +233,6 @@ class PGD_MACE(FGSM_MACE):
             clip = True
         elif clip is False:
             raise ValueError("PGD requires clipping; clip=False is not allowed.")
-        
-        
 
         self._original_positions = atoms.get_positions().copy()
         self._reset_history()

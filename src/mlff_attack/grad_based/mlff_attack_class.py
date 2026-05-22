@@ -139,7 +139,7 @@ class MLFFAttack(ABC):
         return perturbed_atoms
 
     def _clip_perturbations(self, atoms: Any) -> None:
-        """Ensure perturbations stay within epsilon bound.
+        """Clip each coordinate perturbation to the L-infinity epsilon bound.
 
         Parameters
         ----------
@@ -152,13 +152,8 @@ class MLFFAttack(ABC):
         current_pos = atoms.get_positions()
         perturbations = current_pos - self._original_positions
 
-        # Clip per-atom displacement magnitude
-        magnitudes = np.linalg.norm(perturbations, axis=1, keepdims=True)
-        mask = magnitudes.squeeze() > self.epsilon
-
-        if np.any(mask):
-            perturbations[mask] *= self.epsilon / magnitudes[mask]
-            atoms.set_positions(self._original_positions + perturbations)
+        clipped_perturbations = np.clip(perturbations, -self.epsilon, self.epsilon)
+        atoms.set_positions(self._original_positions + clipped_perturbations)
 
     def save_perturbation(
         self,

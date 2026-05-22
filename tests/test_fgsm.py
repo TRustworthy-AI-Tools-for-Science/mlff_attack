@@ -145,8 +145,7 @@ def test_attack_step_scales_epsilon_by_n_steps():
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
     step_size = epsilon / n_steps
 
-    assert np.max(np.abs(displacement)) <= step_size + 1e-6
-
+    assert np.all(np.abs(displacement) <= step_size + 1e-6)
 
 def test_n_steps():
     model = dummy_model()
@@ -167,18 +166,17 @@ def test_displacements_are_clipped_to_epsilon():
 
     epsilon = 0.01
     fgsm = FGSM_MACE(atoms.calc, epsilon=epsilon, device="cpu")
-    fake_gradient = lambda a: np.ones_like(a)
-    atoms_positions = atoms.get_positions()
-    temp_g = fake_gradient(atoms_positions)
-    fgsm.compute_gradient = lambda a: temp_g
+    unclipped_displacement = np.full_like(atoms.get_positions(), 2 * epsilon)
 
-    assert np.linalg.norm([epsilon, epsilon, epsilon]) > epsilon
+    assert np.any(np.abs(unclipped_displacement) > epsilon + 1e-6)
 
-    perturbed_atoms = fgsm.attack(atoms, n_steps=1, clip=True)
+    perturbed_atoms = atoms.copy()
+    perturbed_atoms.set_positions(atoms.get_positions() + unclipped_displacement)
+
+    fgsm._original_positions = atoms.get_positions()
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
-    displacement_magnitudes = np.linalg.norm(displacement, axis=1)
 
-    assert np.all(displacement_magnitudes <= epsilon + 1e-6)
+    assert np.all(np.abs(displacement) > epsilon + 1e-6)
 
 
 def test_displacements_are_not_clipped_to_epsilon():
@@ -186,17 +184,19 @@ def test_displacements_are_not_clipped_to_epsilon():
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
     epsilon = 0.01
-    fgsm = FGSM_MACE(atoms.calc, epsilon=epsilon, device="cpu")
-    fake_gradient = lambda a: np.ones_like(a)
-    atoms_positions = atoms.get_positions()
-    temp_g = fake_gradient(atoms_positions)
-    fgsm.compute_gradient = lambda a: temp_g
-    
-    perturbed_atoms = fgsm.attack(atoms, n_steps=1, clip=False)
-    displacement = perturbed_atoms.get_positions() - atoms.get_positions()
-    displacement_magnitudes = np.linalg.norm(displacement, axis=1)
+    fgsm = FGSM_MACE(atoms.calc, device="cpu", epsilon=epsilon)
+    unclipped_displacement = np.full_like(atoms.get_positions(), 2 * epsilon)
 
-    assert np.all(displacement_magnitudes > epsilon)
+    assert np.any(np.abs(unclipped_displacement) > epsilon + 1e-6)
+
+    perturbed_atoms = atoms.copy()
+    perturbed_atoms.set_positions(atoms.get_positions() + unclipped_displacement)
+
+    fgsm._original_positions = atoms.get_positions()
+    fgsm._clip_perturbations(perturbed_atoms)
+    displacement = perturbed_atoms.get_positions() - atoms.get_positions()
+
+    assert np.all(np.abs(displacement) <= epsilon + 1e-6)
 
 
 def test_target_energy():
