@@ -112,7 +112,7 @@ class FGSM_MACE(MLFFAttack):
         for key in batch:
             if torch.is_tensor(batch[key]):
                 batch[key] = batch[key].to(self.device)
-                # match floating tensors to the model dtype - DC
+                # match floating tensors to the model dtype
                 if torch.is_floating_point(batch[key]):
                     batch[key] = batch[key].to(model_dtype)
 
@@ -284,7 +284,7 @@ class FGSM_MACE(MLFFAttack):
         self,
         atoms: Any,
         n_steps: int = 1,
-        clip: bool = True
+        clip: Optional[bool] = None
     ) -> Any:
         """Execute FGSM attack.
 
@@ -297,13 +297,16 @@ class FGSM_MACE(MLFFAttack):
         n_steps : int, optional
             Number of attack iterations (1 for FGSM, >1 for I-FGSM), by default 1
         clip : bool, optional
-            Whether to clip perturbations to epsilon bound, by default True
+            Whether to clip perturbations to epsilon bound, by default False
 
         Returns
         -------
         Any
             Perturbed atoms object
         """
+        if clip is None:
+            clip = False
+            
         # Store original positions
         if self._original_positions is None:
             self._original_positions = atoms.get_positions().copy()

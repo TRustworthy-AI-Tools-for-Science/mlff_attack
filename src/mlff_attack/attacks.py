@@ -95,8 +95,6 @@ def make_attack(
             logger.info("   Mode: Maximize energy")
 
     if attack_type == "fgsm":
-        if clip is None:
-            clip = False
         attack = FGSM_MACE(
             model=atoms.calc,
             epsilon=epsilon,
@@ -121,7 +119,7 @@ def make_attack(
         )
 
     else:
-        raise NotImplementedError(f"Attack type '{attack_type}' not implemented yet.")
+        raise NotImplementedError(f"Attack type '{attack_type}' not implemented yet. Use fgsm or pgd.")
 
     # Execute attack
     perturbed_atoms = attack.attack(atoms, n_steps=n_steps, clip=clip)

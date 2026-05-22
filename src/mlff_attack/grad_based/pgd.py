@@ -135,7 +135,7 @@ class PGD_MACE(FGSM_MACE):
         self,
         atoms: Any,
         n_steps: Optional[int] = None,
-        clip: bool = True,
+        clip: Optional[bool] = None,
         random_start: Optional[bool] = None,
         loss_fn: Optional[Callable] = None,
     ) -> Any:
@@ -144,13 +144,20 @@ class PGD_MACE(FGSM_MACE):
         Args:
             atoms: Input atomic structure with attached calculator
             n_steps: Optional override for ``num_iter``
-            clip: Whether to project perturbations back into the epsilon ball
+            clip: Whether to project perturbations within the epsilon ball, by default and always True
             random_start: Optional override for random initialization
             loss_fn: Optional custom loss function
 
         Returns:
             Final perturbed atomic structure after all attack iterations
         """
+        if clip is None:
+            clip = True
+        elif clip is False:
+            raise ValueError("PGD requires clipping; clip=False is not allowed.")
+        
+        
+
         self._original_positions = atoms.get_positions().copy()
         self._reset_history()
 

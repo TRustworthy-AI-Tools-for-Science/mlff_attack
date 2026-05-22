@@ -72,7 +72,7 @@ def parse_args():
         "--type",
         type=str,
         default="fgsm",
-        choices=["fgsm", "pgd"],
+        choices=["fgsm", "FGSM", "pgd", "PGD"],
         help="Type of adversarial attack to perform"
     )
 
@@ -106,9 +106,10 @@ def parse_args():
 
     parser.add_argument(
         "--clip",
-        action="store_true",
+        type=str,
         default=None,
-        help="Clip total perturbation displacements to epsilon",
+        choices=["true", "True", "false", "False"],
+        help="Clip total perturbation displacements to epsilon (true or false)"
     )
 
     return parser.parse_args()
@@ -132,6 +133,8 @@ def main():
     n_steps = args.n_steps
     target_energy = args.target_energy
     clip = args.clip
+    if clip is not None:
+        clip = clip in ("true", "True")
 
     # Determine output path
     if args.outdir is not None:
