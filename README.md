@@ -94,7 +94,7 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 - `--alpha`: PGD step size only valid with `--type pgd` (default: epsilon / n_steps).
 - `--n-steps`: Number of attack iterations (default: 1 for FGSM, >1 for PGD).
 - `--target-energy`: Target energy in eV (default: maximize the predicted energy).
-- `--clip`: Whether to clip perturbations to the epsilon bound (FGSM default: False, PGD: always True).
+- `--clip`: Whether to clip perturbations to the epsilon bound. Pass `true` or `false`. If omitted, FGSM defaults to `false`; PGD defaults to clipping and rejects `false`.
 
 #### Example usage
 

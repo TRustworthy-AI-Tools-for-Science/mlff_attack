@@ -36,7 +36,7 @@ class PGD_MACE(MLFFAttack):
 
         Args:
             model: MLFF model with calculator interface
-            epsilon: Maximum per-atom perturbation magnitude in Angstroms
+            epsilon: Maximum absolute displacement per coordinate under L-infinity
             alpha: Step size for each iteration
             num_iter: Number of attack iterations
             device: Device for PyTorch computations

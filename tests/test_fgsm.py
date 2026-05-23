@@ -174,9 +174,10 @@ def test_displacements_are_clipped_to_epsilon():
     perturbed_atoms.set_positions(atoms.get_positions() + unclipped_displacement)
 
     fgsm._original_positions = atoms.get_positions()
+    fgsm._clip_perturbations(perturbed_atoms)
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
 
-    assert np.all(np.abs(displacement) > epsilon + 1e-6)
+    assert np.all(np.abs(displacement) <= epsilon + 1e-6)
 
 
 def test_displacements_are_not_clipped_to_epsilon():
@@ -193,10 +194,9 @@ def test_displacements_are_not_clipped_to_epsilon():
     perturbed_atoms.set_positions(atoms.get_positions() + unclipped_displacement)
 
     fgsm._original_positions = atoms.get_positions()
-    fgsm._clip_perturbations(perturbed_atoms)
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
 
-    assert np.all(np.abs(displacement) <= epsilon + 1e-6)
+    assert np.all(np.abs(displacement) > epsilon + 1e-6)
 
 
 def test_target_energy():

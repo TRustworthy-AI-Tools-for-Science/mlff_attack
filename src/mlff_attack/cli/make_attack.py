@@ -119,15 +119,15 @@ def main():
     """Run the MACE adversarial attack CLI."""
     # Parse command line arguments
     args = parse_args()
+    attack_type = args.type.lower()
 
-    if args.type != "pgd" and args.alpha is not None:
+    if attack_type != "pgd" and args.alpha is not None:
         raise SystemExit("--alpha can only be used with --type pgd")
 
     # Override configuration with command line arguments
     input_cif = args.input
     model_path = args.model
     device = args.device
-    attack_type = args.type
     epsilon = args.epsilon
     alpha = args.alpha
     n_steps = args.n_steps
