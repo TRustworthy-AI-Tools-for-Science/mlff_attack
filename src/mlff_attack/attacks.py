@@ -343,6 +343,8 @@ def save_perturbation(
     """
 
     save_path = Path(save_path)
+    if save_path.suffix != ".npz":
+        save_path = save_path.with_suffix(".npz")
     save_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Convert gradients to numpy if needed
