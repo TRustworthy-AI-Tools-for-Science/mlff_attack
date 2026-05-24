@@ -118,6 +118,7 @@ def test_epsilon_bounds_displacement_with_L_infinity():
 
     assert np.all(np.abs(displacement) <= epsilon + 1e-6)
 
+
 def test_target_energy():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
@@ -141,6 +142,7 @@ def test_compute_gradient():
     assert gradients.shape == atoms.get_positions().shape
     assert np.all(np.isfinite(gradients))
 
+
 def test_random_start_is_within_epsilon():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
@@ -154,6 +156,7 @@ def test_random_start_is_within_epsilon():
 
     assert not np.allclose(perturbed_atoms.get_positions(), atoms.get_positions(), atol=1e-6)
     assert np.all(np.abs(displacement) <= epsilon + 1e-6)
+
 
 def test_attack_step():
     model = dummy_model()

@@ -147,6 +147,7 @@ def test_attack_step_scales_epsilon_by_n_steps():
 
     assert np.all(np.abs(displacement) <= step_size + 1e-6)
 
+
 def test_n_steps():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
@@ -242,7 +243,9 @@ def test_compute_gradient_uses_loss_function():
     fgsm = FGSM_MACE(atoms.calc, epsilon=0.1, device="cpu")
 
     default_gradients = fgsm.compute_gradient(atoms)
-    loss_function = lambda energy: energy
+    
+    energy_loss = lambda energy: energy
+    loss_function = energy_loss
     custom_gradients = fgsm.compute_gradient(atoms, loss_fn=loss_function)
 
     assert np.allclose(custom_gradients, -default_gradients, atol=1e-5)
