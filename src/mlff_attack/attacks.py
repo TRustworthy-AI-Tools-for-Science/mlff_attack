@@ -375,7 +375,6 @@ def save_perturbation(
 
     # Save to npz file
     np.savez_compressed(save_path, **data)
-    logger.info("Saved perturbation data to %s.npz", save_path)
 
     return save_path
 

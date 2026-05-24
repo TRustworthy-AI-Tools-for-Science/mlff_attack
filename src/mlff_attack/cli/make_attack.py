@@ -106,10 +106,14 @@ def parse_args():
 
     parser.add_argument(
         "--clip",
-        type=str,
+        nargs="?",
+        const="true",
         default=None,
         choices=["true", "True", "false", "False"],
-        help="Clip total perturbation displacements to epsilon (true or false)"
+        help=(
+            "Clip total perturbation displacements to epsilon. "
+            "Use --clip or --clip true to enable, --clip false to disable."
+        ),
     )
 
     return parser.parse_args()

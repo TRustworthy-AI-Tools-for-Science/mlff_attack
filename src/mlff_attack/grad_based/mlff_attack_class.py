@@ -228,11 +228,13 @@ class MLFFAttack(ABC):
 
         perturbations = self._perturbed_positions - self._original_positions
         magnitudes = np.linalg.norm(perturbations, axis=1)
+        coordinate_magnitudes = np.abs(perturbations)
 
         return {
             'mean_displacement': float(np.mean(magnitudes)),
             'max_displacement': float(np.max(magnitudes)),
             'std_displacement': float(np.std(magnitudes)),
+            'max_coordinate_displacement': float(np.max(coordinate_magnitudes)),
             'total_atoms': len(magnitudes),
             'atoms_perturbed': int(np.sum(magnitudes > 1e-6))
         }
