@@ -401,7 +401,7 @@ def create_visualization(
         plt.close()
 
     # Print summary to console
-    logger.info("\\n%s", "=" * 50)
+    logger.info("\n%s", "=" * 50)
     logger.info(summary_text)
     logger.info("%s", "=" * 50)
 

@@ -48,7 +48,7 @@ def make_attack(
         Device to run the model on ("cpu" or "cuda")
     output_cif : str or Path
         Path to save the perturbed CIF file
-    attack_type : str, optional
+    attack_type : str
         Type of attack to perform, by default "fgsm"
     epsilon : float
         Perturbation step size in Angstroms

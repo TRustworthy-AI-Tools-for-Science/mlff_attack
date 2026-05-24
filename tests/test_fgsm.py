@@ -248,4 +248,4 @@ def test_compute_gradient_uses_loss_function():
     loss_function = energy_loss
     custom_gradients = fgsm.compute_gradient(atoms, loss_fn=loss_function)
 
-    assert np.allclose(custom_gradients, -default_gradients, atol=1e-5)
+    assert np.allclose(custom_gradients, default_gradients, atol=1e-5)

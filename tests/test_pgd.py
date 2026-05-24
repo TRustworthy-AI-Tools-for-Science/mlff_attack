@@ -146,6 +146,7 @@ def test_compute_gradient():
 def test_random_start_is_within_epsilon():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
+    epsilon = 0.1
 
     pgd = PGD_MACE(
         atoms.calc,

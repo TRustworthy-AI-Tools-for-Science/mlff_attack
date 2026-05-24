@@ -145,7 +145,7 @@ class PGD_MACE(MLFFAttack):
         elif self.target_energy is not None:
             loss = (energy - self.target_energy) ** 2
         else:
-            loss = -energy
+            loss = energy
 
         loss.backward()
         grad_positions = positions.grad

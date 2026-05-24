@@ -214,7 +214,7 @@ class FGSM_MACE(MLFFAttack):
             loss = (energy - self.target_energy) ** 2
         else:
             # Maximize energy (adversarial attack)
-            loss = -energy
+            loss = energy
 
         # Backprop to get gradients w.r.t. positions
         loss.backward()
