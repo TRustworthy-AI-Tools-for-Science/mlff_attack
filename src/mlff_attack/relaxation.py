@@ -93,7 +93,7 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64", verb
             if dtype_str == "float32":
                 dtype = torch.float32
             else:
-                dtype = "float64"
+                dtype = torch.float64
 
             if verbose:
                 logger.info("[INFO] Loading MACE model: %s on %s", model_path, device)

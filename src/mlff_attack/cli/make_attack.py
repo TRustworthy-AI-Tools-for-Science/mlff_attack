@@ -154,7 +154,8 @@ def main():
     logger.info("\nLoading structure from: %s", input_cif)
     atoms = load_structure(input_cif)
     if atoms is None:
-        raise RuntimeError(f"Failed to load structure from {input_cif}")
+        logger.info("[ERROR] Failed to load structure from %s", input_cif)
+        return 1
     logger.info("   Loaded %s atoms: %s", len(atoms), atoms.get_chemical_formula())
 
     # Generate perturbed structure

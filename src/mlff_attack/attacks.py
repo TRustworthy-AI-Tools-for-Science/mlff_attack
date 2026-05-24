@@ -104,8 +104,6 @@ def make_attack(
         )
 
     elif attack_type == "pgd":
-        if n_steps <= 1:
-            raise ValueError("n_steps must be > 1 for PGD")
         if alpha is None:
             alpha = epsilon / n_steps
         attack = PGD_MACE(
@@ -631,7 +629,7 @@ def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None)
   ΔE:        {delta_e:+.4f} eV
 
 """
-    except ValueError:
+    except (ValueError, RuntimeError):
         energy_text = "Energy: Calculation failed\n"
 
     # Per-element statistics

@@ -30,6 +30,7 @@ pip install -e .
 
 # Or install with development dependencies
 pip install -e ".[dev]"
+```
 
 ### Optional UMA support
 
@@ -102,7 +103,7 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 - `--type`: Type of attack to perform (e.g., `fgsm`, `pgd`) (required).
 - `--input`: Path to the input structure file (CIF format) (required).
 - `--model`: Path to the MACE model file (.model) (required).
-- `--device`: Device to use for computations (cuda or cpu, default: cuda).
+- `--device`: Device to use for computations (cuda or cpu, default: cpu).
 - `--outdir`: Directory to save the results (required).
 - `--visualize`: Generate perturbation visualization plot (default: enabled).
 - `--no-visualize`: Skip perturbation visualization plot generation.
