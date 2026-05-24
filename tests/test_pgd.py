@@ -147,9 +147,14 @@ def test_random_start_is_within_epsilon():
     model = dummy_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
-    epsilon = 0.1
-    pgd = PGD_MACE(atoms.calc, epsilon=epsilon, alpha=0.01, num_iter=3, device="cpu")
-
+    pgd = PGD_MACE(
+        atoms.calc,
+        epsilon=epsilon,
+        alpha=0.01,
+        num_iter=3,
+        device="cpu",
+        rng=np.random.default_rng(0),
+    )
     perturbed_atoms = pgd._random_start(atoms)
 
     displacement = perturbed_atoms.get_positions() - atoms.get_positions()
