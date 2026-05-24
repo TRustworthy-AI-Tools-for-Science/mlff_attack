@@ -66,7 +66,23 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64", verb
         ASE Atoms object with calculator attached, or None if setup fails
     """
     try:
+        model_id = str(model_path)
 
+        if model_id.startswith("uma-"):
+            try:
+                from fairchem.core import pretrained_mlip, FAIRChemCalculator
+            except ImportError:
+                logger.info(
+                    "[ERROR] UMA requires fairchem-core. Install it with: pip install -e \".[uma]\""
+                )
+                return None
+
+            if verbose:
+                logger.info("[INFO] Loading UMA model: %s on %s", model_id, device)
+
+            predictor = pretrained_mlip.get_predict_unit(model_id, device=device)
+            atoms.calc = FAIRChemCalculator(predictor, task_name="omat")
+            return atoms
 
         if isinstance(model_path, mace.calculators.mace.MACECalculator):
             if verbose:
@@ -88,7 +104,7 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64", verb
             )
         return atoms
     except (OSError, ValueError, RuntimeError) as exc:
-        logger.info("[ERROR] Failed to setup MACE calculator: %s", exc)
+        logger.info("[ERROR] Failed to setup calculator: %s", exc)
         return None
 
 

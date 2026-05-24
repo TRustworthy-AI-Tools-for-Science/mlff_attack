@@ -159,18 +159,22 @@ def main():
 
     # Generate perturbed structure
     logger.info("\nGenerating perturbed structure with epsilon=%s Å", epsilon)
-    output_file, perturbed_atoms, _attack_details = make_attack(
-        atoms=atoms,
-        model_path=model_path,
-        device=device,
-        output_cif=output_cif,
-        attack_type=attack_type,
-        epsilon=epsilon,
-        alpha=alpha,
-        n_steps=n_steps,
-        target_energy=target_energy,
-        clip=clip
-    )
+    try:
+        output_file, perturbed_atoms, _attack_details = make_attack(
+            atoms=atoms,
+            model_path=model_path,
+            device=device,
+            output_cif=output_cif,
+            attack_type=attack_type,
+            epsilon=epsilon,
+            alpha=alpha,
+            n_steps=n_steps,
+            target_energy=target_energy,
+            clip=clip,
+        )
+    except (ValueError, NotImplementedError, RuntimeError) as exc:
+        logger.info("[ERROR] Failed to generate attack: %s", exc)
+        return 1
 
     # Visualize perturbation
     if args.visualize:

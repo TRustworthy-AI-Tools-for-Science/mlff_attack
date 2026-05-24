@@ -26,7 +26,7 @@ def make_attack(
     model_path,
     device,
     output_cif,
-    attack_type="fgsm",
+    attack_type,
     epsilon,
     alpha=None,
     n_steps=1,

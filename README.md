@@ -30,6 +30,14 @@ pip install -e .
 
 # Or install with development dependencies
 pip install -e ".[dev]"
+
+### Optional UMA support
+
+UMA support requires the optional UMA dependencies and Hugging Face authentication:
+
+```bash
+pip install -e ".[uma]"
+huggingface-cli login
 ```
 
 ## Usage
@@ -42,12 +50,20 @@ After installation, you can use the `mace-calc-single` command:
 mace-calc-single --input structure.cif --model mace-model.model --outdir results/
 ```
 
+### Running UMA calculations
+
+After installing the UMA extra and logging in to Hugging Face, you can use:
+
+```bash
+uma-calc-single --input structure.cif --model uma-model --outdir results/
+```
+
 #### Command-line options
 
 - `--input`: Input CIF file (required)
 - `--model`: Path to MACE model file (.model) (required)
 - `--outdir`: Output directory (required)
-- `--device`: Device to use (cuda or cpu, default: cuda)
+- `--device`: Device to use (cuda or cpu, default: cpu)
 - `--fmax`: Force convergence criterion in eV/Å (default: 0.01)
 - `--max-steps`: Maximum relaxation steps (default: 300)
 - `--optimizer`: ASE optimizer to use (BFGS or LBFGS, default: LBFGS)
@@ -94,7 +110,7 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 - `--alpha`: PGD step size only valid with `--type pgd` (default: epsilon / n_steps).
 - `--n-steps`: Number of attack iterations (default: 1 for FGSM, >1 for PGD).
 - `--target-energy`: Target energy in eV (default: maximize the predicted energy).
-- `--clip`: Whether to clip perturbations to the epsilon bound. Pass `true` or `false`. If omitted, FGSM defaults to `false`; PGD defaults to clipping and rejects `false`.
+- `--clip`: Whether to clip perturbations to the epsilon bound. Pass `true` or `false`. If omitted, FGSM defaults to `false`; PGD defaults to `true` and rejects `false`.
 
 #### Example usage
 
