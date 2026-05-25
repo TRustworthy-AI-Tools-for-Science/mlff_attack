@@ -143,7 +143,8 @@ class PGD_MACE(MLFFAttack):
         if loss_fn is not None:
             loss = loss_fn(energy)
         elif self.target_energy is not None:
-            loss = (energy - self.target_energy) ** 2
+            # Try to reach target energy (minimize squared error)
+            loss = -(energy - self.target_energy) ** 2
         else:
             loss = energy
 
