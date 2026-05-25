@@ -20,14 +20,77 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Main entry point for UMA single structure relaxation."""
-    parser = argparse.ArgumentParser(description="Relax a single CIF with UMA.")
-    parser.add_argument("--input", required=True, help="Input CIF file")
-    parser.add_argument("--model", default="uma-s-1p2", help="UMA model name")
-    parser.add_argument("--outdir", required=True, help="Output directory")
-    parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"], help="Device")
-    parser.add_argument("--fmax", type=float, default=0.01, help="Force convergence criterion (eV/Å)")
-    parser.add_argument("--max-steps", type=int, default=300, help="Maximum relaxation steps")
-    parser.add_argument("--optimizer", default="LBFGS", choices=["BFGS", "LBFGS"], help="ASE optimizer")
+    parser = argparse.ArgumentParser(
+        description="Relax a single CIF with UMA."
+    )
+
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="Input CIF file",
+    )
+
+    parser.add_argument(
+        "--model",
+        default="uma-s-1p2",
+        help="UMA model name",
+    )
+
+    parser.add_argument(
+        "--outdir",
+        required=True,
+        help="Output directory",
+    )
+
+    parser.add_argument(
+        "--device",
+        default="cuda",
+        choices=["cuda", "cpu"],
+        help="Device",
+    )
+
+    parser.add_argument(
+        "--fmax",
+        type=float,
+        default=0.01,
+        help="Force convergence criterion (eV/Angstrom)",
+    )
+
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        default=300,
+        help="Maximum relaxation steps",
+    )
+
+    parser.add_argument(
+        "--optimizer",
+        default="LBFGS",
+        choices=["BFGS", "LBFGS"],
+        help="ASE optimizer",
+    )
+
+    parser.add_argument(
+        "--task-name",
+        default="omat",
+        choices=["oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"],
+        help="UMA task/domain. Use omat for inorganic crystals, omol for molecules.",
+    )
+
+    parser.add_argument(
+        "--charge",
+        type=int,
+        default=None,
+        help="Molecular charge. Only used with --task-name omol.",
+    )
+
+    parser.add_argument(
+        "--spin",
+        type=int,
+        default=None,
+        help="Spin multiplicity. Only used with --task-name omol.",
+    )
+
     args = parser.parse_args()
 
     # Setup output paths
@@ -48,7 +111,14 @@ def main():
         return 1
 
     # Setup calculator
-    atoms = setup_calculator(atoms, args.model, args.device)
+    atoms = setup_calculator(
+        atoms,
+        args.model,
+        args.device,
+        uma_task_name=args.task_name,
+        uma_charge=args.charge,
+        uma_spin=args.spin,
+    )
     if atoms is None:
         logger.info("[ERROR] Failed to setup UMA calculator with model %s.", args.model)
         return 1
