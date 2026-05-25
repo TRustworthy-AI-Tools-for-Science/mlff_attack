@@ -39,7 +39,16 @@ def load_structure(input_path):
         return None
 
 
-def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64", verbose=False):
+def setup_calculator(
+    atoms,
+    model_path,
+    device="cuda",
+    dtype_str="float64",
+    verbose=False,
+    uma_task_name="omat",
+    uma_charge=None,
+    uma_spin=None
+):
     """Initialize and attach MACE or UMA calculator to atoms object.
 
     This supports two model types:
@@ -77,11 +86,29 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64", verb
                 )
                 return None
 
+            valid_uma_tasks = {"oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"}
+            if uma_task_name not in valid_uma_tasks:
+                logger.info(
+                    "[ERROR] Invalid UMA task_name '%s'. Choose one of: %s",
+                    uma_task_name,
+                    ", ".join(sorted(valid_uma_tasks)),
+                )
+                return None
+
+            if uma_task_name == "omol":
+                atoms.info["charge"] = uma_charge if uma_charge is not None else 0
+                atoms.info["spin"] = uma_spin if uma_spin is not None else 1
+
             if verbose:
-                logger.info("[INFO] Loading UMA model: %s on %s", model_id, device)
+                logger.info(
+                    "[INFO] Loading UMA model: %s on %s with task_name=%s",
+                    model_id,
+                    device,
+                    uma_task_name,
+                )
 
             predictor = pretrained_mlip.get_predict_unit(model_id, device=device)
-            atoms.calc = FAIRChemCalculator(predictor, task_name="omat")
+            atoms.calc = FAIRChemCalculator(predictor, task_name=uma_task_name)
             return atoms
 
         if isinstance(model_path, mace.calculators.mace.MACECalculator):
@@ -103,6 +130,7 @@ def setup_calculator(atoms, model_path, device="cuda", dtype_str="float64", verb
                 default_dtype=dtype
             )
         return atoms
+
     except (OSError, ValueError, RuntimeError) as exc:
         logger.info("[ERROR] Failed to setup calculator: %s", exc)
         return None
@@ -134,7 +162,7 @@ def run_relaxation(
     optimizer="LBFGS",
     verbose=True,
     checkpoint_interval=None,
-    checkpoint_dir=None,
+    checkpoint_dir=None
 ):
     """Run structural relaxation.
 
