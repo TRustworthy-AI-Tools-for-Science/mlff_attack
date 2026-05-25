@@ -39,7 +39,7 @@ attack = FGSM_MACE(
     model=atoms.calc,
     epsilon=0.05,  # Max perturbation in Angstroms
     device="cpu",
-    track_history=True
+    track_history=True,
 )
 
 # Execute attack
@@ -57,7 +57,7 @@ summary = attack.get_attack_summary()
 attack = FGSM_MACE(
     model=atoms.calc,
     epsilon=0.01,
-    device="cpu"
+    device="cpu",
 )
 
 # 10 iterations with clipping
@@ -78,7 +78,7 @@ attack = FGSM_MACE(
     model=atoms.calc,
     epsilon=0.02,
     device="cpu",
-    target_energy=target_energy  # Minimize (E - target)^2
+    target_energy=target_energy,  # Minimize (E - target)^2
 )
 
 perturbed_atoms = attack.attack(atoms, n_steps=10, clip=True)
@@ -231,7 +231,7 @@ print(f"Mean gradient magnitude: {np.mean(grad_mags):.4f}")
 from mlff_attack.attacks import adversarial_attack_step
 
 perturbed, orig_e, pert_e, grads = adversarial_attack_step(
-    atoms, device="cpu", epsilon=0.05, target_energy=None
+    atoms, device="cpu", epsilon=0.05, target_energy=None,
 )
 ```
 
