@@ -69,7 +69,7 @@ def main():
         choices=["BFGS", "LBFGS"],
         help="ASE optimizer",
     )
-    
+
     args = parser.parse_args()
 
     # Setup output paths
