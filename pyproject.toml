@@ -56,8 +56,7 @@ uma = [
 ]
 
 [project.scripts]
-mace-calc-single = "mlff_attack.cli.mace_calc_single:main"
-uma-calc-single = "mlff_attack.cli.uma_calc_single:main"
+calc-single = "mlff_attack.cli.calc_single:main"
 visualize-traj = "mlff_attack.cli.visualize_traj:main"
 make-attack = "mlff_attack.cli.make_attack:main"
 

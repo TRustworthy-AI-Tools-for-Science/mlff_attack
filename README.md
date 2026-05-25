@@ -45,22 +45,17 @@ huggingface-cli login
 
 ### Running MACE calculations
 
-After installation, you can use the `mace-calc-single` command:
+After installation, you can use the `calc-single` commands:
 
 ```bash
-mace-calc-single --input structure.cif --model mace-model.model --outdir results/
-```
+calc-single --type mace --input structure.cif --model mace-model.model --outdir results/
 
-### Running UMA calculations
-
-After installing the UMA extra and logging in to Hugging Face, you can use:
-
-```bash
-uma-calc-single --input structure.cif --model uma-model --outdir results/
+calc-single --type uma --input structure.cif --outdir results/ --task-name omat
 ```
 
 #### Command-line options
 
+- `--type`: Calculator type, either `mace` or `uma` (required)
 - `--input`: Input CIF file (required)
 - `--model`: Path to MACE model file (.model) (required)
 - `--outdir`: Output directory (required)
@@ -68,6 +63,9 @@ uma-calc-single --input structure.cif --model uma-model --outdir results/
 - `--fmax`: Force convergence criterion in eV/Å (default: 0.01)
 - `--max-steps`: Maximum relaxation steps (default: 300)
 - `--optimizer`: ASE optimizer to use (BFGS or LBFGS, default: LBFGS)
+- `--task-name`: UMA task/domain, only used with `--type uma` (default: `omat`)
+- `--charge`: Molecular charge, only used with `--type uma --task-name omol`
+- `--spin`: Spin multiplicity, only used with `--type uma --task-name omol`
 
 ### Visualizing trajectories
 
@@ -132,7 +130,7 @@ make-attack --type pgd --input structure.cif --model mace-model.model --outdir o
 
 ```bash
 # Run MACE relaxation
-mace-calc-single --input structure.cif --model mace-model.model --outdir output/
+calc-single --type mace --input structure.cif --model mace-model.model --outdir output/
 
 # Visualize the results
 visualize-traj --traj output/relaxed.traj --outdir output/ --show
@@ -141,7 +139,7 @@ visualize-traj --traj output/relaxed.traj --outdir output/ --show
 make-attack --type fgsm --input structure.cif --outdir output_perturbed/
 
 # Run MACE relaxation on perturbed structure
-mace-calc-single --input perturbed_structure.cif --model mace-model.model --outdir output_perturbed/
+calc-single --type mace --input perturbed_structure.cif --model mace-model.model --outdir output_perturbed/
 
 # Visualize the results of the attack
 visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
