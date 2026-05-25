@@ -63,6 +63,7 @@ class FGSM_MACE(MLFFAttack):
         self.target_energy = target_energy
         self._last_energy = None
         self._last_gradients = None
+        self._initial_energy = None
 
     def _forward_pass_with_gradients(self, atoms: Any) -> tuple:
         """Perform forward pass through MACE model with gradient tracking.
@@ -162,7 +163,6 @@ class FGSM_MACE(MLFFAttack):
         model.eval()
 
         with torch.enable_grad():
-            positions.requires_grad_(True)
             batch["positions"] = positions
 
             # Forward pass through model
@@ -219,6 +219,10 @@ class FGSM_MACE(MLFFAttack):
         # Backprop to get gradients w.r.t. positions
         loss.backward()
         grad_positions = positions.grad
+        if grad_positions is None:
+            raise RuntimeError(
+                "Gradient did not flow to positions; check model differentiability."
+            )
 
         # Store for history tracking
         self._last_energy = energy.item()
@@ -250,8 +254,10 @@ class FGSM_MACE(MLFFAttack):
         gradients = self.compute_gradient(atoms)
 
         # FGSM: perturbation is step size * sign of gradient
+        # Negate when targeting a specific energy to descend toward the target
         step_size = self.epsilon / n_steps
-        perturbation = step_size * np.sign(gradients)
+        direction = -1 if self.target_energy is not None else 1
+        perturbation = direction * step_size * np.sign(gradients)
 
         # Apply perturbation
         current_positions = atoms.get_positions()
@@ -307,9 +313,12 @@ class FGSM_MACE(MLFFAttack):
         if clip is None:
             clip = False
             
-        # Store original positions
-        if self._original_positions is None:
-            self._original_positions = atoms.get_positions().copy()
+        self.reset()
+        self._original_positions = atoms.get_positions().copy()
+        try:
+            self._initial_energy = atoms.get_potential_energy()
+        except (ValueError, RuntimeError):
+            self._initial_energy = None
 
         # Execute attack
         perturbed_atoms = atoms.copy()
@@ -429,11 +438,12 @@ class FGSM_MACE(MLFFAttack):
 
         if self.track_history and self.attack_history:
             if self.attack_history['energies']:
-                summary['initial_energy'] = self.attack_history['energies'][0]
+                summary['initial_energy'] = self._initial_energy
                 summary['final_energy'] = self.attack_history['energies'][-1]
-                summary['energy_change'] = (
-                    summary['final_energy'] - summary['initial_energy']
-                )
+                if self._initial_energy is not None:
+                    summary['energy_change'] = (
+                        summary['final_energy'] - self._initial_energy
+                    )
 
             if self.attack_history['max_forces']:
                 summary['final_max_force'] = self.attack_history['max_forces'][-1]
