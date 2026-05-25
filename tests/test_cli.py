@@ -19,7 +19,8 @@ def test_cli_mace_calc_single():
     # Construct command
     cmd = [
         "python",
-        "src/mlff_attack/cli/mace_calc_single.py",
+        "src/mlff_attack/cli/calc_single.py",
+        "--type", "mace",
         "--input", input_cif,
         "--model", model_path,
         "--outdir", outdir,
@@ -45,6 +46,51 @@ def test_cli_mace_calc_single():
     if os.path.exists(outdir):
         import shutil
         shutil.rmtree(outdir)
+
+
+def test_cli_uma_calc_single():
+    # Define input parameters
+    input_cif = 'does_not_exist.cif'  # Intentionally incorrect path
+    model_path = 'does_not_exist.model'  # Intentionally incorrect path
+    outdir = "tests/output/uma_calc_single_test"
+
+    # Ensure output directory is clean
+    if os.path.exists(outdir):
+        import shutil
+        shutil.rmtree(outdir)
+
+    # Construct command
+    cmd = [
+        "python",
+        "src/mlff_attack/cli/calc_single.py",
+        "--type", "uma",
+        "--input", input_cif,
+        "--model", model_path,
+        "--outdir", outdir,
+        "--device", "cpu",
+        "--task", "omat",
+        "--fmax", "0.02",
+        "--max-steps", "100",
+        "--optimizer", "LBFGS"
+    ]
+
+    # Run the CLI command
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    # Check that the command executed successfully
+    assert result.returncode == 1, f"CLI failed with error: {result.stderr}"
+
+    # Check that output files are created
+    traj_path = Path(outdir) / "relaxed.traj"
+    cif_path = Path(outdir) / "relaxed.cif"
+    assert not traj_path.exists(), "Trajectory file should not have been created."
+    assert not cif_path.exists(), "Relaxed CIF file should not have been created."
+
+    # Clean up after test
+    if os.path.exists(outdir):
+        import shutil
+        shutil.rmtree(outdir)
+
 
 @pytest.mark.cli
 def test_cli_make_attack():
@@ -86,6 +132,41 @@ def test_cli_make_attack():
         import shutil
         shutil.rmtree(outdir)
 
+
+def test_cli_mace_rejects_uma_charge():
+    cmd = [
+        sys.executable,
+        "src/mlff_attack/cli/calc_single.py",
+        "--type", "mace",
+        "--input", "does_not_exist.cif",
+        "--model", "does_not_exist.model",
+        "--outdir", "tests/output/mace_rejects_uma_charge_test",
+        "--charge", "0",
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert result.returncode != 0
+    assert "--charge can only be used with --type uma" in result.stderr
+
+
+def test_cli_mace_rejects_uma_spin():
+    cmd = [
+        sys.executable,
+        "src/mlff_attack/cli/calc_single.py",
+        "--type", "mace",
+        "--input", "does_not_exist.cif",
+        "--model", "does_not_exist.model",
+        "--outdir", "tests/output/mace_rejects_uma_charge_test",
+        "--spin", "0",
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert result.returncode != 0
+    assert "--spin can only be used with --type uma" in result.stderr
+
+
 @pytest.mark.cli
 def test_cli_fgsm_accepts_all_arguments():
     cmd = [
@@ -108,6 +189,7 @@ def test_cli_fgsm_accepts_all_arguments():
     # Check that the command executed successfully
     assert result.returncode == 1, f"CLI failed with error: {result.stderr}"
     assert "unrecognized arguments" not in result.stderr
+
 
 def test_cli_fgsm_rejects_alpha():
     cmd = [

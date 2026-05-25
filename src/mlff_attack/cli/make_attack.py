@@ -71,7 +71,7 @@ def parse_args():
     parser.add_argument(
         "--type",
         type=str,
-        default="fgsm",
+        required=True
         choices=["fgsm", "FGSM", "pgd", "PGD"],
         help="Type of adversarial attack to perform"
     )

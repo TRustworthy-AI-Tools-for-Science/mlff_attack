@@ -42,19 +42,20 @@ def load_structure(input_path):
 def setup_calculator(
     atoms,
     model_path,
-    device="cuda",
+    device="cpu",
     dtype_str="float64",
     verbose=False,
-    uma_task_name="omat",
+    calculator=None,
+    uma_task="omat",
     uma_charge=None,
-    uma_spin=None
+    uma_spin=None,
 ):
     """Initialize and attach MACE or UMA calculator to atoms object.
 
     This supports two model types:
 
     - MACE models: pass a local model path, like "mace-mpa-0-medium.model"
-    - UMA models: pass a UMA model name, like "uma-s-1p2"
+    - UMA models: pass a UMA model name, like "uma-s-1p1"
 
     Parameters
     ----------
@@ -76,8 +77,18 @@ def setup_calculator(
     """
     try:
         model_id = str(model_path)
+        if calculator not in {None, "mace", "uma"}:
+            logger.info(
+                "[ERROR] Invalid calculator '%s'. Use 'mace' or 'uma'.",
+                calculator,
+            )
+            return None
 
-        if model_id.startswith("uma-"):
+        use_uma = calculator == "uma" or (
+            calculator is None and model_id.startswith("uma-")
+        )
+
+        if use_uma:
             try:
                 from fairchem.core import pretrained_mlip, FAIRChemCalculator
             except ImportError:
@@ -87,28 +98,28 @@ def setup_calculator(
                 return None
 
             valid_uma_tasks = {"oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"}
-            if uma_task_name not in valid_uma_tasks:
+            if uma_task not in valid_uma_tasks:
                 logger.info(
-                    "[ERROR] Invalid UMA task_name '%s'. Choose one of: %s",
-                    uma_task_name,
+                    "[ERROR] Invalid UMA uma_task '%s'. Choose one of: %s",
+                    uma_task,
                     ", ".join(sorted(valid_uma_tasks)),
                 )
                 return None
 
-            if uma_task_name == "omol":
+            if uma_task == "omol":
                 atoms.info["charge"] = uma_charge if uma_charge is not None else 0
                 atoms.info["spin"] = uma_spin if uma_spin is not None else 1
 
             if verbose:
                 logger.info(
-                    "[INFO] Loading UMA model: %s on %s with task_name=%s",
+                    "[INFO] Loading UMA model: %s on %s with uma_task=%s",
                     model_id,
                     device,
-                    uma_task_name,
+                    uma_task,
                 )
 
             predictor = pretrained_mlip.get_predict_unit(model_id, device=device)
-            atoms.calc = FAIRChemCalculator(predictor, task_name=uma_task_name)
+            atoms.calc = FAIRChemCalculator(predictor, uma_task=uma_task)
             return atoms
 
         if isinstance(model_path, mace.calculators.mace.MACECalculator):
@@ -162,7 +173,7 @@ def run_relaxation(
     optimizer="LBFGS",
     verbose=True,
     checkpoint_interval=None,
-    checkpoint_dir=None
+    checkpoint_dir=None,
 ):
     """Run structural relaxation.
 

@@ -341,7 +341,7 @@ def create_visualization(
     output_format='png',
     show=False,
     save_to_csv=True,
-    fmax=0.01
+    fmax=0.01,
 ):
     """Create visualization plots for trajectory data.
 

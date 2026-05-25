@@ -10,7 +10,7 @@ import sys
 
 from mlff_attack.visualization import (
     create_visualization,
-    load_trajectory
+    load_trajectory,
 )
 
 logger = logging.getLogger(__name__)

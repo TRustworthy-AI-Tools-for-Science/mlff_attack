@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI entry point for MACE single structure relaxation.
+CLI entry point for MACE or UMA single structure relaxation.
 """
 
 import argparse
@@ -12,16 +12,24 @@ from mlff_attack.relaxation import (
     load_structure,
     setup_calculator,
     run_relaxation,
-    save_results
+    save_results,
 )
 
 logger = logging.getLogger(__name__)
 
 
 def main():
-    """Main entry point for MACE single structure relaxation."""
+    """Main entry point for MACE or UMA single structure relaxation."""
     parser = argparse.ArgumentParser(
-        description="Relax a single CIF with MACE."
+        description="Relax a single CIF with MACE or UMA."
+    )
+
+    parser.add_argument(
+        "--type",
+        type=str,
+        required=True,
+        choices=["mace", "MACE", "uma", "UMA"],
+        help="Type of calculator to use: mace or uma",
     )
 
     parser.add_argument(
@@ -33,7 +41,7 @@ def main():
     parser.add_argument(
         "--model",
         required=True,
-        help="Path to MACE model file (.model)",
+        help="Path to MACE or UMA model file (.model)",
     )
 
     parser.add_argument(
@@ -70,7 +78,38 @@ def main():
         help="ASE optimizer",
     )
 
+    parser.add_argument(
+        "--task",
+        default="omat",
+        choices=["oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"],
+        help="UMA task. Only used with --type uma.",
+    )
+
+    parser.add_argument(
+        "--charge",
+        type=int,
+        default=None,
+        help="Molecular charge. Only used with --type uma --task omol.",
+    )
+
+    parser.add_argument(
+        "--spin",
+        type=int,
+        default=None,
+        help="Spin multiplicity. Only used with --type uma --task omol.",
+    )
+
     args = parser.parse_args()
+    calculator_type = args.type.lower()
+
+    if calculator_type == "mace":
+        if args.model is None:
+            parser.error("--model is required with --type mace")
+        if args.charge is not None:
+            parser.error("--charge can only be used with --type uma")
+        if args.spin is not None:
+            parser.error("--spin can only be used with --type uma")
+        args.device = args.device or "cpu"
 
     # Setup output paths
     outdir = Path(args.outdir)
@@ -90,9 +129,21 @@ def main():
         return 1
 
     # Setup calculator
-    atoms = setup_calculator(atoms, args.model, args.device)
+    atoms = setup_calculator(
+        atoms,
+        args.model,
+        args.device,
+        calculator_type=calculator_type,
+        uma_task_name=args.task_name,
+        uma_charge=args.charge,
+        uma_spin=args.spin,
+    )
     if atoms is None:
-        logger.info("[ERROR] Failed to setup MACE calculator with model %s.", args.model)
+        logger.info(
+            "[ERROR] Failed to setup %s calculator with model %s.",
+            calculator_type.upper(),
+            args.model,
+        )
         return 1
 
     atoms.info["fmax"] = args.fmax
@@ -103,7 +154,7 @@ def main():
         traj_path=traj_path,
         fmax=args.fmax,
         max_steps=args.max_steps,
-        optimizer=args.optimizer
+        optimizer=args.optimizer,
     )
 
     if not success:

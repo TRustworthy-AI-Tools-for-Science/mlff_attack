@@ -32,7 +32,7 @@ def make_attack(
     n_steps=1,
     target_energy=None,
     clip=None,
-    verbose=True
+    verbose=True,
 ):
     """Perform an adversarial attack on the given atomic structure using a MACE model.
 
@@ -313,7 +313,7 @@ def save_perturbation(
     energy_perturbed,
     gradients,
     save_path,
-    metadata=None
+    metadata=None,
 ):
     """Save perturbation data to a file for later analysis.
 
