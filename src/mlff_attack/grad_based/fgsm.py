@@ -211,7 +211,7 @@ class FGSM_MACE(MLFFAttack):
             loss = loss_fn(energy)
         elif self.target_energy is not None:
             # Try to reach target energy
-            loss = (energy - self.target_energy) ** 2
+            loss = -((energy - self.target_energy) ** 2)
         else:
             # Maximize energy (adversarial attack)
             loss = energy
