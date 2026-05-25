@@ -143,12 +143,17 @@ class PGD_MACE(MLFFAttack):
         if loss_fn is not None:
             loss = loss_fn(energy)
         elif self.target_energy is not None:
-            loss = (energy - self.target_energy) ** 2
+            # Try to reach target energy (minimize squared error)
+            loss = -(energy - self.target_energy) ** 2
         else:
             loss = energy
 
         loss.backward()
         grad_positions = positions.grad
+        if grad_positions is None:
+            raise RuntimeError(
+                "Gradient did not flow to positions; check model differentiability."
+            )
 
         self._last_energy = energy.item()
         self._last_gradients = grad_positions.detach().cpu().numpy()
@@ -175,7 +180,8 @@ class PGD_MACE(MLFFAttack):
             gradients = self.compute_gradient(atoms)
         else:
             gradients = self.compute_gradient(atoms, loss_fn=loss_fn)
-        perturbation = self.alpha * np.sign(gradients)
+        direction = -1 if self.target_energy is not None else 1
+        perturbation = direction * self.alpha * np.sign(gradients)
 
         perturbed_atoms = atoms.copy()
         perturbed_atoms.set_positions(atoms.get_positions() + perturbation)

@@ -31,13 +31,7 @@ def main():
     )
     args = parser.parse_args()
 
-    # Load trajectory
-    traj = load_trajectory(args.traj)
-    if traj is None:
-        logger.error("Error: Could not load trajectory from %s", args.traj)
-        return 1
-
-    # Create output directory
+    # Create output directory and configure logging before loading trajectory
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
@@ -46,6 +40,12 @@ def main():
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         encoding="utf-8",
     )
+
+    # Load trajectory
+    traj = load_trajectory(args.traj)
+    if traj is None:
+        logger.error("Error: Could not load trajectory from %s", args.traj)
+        return 1
 
     # Create visualization
     output_file = create_visualization(
