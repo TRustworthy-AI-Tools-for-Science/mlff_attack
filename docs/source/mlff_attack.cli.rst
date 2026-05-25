@@ -4,10 +4,10 @@ mlff\_attack.cli package
 Submodules
 ----------
 
-mlff\_attack.cli.mace\_calc\_single module
-------------------------------------------
+mlff\_attack.cli.calc\_single module
+------------------------------------
 
-.. automodule:: mlff_attack.cli.mace_calc_single
+.. automodule:: mlff_attack.cli.calc_single
    :members:
    :show-inheritance:
    :undoc-members:
