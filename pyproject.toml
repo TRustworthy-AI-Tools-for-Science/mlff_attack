@@ -34,7 +34,8 @@ dependencies = [
     "mp_api",
     "seaborn",
     "ipywidgets",
-    "jupyterlab"
+    "jupyterlab",
+    "pandas"
 ]
 
 [project.optional-dependencies]
@@ -49,8 +50,14 @@ dev = [
     "sphinx"
 ]
 
+uma = [
+    "fairchem-core>=2.0.0",
+    "huggingface_hub",
+]
+
 [project.scripts]
 mace-calc-single = "mlff_attack.cli.mace_calc_single:main"
+uma-calc-single = "mlff_attack.cli.uma_calc_single:main"
 visualize-traj = "mlff_attack.cli.visualize_traj:main"
 make-attack = "mlff_attack.cli.make_attack:main"
 

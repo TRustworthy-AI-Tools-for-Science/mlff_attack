@@ -32,6 +32,15 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
+### Optional UMA support
+
+UMA support requires the optional UMA dependencies and Hugging Face authentication:
+
+```bash
+pip install -e ".[uma]"
+huggingface-cli login
+```
+
 ## Usage
 
 ### Running MACE calculations
@@ -42,12 +51,20 @@ After installation, you can use the `mace-calc-single` command:
 mace-calc-single --input structure.cif --model mace-model.model --outdir results/
 ```
 
+### Running UMA calculations
+
+After installing the UMA extra and logging in to Hugging Face, you can use:
+
+```bash
+uma-calc-single --input structure.cif --model uma-model --outdir results/
+```
+
 #### Command-line options
 
 - `--input`: Input CIF file (required)
 - `--model`: Path to MACE model file (.model) (required)
 - `--outdir`: Output directory (required)
-- `--device`: Device to use (cuda or cpu, default: cuda)
+- `--device`: Device to use (cuda or cpu, default: cpu)
 - `--fmax`: Force convergence criterion in eV/Å (default: 0.01)
 - `--max-steps`: Maximum relaxation steps (default: 300)
 - `--optimizer`: ASE optimizer to use (BFGS or LBFGS, default: LBFGS)
@@ -86,12 +103,15 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 - `--type`: Type of attack to perform (e.g., `fgsm`, `pgd`) (required).
 - `--input`: Path to the input structure file (CIF format) (required).
 - `--model`: Path to the MACE model file (.model) (required).
+- `--device`: Device to use for computations (cuda or cpu, default: cpu).
 - `--outdir`: Directory to save the results (required).
+- `--visualize`: Generate perturbation visualization plot (default: enabled).
+- `--no-visualize`: Skip perturbation visualization plot generation.
 - `--epsilon`: Perturbation step size for the attack (default: 0.05).
+- `--alpha`: PGD step size only valid with `--type pgd` (default: epsilon / n_steps).
 - `--n-steps`: Number of attack iterations (default: 1 for FGSM, >1 for PGD).
-- `--alpha`: PGD step size. Only valid with `--type pgd`. If omitted for PGD, defaults to `epsilon / n_steps`.
-- `--clip`: Whether to clip perturbations to the epsilon bound (default: False).
-- `--device`: Device to use for computations (cuda or cpu, default: cuda).
+- `--target-energy`: Target energy in eV (default: maximize the predicted energy).
+- `--clip`: Whether to clip perturbations to the epsilon bound. Pass `true` or `false`. If omitted, FGSM defaults to `false`; PGD defaults to `true` and rejects `false`.
 
 #### Example usage
 
@@ -104,7 +124,7 @@ make-attack --type fgsm --input structure.cif --model mace-model.model --outdir 
 make-attack --type fgsm --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --n-steps 10
 
 # Perform a PGD attack
-make-attack --type pgd --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --n-steps 10 --alpha 0.01
+make-attack --type pgd --input structure.cif --model mace-model.model --outdir output_perturbed/ --epsilon 0.1 --alpha 0.01 --n-steps 10
 
 ```
 

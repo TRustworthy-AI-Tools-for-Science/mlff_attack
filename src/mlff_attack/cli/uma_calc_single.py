@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+# UMA-Small - DC
 """
-CLI entry point for MACE single structure relaxation.
+CLI entry point for UMA single structure relaxation.
 """
 
 import argparse
@@ -19,64 +19,22 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    """Main entry point for MACE single structure relaxation."""
-    parser = argparse.ArgumentParser(
-        description="Relax a single CIF with MACE."
-    )
-
-    parser.add_argument(
-        "--input",
-        required=True,
-        help="Input CIF file",
-    )
-
-    parser.add_argument(
-        "--model",
-        required=True,
-        help="Path to MACE model file (.model)",
-    )
-
-    parser.add_argument(
-        "--outdir",
-        required=True,
-        help="Output directory",
-    )
-
-    parser.add_argument(
-        "--device",
-        default="cpu",
-        choices=["cuda", "cpu"],
-        help="Device",
-    )
-
-    parser.add_argument(
-        "--fmax",
-        type=float,
-        default=0.01,
-        help="Force convergence criterion (eV/Angstrom)",
-    )
-
-    parser.add_argument(
-        "--max-steps",
-        type=int,
-        default=300,
-        help="Maximum relaxation steps",
-    )
-
-    parser.add_argument(
-        "--optimizer",
-        default="LBFGS",
-        choices=["BFGS", "LBFGS"],
-        help="ASE optimizer",
-    )
-    
+    """Main entry point for UMA single structure relaxation."""
+    parser = argparse.ArgumentParser(description="Relax a single CIF with UMA.")
+    parser.add_argument("--input", required=True, help="Input CIF file")
+    parser.add_argument("--model", default="uma-s-1p2", help="UMA model name")
+    parser.add_argument("--outdir", required=True, help="Output directory")
+    parser.add_argument("--device", default="cuda", choices=["cuda", "cpu"], help="Device")
+    parser.add_argument("--fmax", type=float, default=0.01, help="Force convergence criterion (eV/Å)")
+    parser.add_argument("--max-steps", type=int, default=300, help="Maximum relaxation steps")
+    parser.add_argument("--optimizer", default="LBFGS", choices=["BFGS", "LBFGS"], help="ASE optimizer")
     args = parser.parse_args()
 
     # Setup output paths
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
-        filename=outdir / "mace_calc_single.log",
+        filename=outdir / "uma_calc_single.log",
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         encoding="utf-8",
@@ -92,7 +50,7 @@ def main():
     # Setup calculator
     atoms = setup_calculator(atoms, args.model, args.device)
     if atoms is None:
-        logger.info("[ERROR] Failed to setup MACE calculator with model %s.", args.model)
+        logger.info("[ERROR] Failed to setup UMA calculator with model %s.", args.model)
         return 1
 
     atoms.info["fmax"] = args.fmax

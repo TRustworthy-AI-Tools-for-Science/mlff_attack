@@ -3,47 +3,64 @@
 """
 Contains implementation for FGSM, I-FGSM, and PGD attacks on MLFF models.
 """
-from pathlib import Path
-import logging
-logger = logging.getLogger(__name__)
-import numpy as np
-
 from datetime import datetime
+import logging
+from pathlib import Path
 
-import torch
 import matplotlib.pyplot as plt
-from ase.io import read, write
+import numpy as np
+import torch
+from ase import Atoms
+from ase.io import write
+
+from mlff_attack.grad_based.fgsm import FGSM_MACE
+from mlff_attack.grad_based.pgd import PGD_MACE
 from mlff_attack.relaxation import setup_calculator
 
+logger = logging.getLogger(__name__)
 
-def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, attack_type="fgsm", n_steps=1, alpha=None, clip=False, verbose=True):
+
+def make_attack(
+    *,
+    atoms,
+    model_path,
+    device,
+    output_cif,
+    attack_type,
+    epsilon,
+    alpha=None,
+    n_steps=1,
+    target_energy=None,
+    clip=None,
+    verbose=True
+):
     """Perform an adversarial attack on the given atomic structure using a MACE model.
-    
+
     This is a convenience wrapper around the FGSM_MACE class.
 
     Parameters
     ----------
+    atoms : ase.Atoms
+        ASE Atoms object representing the structure to attack
     model_path : str or Path
         Path to the MACE model file
     device : str
         Device to run the model on ("cpu" or "cuda")
-    atoms : ase.Atoms
-        ASE Atoms object representing the structure to attack
-    epsilon : float
-        Perturbation step size in Angstroms
-    target_energy : float or None
-        Target energy for the attack (if None, maximize energy)
     output_cif : str or Path
         Path to save the perturbed CIF file
-    attack_type : str, optional
+    attack_type : str
         Type of attack to perform, by default "fgsm"
-    n_steps : int, optional
-        Number of steps for iterative attacks (only used for I-FGSM/PGD), by default 1
+    epsilon : float
+        Perturbation step size in Angstroms
     alpha : float, optional
         PGD step size. If not provided, use epsilon / n_steps
-    clip : bool, optional
-        Whether to clip the perturbations, by default False
-        
+    n_steps : int, optional
+        Number of steps for iterative attacks (only used for I-FGSM/PGD), by default 1
+    target_energy : float or None
+        Target energy for the attack (if None, maximize energy)
+    clip : bool or None, optional
+        Whether to clip perturbations. If None, defaults to False for FGSM and True for PGD.
+
     Returns
     -------
     str
@@ -53,30 +70,30 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
     attack.attack_history : dict
         Contains details and history of the attack
     """
-    from mlff_attack.grad_based.fgsm import FGSM_MACE
-    from mlff_attack.grad_based.pgd import PGD_MACE
-
     # Setup calculator
     if verbose:
         logger.info("Setting up MACE calculator")
-        logger.info(f"Model: {model_path}")
-        logger.info(f"Device: {device}")
+        logger.info("Model: %s", model_path)
+        logger.info("Device: %s", device)
     atoms = setup_calculator(atoms, model_path, device)
     if atoms is None:
         raise RuntimeError("Failed to set up calculator")
-    
+
+    if n_steps <= 0:
+        raise ValueError("n_steps must be a positive integer")
+
     # Get original energy
     orig_energy = atoms.get_potential_energy()
-    
+
     # Create FGSM attack
     if verbose:
-        logger.info(f"\nPerforming {attack_type.upper()} adversarial attack")
-        logger.info(f"   Epsilon: {epsilon} Å")
+        logger.info("\nPerforming %s adversarial attack", attack_type.upper())
+        logger.info("   Epsilon: %s Å", epsilon)
         if target_energy is not None:
-            logger.info(f"   Target energy: {target_energy} eV")
+            logger.info("   Target energy: %s eV", target_energy)
         else:
-            logger.info(f"   Mode: Maximize energy")
-    
+            logger.info("   Mode: Maximize energy")
+
     if attack_type == "fgsm":
         attack = FGSM_MACE(
             model=atoms.calc,
@@ -84,11 +101,11 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
             device=device,
             track_history=True,
             target_energy=target_energy,
-    )
-    
+        )
+
     elif attack_type == "pgd":
-        # if alpha is None:
-        #     alpha = epsilon / n_steps
+        if alpha is None:
+            alpha = epsilon / n_steps
         attack = PGD_MACE(
             model=atoms.calc,
             epsilon=epsilon,
@@ -100,8 +117,8 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
         )
 
     else:
-        raise NotImplementedError(f"Attack type '{attack_type}' not implemented yet.")
-    
+        raise NotImplementedError(f"Attack type '{attack_type}' not implemented yet. Use fgsm or pgd.")
+
     # Execute attack
     perturbed_atoms = attack.attack(atoms, n_steps=n_steps, clip=clip)
 
@@ -109,52 +126,50 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
         raise RuntimeError("Attack failed, no perturbed structure returned")
     if perturbed_atoms.get_positions().shape != atoms.get_positions().shape:
         raise RuntimeError("Perturbed structure has incorrect shape")
-    
+
     # Get perturbed energy
     pert_energy = perturbed_atoms.get_potential_energy()
     energy_change = pert_energy - orig_energy
-    if verbose:
-        logger.info(f"   Original energy:  {orig_energy:.4f} eV")
-        logger.info(f"   Perturbed energy: {pert_energy:.4f} eV")
-        logger.info(f"   Energy change:    {energy_change:+.4f} eV")
-    
+
     # Calculate displacement statistics
     stats = attack.get_perturbation_stats()
     if verbose:
-        logger.info(f"   Mean displacement: {stats['mean_displacement']:.4f} Å")
-        logger.info(f"   Max displacement:  {stats['max_displacement']:.4f} Å")
-    
-    # Save perturbed structure
-    if verbose:
-        logger.info(f"\nSaving perturbed structure to: {output_cif}")
+        logger.info("   Original energy:  %.4f eV", orig_energy)
+        logger.info("   Perturbed energy: %.4f eV", pert_energy)
+        logger.info("   Energy change:    %+.4f eV", energy_change)
+        logger.info("   Mean displacement: %.4f Å", stats["mean_displacement"])
+        logger.info("   Max displacement:  %.4f Å", stats["max_displacement"])
+        # Save perturbed structure
+        logger.info("\nSaving perturbed structure to: %s", output_cif)
+
     write(output_cif, perturbed_atoms)
     if verbose:
-        logger.info(f"   Successfully saved!")
+        logger.info("   Successfully saved!")
 
     return str(output_cif), perturbed_atoms, attack.attack_history
 
 
 # def forward_pass_with_gradients(atoms, device="cpu"):
 #     """Perform a forward pass through the MACE model with gradient tracking.
-    
+
 #     .. deprecated::
 #         Use FGSM_MACE class instead. This function is kept for backward compatibility.
-    
+
 #     This uses the calculator's internal method to prepare the batch,
 #     then replaces positions with a gradient-enabled version.
-    
+
 #     Parameters
 #     ----------
 #     atoms : ase.Atoms
 #         ASE Atoms object with MACE calculator attached
 #     device : str, optional
 #         Device to run on ("cpu" or "cuda"), by default "cpu"
-    
+
 #     Returns
 #     -------
 #     tuple
 #         A tuple containing:
-        
+
 #         - energy : torch.Tensor
 #             Total energy (scalar, requires_grad=True)
 #         - forces : torch.Tensor
@@ -164,40 +179,40 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
 #     """
 #     calc = atoms.calc
 #     model = calc.models[0]
-    
+
 #     # Save original positions
 #     positions_np = atoms.get_positions()
-    
+
 #     # Use the calculator's internal method to prepare the batch
 #     # Call the calculator to get the batch structure, then modify positions
 #     from mace.data import AtomicData, config_from_atoms
-    
+
 #     # Create configuration from atoms
 #     config = config_from_atoms(atoms)
-    
+
 #     # Create AtomicData with the calculator's settings
 #     atomic_data = AtomicData.from_config(
 #         config, z_table=calc.z_table, cutoff=calc.r_max
 #     )
-    
+
 #     # Convert to dict
 #     batch = atomic_data.to_dict()
-    
+
 #     # Move everything to the right device first
 #     for key in batch:
 #         if torch.is_tensor(batch[key]):
 #             batch[key] = batch[key].to(device)
-    
+
 #     # Add batch indexing if not present (on correct device)
 #     if "batch" not in batch:
 #         batch["batch"] = torch.zeros(len(atoms), dtype=torch.long, device=device)
 #     if "ptr" not in batch:
 #         batch["ptr"] = torch.tensor([0, len(atoms)], dtype=torch.long, device=device)
-    
+
 #     # Now replace positions with gradient-enabled version
 #     positions = torch.tensor(positions_np, dtype=torch.float64, device=device, requires_grad=True)
 #     batch["positions"] = positions
-    
+
 #     # Check and fix natoms if present
 #     if "natoms" in batch:
 #         natoms_val = batch["natoms"]
@@ -208,7 +223,7 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
 #             batch["natoms"] = torch.tensor([len(atoms), len(atoms)], dtype=torch.long, device=device)
 #     else:
 #         batch["natoms"] = torch.tensor([len(atoms), len(atoms)], dtype=torch.long, device=device)
-    
+
 #     # Add head field if present in calculator (for multi-head models)
 #     if hasattr(calc, 'head') and calc.head is not None:
 #         # Map head name to index
@@ -221,28 +236,28 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
 #     elif "head" not in batch:
 #         # Default head is 0
 #         batch["head"] = torch.zeros(len(atoms), dtype=torch.long, device=device)
-    
+
 #     # Forward pass - disable computing forces in the model output
 #     model.eval()
-    
+
 #     # We need to recompute with fresh gradients
 #     # Don't use model's internal force computation
 #     with torch.enable_grad():
 #         # Ensure positions require grad
 #         positions.requires_grad_(True)
-        
+
 #         # Update batch with fresh positions
 #         batch["positions"] = positions
-        
+
 #         # Forward pass through model
 #         output = model(batch, training=False, compute_force=False)
-        
+
 #         # Extract energy
 #         energy = output["energy"]
 #         # Ensure energy is a scalar for gradient computation
 #         if energy.dim() > 0:
 #             energy = energy.sum()
-        
+
 #         # Compute forces as negative gradient
 #         forces = -torch.autograd.grad(
 #             outputs=energy,
@@ -250,16 +265,16 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
 #             retain_graph=True,
 #             create_graph=False
 #         )[0]
-    
+
 #     return energy, forces, positions
 
 
 # def backprop_step(energy, positions, loss_fn=None):
 #     """Perform backpropagation to compute gradients.
-    
+
 #     .. deprecated::
 #         Use FGSM_MACE.compute_gradient() instead. This function is kept for backward compatibility.
-    
+
 #     Parameters
 #     ----------
 #     energy : torch.Tensor
@@ -269,7 +284,7 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
 #     loss_fn : Callable, optional
 #         Optional loss function to apply to energy before backprop.
 #         If None, backprop directly on energy, by default None
-    
+
 #     Returns
 #     -------
 #     torch.Tensor
@@ -280,20 +295,28 @@ def make_attack(model_path, device, atoms, epsilon, target_energy, output_cif, a
 #         loss = loss_fn(energy)
 #     else:
 #         loss = energy
-    
+
 #     # Perform backpropagation
 #     loss.backward(retain_graph=True)
-    
+
 #     # Get gradients w.r.t. positions
 #     grad_positions = positions.grad
-    
+
 #     return grad_positions
 
 
-def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original, 
-                     energy_perturbed, gradients, save_path, metadata=None):
+def save_perturbation(
+    atoms_original,
+    atoms_perturbed,
+    epsilon,
+    energy_original,
+    energy_perturbed,
+    gradients,
+    save_path,
+    metadata=None
+):
     """Save perturbation data to a file for later analysis.
-    
+
     Parameters
     ----------
     atoms_original : ase.Atoms
@@ -312,7 +335,7 @@ def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original,
         Path to save the data (will save as .npz file)
     metadata : dict, optional
         Optional dictionary with additional metadata, by default None
-        
+
     Returns
     -------
     Path
@@ -320,12 +343,14 @@ def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original,
     """
 
     save_path = Path(save_path)
+    if save_path.suffix != ".npz":
+        save_path = save_path.with_suffix(".npz")
     save_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Convert gradients to numpy if needed
     if torch.is_tensor(gradients):
         gradients = gradients.cpu().numpy()
-    
+
     # Prepare data dictionary
     data = {
         'positions_original': atoms_original.get_positions(),
@@ -341,7 +366,7 @@ def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original,
         'gradients': gradients,
         'timestamp': datetime.now().isoformat(),
     }
-    
+
     # Add metadata if provided
     if metadata is not None:
         for key, value in metadata.items():
@@ -349,27 +374,26 @@ def save_perturbation(atoms_original, atoms_perturbed, epsilon, energy_original,
             if isinstance(value, (list, tuple)):
                 value = np.array(value)
             data[f'meta_{key}'] = value
-    
+
     # Save to npz file
     np.savez_compressed(save_path, **data)
-    logger.info(f"Saved perturbation data to {save_path}.npz")
-    
+
     return save_path
 
 
 def load_perturbation(load_path):
     """Load perturbation data from a saved file.
-    
+
     Parameters
     ----------
     load_path : str or Path
         Path to the saved .npz file
-    
+
     Returns
     -------
     dict
         Dictionary containing all saved perturbation data with keys:
-        
+
         - atoms_original : ase.Atoms
             Reconstructed original ASE Atoms object
         - atoms_perturbed : ase.Atoms
@@ -391,17 +415,14 @@ def load_perturbation(load_path):
         - metadata : dict
             Dictionary of any additional metadata
     """
-    import numpy as np
-    from ase import Atoms
-    
     load_path = Path(load_path)
-    
+
     if not load_path.exists():
         raise FileNotFoundError(f"File not found: {load_path}")
-    
+
     # Load data
     data = np.load(load_path, allow_pickle=True)
-    
+
     # Reconstruct original atoms
     atoms_original = Atoms(
         symbols=data['chemical_symbols'].tolist(),
@@ -409,7 +430,7 @@ def load_perturbation(load_path):
         cell=data['cell'],
         pbc=data['pbc']
     )
-    
+
     # Reconstruct perturbed atoms
     atoms_perturbed = Atoms(
         symbols=data['chemical_symbols'].tolist(),
@@ -417,13 +438,13 @@ def load_perturbation(load_path):
         cell=data['cell'],
         pbc=data['pbc']
     )
-    
+
     # Extract metadata
     metadata = {}
     for key in data.keys():
         if key.startswith('meta_'):
             metadata[key[5:]] = data[key].item() if data[key].ndim == 0 else data[key]
-    
+
     result = {
         'atoms_original': atoms_original,
         'atoms_perturbed': atoms_perturbed,
@@ -436,22 +457,22 @@ def load_perturbation(load_path):
         'timestamp': str(data['timestamp']),
         'metadata': metadata
     }
-    
-    logger.info(f"Loaded perturbation data from {load_path}")
-    logger.info(f"  Timestamp: {result['timestamp']}")
-    logger.info(f"  Atoms: {len(atoms_original)}")
-    logger.info(f"  Epsilon: {result['epsilon']:.4f} Å")
-    logger.info(f"  Energy change: {result['energy_change']:+.4f} eV")
-    
+
+    logger.info("Loaded perturbation data from %s", load_path)
+    logger.info("  Timestamp: %s", result["timestamp"])
+    logger.info("  Atoms: %s", len(atoms_original))
+    logger.info("  Epsilon: %.4f Å", result["epsilon"])
+    logger.info("  Energy change: %+.4f eV", result["energy_change"])
+
     return result
 
 
 # def adversarial_attack_step(atoms, device="cpu", epsilon=0.01, target_energy=None):
 #     """Perform one step of adversarial attack on atomic positions.
-    
+
 #     .. deprecated::
 #         Use FGSM_MACE.attack_step() instead. This function is kept for backward compatibility.
-    
+
 #     Parameters
 #     ----------
 #     atoms : ase.Atoms
@@ -462,12 +483,12 @@ def load_perturbation(load_path):
 #         Step size for perturbation, by default 0.01
 #     target_energy : float or None, optional
 #         Optional target energy for attack. If None, maximize energy, by default None
-    
+
 #     Returns
 #     -------
 #     tuple
 #         A tuple containing:
-        
+
 #         - perturbed_atoms : ase.Atoms
 #             Atoms with perturbed positions
 #         - energy : float
@@ -479,7 +500,7 @@ def load_perturbation(load_path):
 #     """
 #     # Forward pass with gradients
 #     energy, forces, positions = forward_pass_with_gradients(atoms, device=device)
-    
+
 #     # Define loss (maximize or target energy)
 #     if target_energy is not None:
 #         # Try to reach target energy
@@ -487,33 +508,33 @@ def load_perturbation(load_path):
 #     else:
 #         # Maximize energy (for adversarial attack)
 #         loss = -energy
-    
+
 #     # Backprop to get gradients w.r.t. positions
 #     loss.backward()
 #     grad_positions = positions.grad
-    
+
 #     # Compute perturbation (gradient ascent to maximize energy)
 #     perturbation = epsilon * torch.sign(grad_positions)
-    
+
 #     # Apply perturbation
 #     perturbed_positions = positions.detach() + perturbation
-    
+
 #     # Create new atoms with perturbed positions
 #     perturbed_atoms = atoms.copy()
 #     perturbed_atoms.set_positions(perturbed_positions.cpu().numpy())
-    
+
 #     # Set calculator on perturbed atoms
 #     perturbed_atoms.calc = atoms.calc
-    
+
 #     # Compute energy of perturbed structure
 #     perturbed_energy_np = perturbed_atoms.get_potential_energy()
-    
+
 #     return perturbed_atoms, energy.item(), perturbed_energy_np, grad_positions.detach()
 
 
 def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None):
     """Visualize the difference between original and perturbed atomic structures.
-    
+
     Parameters
     ----------
     atoms_before : ase.Atoms
@@ -524,95 +545,94 @@ def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None)
         Perturbation magnitude used, by default 0.01
     outdir : str or Path, optional
         Optional output directory to save plots, by default None
-    
+
     Returns
     -------
     matplotlib.figure.Figure
         Matplotlib figure object
     """
-    import numpy as np
-    
+
     # Get positions
     pos_before = atoms_before.get_positions()
     pos_after = atoms_after.get_positions()
-    
+
     # Calculate displacement
     displacement = pos_after - pos_before
     displacement_mag = np.linalg.norm(displacement, axis=1)
-    
+
     # Create figure - large 3D plot with statistics on the side
     fig = plt.figure(figsize=(18, 10))
-    
+
     # Main 3D plot showing all atoms and displacements
     ax_3d = plt.subplot(1, 2, 1, projection='3d')
-    
+
     # Get atom symbols for coloring
     symbols = atoms_before.get_chemical_symbols()
     unique_symbols = list(set(symbols))
-    
+
     # Create color map for different elements
-    import matplotlib
-    cmap = matplotlib.colormaps.get_cmap('tab10')
+    cmap = plt.get_cmap('tab10')
     symbol_colors = {sym: cmap(i / len(unique_symbols)) for i, sym in enumerate(unique_symbols)}
     colors = [symbol_colors[sym] for sym in symbols]
-    
+
     # Plot all original atoms (blue/transparent)
-    ax_3d.scatter(pos_before[:, 0], pos_before[:, 1], pos_before[:, 2], 
-                  c=colors, s=100, alpha=0.3, marker='o', 
+    ax_3d.scatter(pos_before[:, 0], pos_before[:, 1], pos_before[:, 2],
+                  c=colors, s=100, alpha=0.3, marker='o',
                   edgecolors='blue', linewidth=1, label='Original')
-    
+
     # Plot all perturbed atoms (red/solid)
-    ax_3d.scatter(pos_after[:, 0], pos_after[:, 1], pos_after[:, 2], 
-                  c=colors, s=100, alpha=0.8, marker='o', 
+    ax_3d.scatter(pos_after[:, 0], pos_after[:, 1], pos_after[:, 2],
+                  c=colors, s=100, alpha=0.8, marker='o',
                   edgecolors='red', linewidth=1.5, label='Perturbed')
-    
+
     # Draw displacement vectors for all atoms
     # Scale arrows for visibility
     arrow_scale = 1.0 if displacement_mag.max() < 1.0 else 0.5
     ax_3d.quiver(pos_before[:, 0], pos_before[:, 1], pos_before[:, 2],
                  displacement[:, 0], displacement[:, 1], displacement[:, 2],
-                 length=arrow_scale, normalize=False, alpha=0.6, 
+                 length=arrow_scale, normalize=False, alpha=0.6,
                  arrow_length_ratio=0.2, color='black', linewidth=0.5)
-    
+
     # Set labels and title
     ax_3d.set_xlabel('X (Å)', fontsize=12)
     ax_3d.set_ylabel('Y (Å)', fontsize=12)
     ax_3d.set_zlabel('Z (Å)', fontsize=12)
     ax_3d.set_title(f'Atomic Displacement Visualization (ε={epsilon} Å)', fontsize=14, fontweight='bold')
-    
+
     # Add legend for atom types
-    legend_elements = [plt.Line2D([0], [0], marker='o', color='w', 
-                                  markerfacecolor=symbol_colors[sym], 
+    legend_elements = [plt.Line2D([0], [0], marker='o', color='w',
+                                  markerfacecolor=symbol_colors[sym],
                                   markersize=10, label=sym, markeredgecolor='black')
                       for sym in unique_symbols]
     legend_elements.extend([
-        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', 
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='gray',
                    markersize=10, label='Original', markeredgecolor='blue', markeredgewidth=2, alpha=0.3),
-        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='gray', 
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='gray',
                    markersize=10, label='Perturbed', markeredgecolor='red', markeredgewidth=2)
     ])
     ax_3d.legend(handles=legend_elements, loc='upper left', fontsize=9)
-    
+
     # Make the plot look better
     ax_3d.grid(True, alpha=0.3)
-    
+
     # Right side - statistics panel
     ax_stats = plt.subplot(1, 2, 2)
     ax_stats.axis('off')
-    
+
     # Calculate statistics
     try:
         energy_before = atoms_before.get_potential_energy()
         energy_after = atoms_after.get_potential_energy()
-        delta_E = energy_after - energy_before
+        delta_e = energy_after - energy_before
         energy_text = f"""Energy:
   Original:  {energy_before:.4f} eV
   Perturbed: {energy_after:.4f} eV
-  ΔE:        {delta_E:+.4f} eV
+  ΔE:        {delta_e:+.4f} eV
+
 """
-    except Exception as e:
-        energy_text = f"Energy: Calculation failed\n"
-    
+    except (ValueError, RuntimeError):
+        energy_text = "Energy: Calculation failed\n"
+
     # Per-element statistics
     element_stats = "\nPer-Element Displacement:\n"
     for sym in unique_symbols:
@@ -620,7 +640,7 @@ def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None)
         mean_disp = displacement_mag[mask].mean()
         max_disp = displacement_mag[mask].max()
         element_stats += f"  {sym:>2s}: mean={mean_disp:.4f} Å, max={max_disp:.4f} Å\n"
-    
+
     stats_text = f"""PERTURBATION ANALYSIS
 {'='*40}
 
@@ -636,7 +656,7 @@ Displacement Statistics:
   Max:       {displacement_mag.max():.4f} Å
   Min:       {displacement_mag.min():.4f} Å
   Std Dev:   {displacement_mag.std():.4f} Å
-  
+
 Component Mean Displacement:
   X: {displacement[:, 0].mean():+.4f} ± {displacement[:, 0].std():.4f} Å
   Y: {displacement[:, 1].mean():+.4f} ± {displacement[:, 1].std():.4f} Å
@@ -648,27 +668,28 @@ Displacement Distribution:
   < 0.10 Å:  {np.sum(displacement_mag < 0.10)} atoms ({100*np.sum(displacement_mag < 0.10)/len(atoms_before):.1f}%)
   ≥ 0.10 Å:  {np.sum(displacement_mag >= 0.10)} atoms ({100*np.sum(displacement_mag >= 0.10)/len(atoms_before):.1f}%)
 """
-    
-    ax_stats.text(0.05, 0.98, stats_text, transform=ax_stats.transAxes, 
+    logger.info("\n%s", stats_text)
+
+    ax_stats.text(0.05, 0.98, stats_text, transform=ax_stats.transAxes,
                   fontsize=10, verticalalignment='top', fontfamily='monospace',
-                  bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.2, pad=1))
-    
+                  bbox={"boxstyle": "round", "facecolor": "lightblue", "alpha": 0.2, "pad": 1})
+
     # Adjust layout manually to avoid tight_layout warning with mixed axes
     plt.subplots_adjust(left=0.05, right=0.98, top=0.95, bottom=0.05)
-    
+
     # Save figure - use the perturbed atoms file path if available
     if outdir is not None:
         outdir = Path(outdir)
         outdir.mkdir(parents=True, exist_ok=True)
-        
+
         # Try to determine filename from atoms_after if it has a file path
         if hasattr(atoms_after, 'info') and 'filename' in atoms_after.info:
             base_name = Path(atoms_after.info['filename']).stem
         else:
             base_name = 'perturbation_analysis'
-        
+
         save_path = outdir / f'{base_name}.png'
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
-        logger.info(f"Saved visualization to {save_path}")
-    
+        logger.info("Saved visualization to %s", save_path)
+
     return fig

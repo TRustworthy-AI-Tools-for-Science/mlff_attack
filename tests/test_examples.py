@@ -50,5 +50,3 @@ def test_example_targeted_fgsm_attack():
     if os.path.exists("example_outputs"):
         shutil.rmtree("example_outputs", ignore_errors=True)
     assert not os.path.exists("example_outputs")
-
-

@@ -18,23 +18,23 @@ def create_example_traj():
     # Create the data directory if it doesn't exist
     data_dir = Path(__file__).parent / "data"
     data_dir.mkdir(parents=True, exist_ok=True)
-    
+
     traj_file = data_dir / "sample_traj.xyz"
     traj = Trajectory(str(traj_file), "w")
     for i in range(5):
         atoms = Atoms('H2O', positions=[[0, 0, 0], [0.76 + i*0.1, 0.58, 0], [-0.76 - i*0.1, 0.58, 0]])
         atoms.set_cell([10, 10, 10])
-        
+
         # Add fake energy and forces for testing
         from ase.calculators.singlepoint import SinglePointCalculator
         energy = -10.0 - i * 0.5  # Decreasing energy (relaxation)
         forces = [[0.1/(i+1), 0.05/(i+1), 0.02/(i+1)] for _ in range(len(atoms))]  # Decreasing forces
         calc = SinglePointCalculator(atoms, energy=energy, forces=forces)
         atoms.calc = calc
-        
+
         traj.write(atoms)
     traj.close()
-    
+
     return str(traj_file)
 
 def clean_up_example_traj(traj_file):
@@ -62,7 +62,7 @@ def test_extract_trajectory_data():
     traj_file = create_example_traj()
     traj = visualization.load_trajectory(traj_file)
     steps, energies, max_forces, volumes = visualization.extract_trajectory_data(traj)
-    
+
     assert len(steps) == len(traj)
     assert len(energies) == len(traj)
     assert len(max_forces) == len(traj)
@@ -75,10 +75,10 @@ def test_calculate_statistics_from_traj_data():
     traj_file = create_example_traj()
     traj = visualization.load_trajectory(traj_file)
     steps, energies, max_forces, volumes = visualization.extract_trajectory_data(traj)
-    
+
     fmax = 0.03
     stats = visualization.calculate_statistics(energies, max_forces, volumes, fmax)
-    
+
     assert 'initial_energy' in stats
     assert 'final_energy' in stats
     assert 'energy_change' in stats
@@ -116,7 +116,7 @@ def test_relaxation__summary_displays_not_converged():
     volumes = [100.0, 100.0, 100.0]
     fmax = 0.001 # final force (0.015) > 0.001 so not converged
     stats = visualization.calculate_statistics(energies, max_forces, volumes, fmax)
-    
+
     fig, ax = plt.subplots()
     summary_text = visualization.plot_summary(ax, stats, len(energies) - 1, fmax)
     plt.close(fig)
@@ -161,13 +161,13 @@ def test_plot_volume_draws_a_line_through_points():
     fig, ax = plt.subplots()
     visualization.plot_volume(ax, steps, volumes)
     plt.close(fig)
-    
+
     lines = ax.get_lines()
     volume_line = lines[0]
 
     assert list(volume_line.get_ydata()) == volumes
 
-    
+
 def test_plot_noise_draws_a_line_through_points():
     freq = [0, 1, 2]
     spectrum = [0, 1, 2]
