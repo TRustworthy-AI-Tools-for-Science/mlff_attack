@@ -341,7 +341,7 @@ Examples using the command-line interface:
 .. code-block:: bash
 
    calc-single --type mace --input structure.cif --model mace-model.model \
-               --outdir results/ --fmax 0.01 --max-steps 300
+               --outdir output/ --fmax 0.01 --max-steps 300
 
 **Trajectory Visualization:**
 

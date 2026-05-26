@@ -32,13 +32,16 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
-### Optional UMA support
+### Add MACE or UMA support
 
-UMA support requires the optional UMA dependencies and Hugging Face authentication:
+Install with MACE or UMA support (must be in separate Python environments to avoid conflicts)
 
 ```bash
+pip install -e ".[mace]"
+
+# UMA must be in Python <= 3.12
 pip install -e ".[uma]"
-huggingface-cli login
+hf auth login
 ```
 
 ## Usage
@@ -48,31 +51,31 @@ huggingface-cli login
 After installation, you can use the `calc-single` commands:
 
 ```bash
-calc-single --type mace --input structure.cif --model mace-model.model --outdir results/
+calc-single --type mace --input structure.cif --model mace-model.model --outdir output/
 
-calc-single --type uma --input structure.cif --outdir results/ --task-name omat
+calc-single --type uma --input structure.cif --model uma-variant-version --outdir output/ --task omat
 ```
 
 #### Command-line options
 
-- `--type`: Calculator type, either `mace` or `uma` (required)
-- `--input`: Input CIF file (required)
-- `--model`: Path to MACE model file (.model) (required)
-- `--outdir`: Output directory (required)
-- `--device`: Device to use (cuda or cpu, default: cpu)
-- `--fmax`: Force convergence criterion in eV/Å (default: 0.01)
-- `--max-steps`: Maximum relaxation steps (default: 300)
-- `--optimizer`: ASE optimizer to use (BFGS or LBFGS, default: LBFGS)
-- `--task-name`: UMA task/domain, only used with `--type uma` (default: `omat`)
-- `--charge`: Molecular charge, only used with `--type uma --task-name omol`
-- `--spin`: Spin multiplicity, only used with `--type uma --task-name omol`
+- `--type`: Calculator type, either `mace` or `uma` (required).
+- `--input`: Input CIF file (required).
+- `--model`: Path to MACE (include .model) or UMA (omit .pt) file (required).
+- `--outdir`: Output directory (required).
+- `--device`: Device to use (cuda or cpu, default: cpu).
+- `--fmax`: Force convergence criterion in eV/Å (default: 0.01).
+- `--max-steps`: Maximum relaxation steps (default: 300).
+- `--optimizer`: ASE optimizer to use (BFGS or LBFGS, default: LBFGS).
+- `--task`: UMA task/domain, only used with `--type uma` (default: `omat`).
+- `--charge`: Molecular charge, only used with `--type uma --task omol`.
+- `--spin`: Spin multiplicity, only used with `--type uma --task omol`.
 
 ### Visualizing trajectories
 
 After running a calculation, you can visualize the relaxation trajectory:
 
 ```bash
-visualize-traj --traj results/relaxed.traj --outdir results/
+visualize-traj --traj output/relaxed.traj --outdir output/
 ```
 
 This will generate a comprehensive plot showing:
@@ -83,10 +86,10 @@ This will generate a comprehensive plot showing:
 
 #### Visualization options
 
-- `--traj`: Path to trajectory file (.traj) (required)
-- `--outdir`: Output directory for plots (default: current directory)
-- `--show`: Show plots interactively
-- `--format`: Output format for plots (png, pdf, or svg, default: png)
+- `--traj`: Path to trajectory file (.traj) (required).
+- `--outdir`: Output directory for plots (default: current directory).
+- `--show`: Show plots interactively.
+- `--format`: Output format for plots (png, pdf, or svg, default: png).
 
 ### Running Attacks
 
@@ -98,9 +101,9 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 
 #### Command-line options
 
-- `--type`: Type of attack to perform (e.g., `fgsm`, `pgd`) (required).
+- `--type`: Type of attack to perform, either `fgsm` or `pgd` (required).
 - `--input`: Path to the input structure file (CIF format) (required).
-- `--model`: Path to the MACE model file (.model) (required).
+- `--model`: Path to MACE (include .model) or UMA (omit .pt) file (required).
 - `--device`: Device to use for computations (cuda or cpu, default: cpu).
 - `--outdir`: Directory to save the results (required).
 - `--visualize`: Generate perturbation visualization plot (default: enabled).
@@ -148,10 +151,28 @@ visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
 
 ## Requirements
 
+### Base package
+
 - Python >= 3.10
 - ase >= 3.22.0
-- mace-torch >= 0.3.0
 - torch >= 2.0.0
+- numpy >= 1.20.0
+- matplotlib >= 3.5.0
+- pandas
+- seaborn
+- spglib
+- mp_api
+- ipywidgets
+- jupyterlab
+
+### MACE support
+
+- mace-torch >= 0.3.0
+
+### UMA support
+
+- fairchem-core>=2.0.0
+- huggingface_hub"
 
 ## License
 

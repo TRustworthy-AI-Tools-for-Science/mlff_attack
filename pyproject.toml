@@ -26,33 +26,37 @@ classifiers = [
 ]
 dependencies = [
     "ase>=3.22.0",
-    "mace-torch>=0.3.0",
     "torch>=2.0.0",
     "matplotlib>=3.5.0",
     "numpy>=1.20.0",
+    "pandas",
+    "seaborn",
     "spglib",
     "mp_api",
-    "seaborn",
     "ipywidgets",
     "jupyterlab",
-    "pandas"
 ]
 
 [project.optional-dependencies]
+mace = [
+    "mace-torch>=0.3.0",
+]
+
+uma = [
+    "fairchem-core>=2.0.0",
+    "huggingface_hub",
+]
+
 dev = [
     "pytest",
     "pytest-cov",
+    "pylint",
     "black>=22.0",
     "flake8>=5.0",
     "mypy>=0.990",
     "ipython",
     "ipykernel",
     "sphinx"
-]
-
-uma = [
-    "fairchem-core>=2.0.0",
-    "huggingface_hub",
 ]
 
 [project.scripts]
