@@ -26,7 +26,6 @@ def main():
 
     parser.add_argument(
         "--type",
-        type=str,
         required=True,
         choices=["mace", "MACE", "uma", "UMA"],
         help="Type of calculator to use: mace or uma",
@@ -41,7 +40,7 @@ def main():
     parser.add_argument(
         "--model",
         required=True,
-        help="Path to MACE or UMA model file (.model)",
+        help="Path to MACE (include .model) or UMA (omit .pt) file",
     )
 
     parser.add_argument(
@@ -100,22 +99,22 @@ def main():
     )
 
     args = parser.parse_args()
-    calculator_type = args.type.lower()
+    calculator = args.type.lower()
 
-    if calculator_type == "mace":
+    if calculator == "mace":
         if args.model is None:
             parser.error("--model is required with --type mace")
         if args.charge is not None:
             parser.error("--charge can only be used with --type uma")
         if args.spin is not None:
             parser.error("--spin can only be used with --type uma")
-        args.device = args.device or "cpu"
 
     # Setup output paths
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
+    log_name = f"{calculator}_calc_single.log"
     logging.basicConfig(
-        filename=outdir / "mace_calc_single.log",
+        filename=outdir / log_name,
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         encoding="utf-8",
@@ -133,15 +132,15 @@ def main():
         atoms,
         args.model,
         args.device,
-        calculator_type=calculator_type,
-        uma_task_name=args.task_name,
+        calculator=calculator,
+        uma_task=args.task,
         uma_charge=args.charge,
         uma_spin=args.spin,
     )
     if atoms is None:
         logger.info(
             "[ERROR] Failed to setup %s calculator with model %s.",
-            calculator_type.upper(),
+            calculator.upper(),
             args.model,
         )
         return 1

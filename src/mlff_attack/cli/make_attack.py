@@ -24,21 +24,18 @@ def parse_args():
 
     parser.add_argument(
         "--input",
-        type=str,
         default="initial_cifs/chemistry_value_isovalent_0_05_18_traj.cif",
         help="Path to input CIF file"
     )
 
     parser.add_argument(
         "--model",
-        type=str,
-        default="mace-mpa-0-medium.model",
-        help="Path to MACE model file"
+        require=True,
+        help="Path to MACE (include .model) or UMA (omit .pt) file"
     )
 
     parser.add_argument(
         "--device",
-        type=str,
         default="cpu",
         choices=["cpu", "cuda"],
         help="Device to run model on"
@@ -46,7 +43,6 @@ def parse_args():
 
     parser.add_argument(
         "--outdir",
-        type=str,
         default=None,
         help=(
             "Path to output directory "
@@ -70,8 +66,7 @@ def parse_args():
 
     parser.add_argument(
         "--type",
-        type=str,
-        required=True
+        required=True,
         choices=["fgsm", "FGSM", "pgd", "PGD"],
         help="Type of adversarial attack to perform"
     )

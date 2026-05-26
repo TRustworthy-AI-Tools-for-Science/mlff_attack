@@ -4,13 +4,11 @@ MACE and UMA relaxation functionality.
 """
 
 import logging
+import torch
 from pathlib import Path
 
-import mace
 from ase.io import read, write
 from ase.optimize import BFGS, LBFGS
-from mace.calculators import mace as mace_calculator
-import torch
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +62,7 @@ def setup_calculator(
     model_path : str or Path or MACECalculator
         Path to MACE model file or existing MACECalculator instance, or a UMA model name
     device : str, optional
-        Device to use (cuda or cpu), by default "cuda"
+        Device to use (cuda or cpu), by default "cpu"
     dtype_str : str, optional
         Data type for MACE calculations ("float32" or "float64"), by default "float64"
     verbose : bool, optional
@@ -88,6 +86,7 @@ def setup_calculator(
             calculator is None and model_id.startswith("uma-")
         )
 
+        # if use UMA
         if use_uma:
             try:
                 from fairchem.core import pretrained_mlip, FAIRChemCalculator
@@ -119,8 +118,18 @@ def setup_calculator(
                 )
 
             predictor = pretrained_mlip.get_predict_unit(model_id, device=device)
-            atoms.calc = FAIRChemCalculator(predictor, uma_task=uma_task)
+            atoms.calc = FAIRChemCalculator(predictor, task_name=uma_task)
             return atoms
+
+        # if use MACE
+        try:
+            import mace
+            from mace.calculators import mace as mace_calculator
+        except ImportError:
+            logger.info(
+                "[ERROR] MACE requires mace-torch. Install it with: pip install -e \".[mace]\""
+            )
+            return None
 
         if isinstance(model_path, mace.calculators.mace.MACECalculator):
             if verbose:
