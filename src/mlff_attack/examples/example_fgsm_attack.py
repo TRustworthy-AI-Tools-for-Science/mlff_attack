@@ -19,7 +19,7 @@ from ase.io import write
 from mace.calculators import mace_mp
 
 from mlff_attack.attacks import visualize_perturbation
-from mlff_attack.grad_based.fgsm import FGSM_MACE
+from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
 from mlff_attack.relaxation import setup_calculator
 
 logger = logging.getLogger(__name__)

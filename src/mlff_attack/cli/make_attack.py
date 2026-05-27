@@ -123,6 +123,15 @@ def main():
     if attack_type != "pgd" and args.alpha is not None:
         raise SystemExit("--alpha can only be used with --type pgd")
 
+    if args.model.startswith("uma"):
+        calculator = "uma"
+    elif args.model.startswith("mace"):
+        calculator = "mace"
+    else:
+        raise SystemExit(
+            "--model must start with 'uma' for UMA or 'mace' for MACE"
+        )
+
     # Override configuration with command line arguments
     input_cif = args.input
     model_path = args.model
@@ -155,6 +164,9 @@ def main():
     if atoms is None:
         logger.info("[ERROR] Failed to load structure from %s", input_cif)
         return 1
+    uma_task = atoms.info.get("task")
+    uma_charge = atoms.info.get("charge")
+    uma_spin = atoms.info.get("spin")
     logger.info("   Loaded %s atoms: %s", len(atoms), atoms.get_chemical_formula())
 
     # Generate perturbed structure
@@ -171,9 +183,13 @@ def main():
             n_steps=n_steps,
             target_energy=target_energy,
             clip=clip,
+            calculator=calculator,
+            uma_task=uma_task,
+            uma_charge=uma_charge,
+            uma_spin=uma_spin,
         )
     except (ValueError, NotImplementedError, RuntimeError) as exc:
-        logger.info("[ERROR] Failed to generate attack: %s", exc)
+        logger.info("[ERROR] Failed to generate attack, run calc-single first and use the same model to generate attack: %s", exc)
         return 1
 
     # Visualize perturbation

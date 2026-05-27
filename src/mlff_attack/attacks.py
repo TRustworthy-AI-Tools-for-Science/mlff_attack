@@ -13,8 +13,6 @@ import torch
 from ase import Atoms
 from ase.io import write
 
-from mlff_attack.grad_based.fgsm import FGSM_MACE
-from mlff_attack.grad_based.pgd import PGD_MACE
 from mlff_attack.relaxation import setup_calculator
 
 logger = logging.getLogger(__name__)
@@ -33,6 +31,10 @@ def make_attack(
     target_energy=None,
     clip=None,
     verbose=True,
+    calculator=None,
+    uma_task="omat",
+    uma_charge=None,
+    uma_spin=None,
 ):
     """Perform an adversarial attack on the given atomic structure using a MACE model.
 
@@ -72,10 +74,24 @@ def make_attack(
     """
     # Setup calculator
     if verbose:
-        logger.info("Setting up MACE calculator")
+        logger.info("Setting up %s calculator", calculator.upper())
         logger.info("Model: %s", model_path)
         logger.info("Device: %s", device)
-    atoms = setup_calculator(atoms, model_path, device)
+
+    calculator_kind = calculator.lower() if isinstance(calculator, str) else calculator
+    if calculator_kind is None:
+        calculator_kind = "uma" if str(model_path).startswith("uma-") else "mace"
+
+    atoms = setup_calculator(
+        atoms,
+        model_path,
+        device,
+        calculator=calculator_kind,
+        uma_task=uma_task,
+        uma_charge=uma_charge,
+        uma_spin=uma_spin,
+    )
+
     if atoms is None:
         raise RuntimeError("Failed to set up calculator")
 
@@ -95,7 +111,14 @@ def make_attack(
             logger.info("   Mode: Maximize energy")
 
     if attack_type == "fgsm":
-        attack = FGSM_MACE(
+        if calculator_kind == "uma":
+            from mlff_attack.grad_based.ase_attacks.fgsm import FGSM_ASE
+            attack_cls = FGSM_ASE
+        else:
+            from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
+            attack_cls = FGSM_MACE
+
+        attack = attack_cls(
             model=atoms.calc,
             epsilon=epsilon,
             device=device,
@@ -106,7 +129,15 @@ def make_attack(
     elif attack_type == "pgd":
         if alpha is None:
             alpha = epsilon / n_steps
-        attack = PGD_MACE(
+
+        if calculator_kind == "uma":
+            from mlff_attack.grad_based.ase_attacks.pgd import PGD_ASE
+            attack_cls = PGD_ASE
+        else:
+            from mlff_attack.grad_based.mace_attacks.pgd import PGD_MACE
+            attack_cls = PGD_MACE
+
+        attack = attack_cls(
             model=atoms.calc,
             epsilon=epsilon,
             alpha=alpha,
@@ -117,7 +148,9 @@ def make_attack(
         )
 
     else:
-        raise NotImplementedError(f"Attack type '{attack_type}' not implemented yet. Use fgsm or pgd.")
+        raise NotImplementedError(
+            f"Attack type '{attack_type}' not implemented yet. Use fgsm or pgd."
+        )
 
     # Execute attack
     perturbed_atoms = attack.attack(atoms, n_steps=n_steps, clip=clip)

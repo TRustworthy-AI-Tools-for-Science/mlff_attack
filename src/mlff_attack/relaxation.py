@@ -82,12 +82,7 @@ def setup_calculator(
             )
             return None
 
-        use_uma = calculator == "uma" or (
-            calculator is None and model_id.startswith("uma-")
-        )
-
-        # if use UMA
-        if use_uma:
+        if calculator == "uma":
             try:
                 from fairchem.core import pretrained_mlip, FAIRChemCalculator
             except ImportError:
@@ -121,7 +116,7 @@ def setup_calculator(
             atoms.calc = FAIRChemCalculator(predictor, task_name=uma_task)
             return atoms
 
-        # if use MACE
+        # if calculator == "mace"
         try:
             import mace
             from mace.calculators import mace as mace_calculator
@@ -151,7 +146,7 @@ def setup_calculator(
             )
         return atoms
 
-    except (OSError, ValueError, RuntimeError) as exc:
+    except (OSError, ValueError, RuntimeError, KeyError) as exc:
         logger.info("[ERROR] Failed to setup calculator: %s", exc)
         return None
 

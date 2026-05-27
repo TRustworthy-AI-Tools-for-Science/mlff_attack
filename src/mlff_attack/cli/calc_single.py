@@ -25,13 +25,6 @@ def main():
     )
 
     parser.add_argument(
-        "--type",
-        required=True,
-        choices=["mace", "MACE", "uma", "UMA"],
-        help="Type of calculator to use: mace or uma",
-    )
-
-    parser.add_argument(
         "--input",
         required=True,
         help="Input CIF file",
@@ -81,33 +74,41 @@ def main():
         "--task",
         default="omat",
         choices=["oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"],
-        help="UMA task. Only used with --type uma.",
+        help="Only used with UMA model",
     )
 
     parser.add_argument(
         "--charge",
         type=int,
         default=None,
-        help="Molecular charge. Only used with --type uma --task omol.",
+        help="Molecular charge only used with UMA model",
     )
 
     parser.add_argument(
         "--spin",
         type=int,
         default=None,
-        help="Spin multiplicity. Only used with --type uma --task omol.",
+        help="Spin multiplicity only used with UMA model",
     )
 
     args = parser.parse_args()
-    calculator = args.type.lower()
+    
+    if args.model.startswith("uma"):
+        calculator = "uma"
+    elif args.model.startswith("mace"):
+        calculator = "mace"
+    else:
+        raise SystemExit(
+            "--model must start with 'uma-' for UMA or 'mace' for MACE"
+        )
 
     if calculator == "mace":
         if args.model is None:
-            parser.error("--model is required with --type mace")
+            parser.error("--model is required with MACE model")
         if args.charge is not None:
-            parser.error("--charge can only be used with --type uma")
+            parser.error("--charge can only be used with UMA model")
         if args.spin is not None:
-            parser.error("--spin can only be used with --type uma")
+            parser.error("--spin can only be used with UMA model")
 
     # Setup output paths
     outdir = Path(args.outdir)
@@ -145,6 +146,9 @@ def main():
         return 1
 
     atoms.info["fmax"] = args.fmax
+    atoms.info["task"] = args.task
+    atoms.info["charge"] = args.charge
+    atoms.info["spin"] = args.spin
 
     # Run relaxation
     success = run_relaxation(
