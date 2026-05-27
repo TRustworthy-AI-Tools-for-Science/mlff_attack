@@ -1,14 +1,20 @@
 # refactored TestFGSM_MACE from test_attacks.py to test_fgsm.py - DC
 import pytest
+
+mace = pytest.importorskip(
+    "mace",
+    reason="test_fgsm.py requires mace-torch dependencies (switch to virtual environment that supports MACE)",
+)
+
 import os
 import torch
 import numpy as np
-import mlff_attack.grad_based.fgsm as fgsm_module
+import mlff_attack.grad_based.mace_attacks.fgsm as fgsm_module
 
 from ase import build
 from mace.calculators import mace_mp
 
-from mlff_attack.grad_based.fgsm import FGSM_MACE
+from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
 from mlff_attack.relaxation import setup_calculator
 from mlff_attack.attacks import save_perturbation, load_perturbation
 from pathlib import Path

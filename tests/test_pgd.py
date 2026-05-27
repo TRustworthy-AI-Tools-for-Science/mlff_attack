@@ -1,5 +1,11 @@
 # refactored TestPGD_MACE from test_attacks.py to test_pgd.py - DC
 import pytest
+
+mace = pytest.importorskip(
+    "mace",
+    reason="test_pgd.py requires mace-torch dependencies (switch to virtual environment that supports MACE)",
+)
+
 import os
 import torch
 import numpy as np
@@ -7,7 +13,7 @@ import numpy as np
 from ase import build
 from mace.calculators import mace_mp
 
-from mlff_attack.grad_based.pgd import PGD_MACE
+from mlff_attack.grad_based.mace_attacks.pgd import PGD_MACE
 from mlff_attack.relaxation import setup_calculator
 from mlff_attack.attacks import save_perturbation, load_perturbation
 from mlff_attack.attacks import make_attack

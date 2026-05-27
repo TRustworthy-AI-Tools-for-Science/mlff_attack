@@ -1,4 +1,10 @@
 import pytest
+
+mace = pytest.importorskip(
+    "mace",
+    reason="test_examples.py requires mace-torch dependencies (switch to virtual environment that supports MACE)",
+)
+
 import shutil
 import os
 from mlff_attack.examples.example_fgsm_attack import basic_fgsm_example
@@ -7,7 +13,7 @@ from mlff_attack.examples.example_fgsm_attack import targeted_attack_example
 from mlff_attack.examples.example_fgsm_attack import load_and_analyze_example
 
 from ase.atoms import Atoms
-from mlff_attack.grad_based.fgsm import FGSM_MACE
+from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
 
 @pytest.mark.smoke
 def test_example_fgsm_attack():
