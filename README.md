@@ -46,19 +46,18 @@ hf auth login
 
 ## Usage
 
-### Running MACE calculations
+### Running calculations
 
-After installation, you can use the `calc-single` commands:
+After installation, you can use the `calc-single` commands for MACE or UMA calculations:
 
 ```bash
-calc-single --type mace --input structure.cif --model mace-model.model --outdir output/
+calc-single --input <structure>.cif --model <mace-model>.model --outdir <output_directory>
 
-calc-single --type uma --input structure.cif --model uma-variant-version --outdir output/ --task omat
+calc-single --input <structure>.cif --model <uma-variant-version> --outdir <output_directory> --task <task-name>
 ```
 
 #### Command-line options
 
-- `--type`: Calculator type, either `mace` or `uma` (required).
 - `--input`: Input CIF file (required).
 - `--model`: Path to MACE (include .model) or UMA (omit .pt) file (required).
 - `--outdir`: Output directory (required).
@@ -75,7 +74,7 @@ calc-single --type uma --input structure.cif --model uma-variant-version --outdi
 After running a calculation, you can visualize the relaxation trajectory:
 
 ```bash
-visualize-traj --traj output/relaxed.traj --outdir output/
+visualize-traj --traj <output_directory>/relaxed.traj --outdir <output_directory>
 ```
 
 This will generate a comprehensive plot showing:
@@ -133,7 +132,7 @@ make-attack --type pgd --input structure.cif --model mace-model.model --outdir o
 
 ```bash
 # Run MACE relaxation
-calc-single --type mace --input structure.cif --model mace-model.model --outdir output/
+calc-single --input structure.cif --model mace-model.model --outdir output/
 
 # Visualize the results
 visualize-traj --traj output/relaxed.traj --outdir output/ --show
@@ -142,7 +141,7 @@ visualize-traj --traj output/relaxed.traj --outdir output/ --show
 make-attack --type fgsm --input structure.cif --outdir output_perturbed/
 
 # Run MACE relaxation on perturbed structure
-calc-single --type mace --input perturbed_structure.cif --model mace-model.model --outdir output_perturbed/
+calc-single --input perturbed_structure.cif --model mace-model.model --outdir output_perturbed/
 
 # Visualize the results of the attack
 visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
