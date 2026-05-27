@@ -66,7 +66,7 @@ Using the class-based API:
 
 .. code-block:: python
 
-   from mlff_attack.grad_based.fgsm import FGSM_MACE
+   from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
    from mlff_attack.relaxation import setup_calculator
    
    # Setup calculator

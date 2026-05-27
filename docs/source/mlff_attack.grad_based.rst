@@ -9,7 +9,7 @@ Submodules
 mlff\_attack.grad\_based.fgsm module
 ------------------------------------
 
-.. automodule:: mlff_attack.grad_based.fgsm
+.. automodule:: mlff_attack.grad_based.mace_attacks.fgsm
    :members:
    :undoc-members:
    :show-inheritance:
@@ -25,7 +25,7 @@ mlff\_attack.grad\_based.mlff\_attack\_class module
 mlff\_attack.grad\_based.pgd module
 -----------------------------------
 
-.. automodule:: mlff_attack.grad_based.pgd
+.. automodule:: mlff_attack.grad_based.mace_attacks.pgd
    :members:
    :undoc-members:
    :show-inheritance:

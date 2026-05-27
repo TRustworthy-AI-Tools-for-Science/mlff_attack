@@ -62,7 +62,7 @@ For more control over the attack process:
 .. code-block:: python
 
    from ase.io import read
-   from mlff_attack.grad_based.fgsm import FGSM_MACE
+   from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
    from mlff_attack.relaxation import setup_calculator
    
    # Load structure and setup calculator
@@ -122,7 +122,7 @@ Monitor the attack progress with detailed history tracking:
 .. code-block:: python
 
    from ase.io import read
-   from mlff_attack.grad_based.fgsm import FGSM_MACE
+   from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
    from mlff_attack.relaxation import setup_calculator
    import matplotlib.pyplot as plt
    

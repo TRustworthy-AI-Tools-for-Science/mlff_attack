@@ -28,7 +28,7 @@ FGSM_MACE (MACE-specific implementation)
 ```python
 from ase.io import read
 from mlff_attack.relaxation import setup_calculator
-from mlff_attack.grad_based.fgsm import FGSM_MACE
+from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
 
 # Load structure and setup calculator
 atoms = read("structure.cif")
@@ -238,7 +238,7 @@ perturbed, orig_e, pert_e, grads = adversarial_attack_step(
 ### New (Object-Oriented API)
 ```python
 # New way - OOP
-from mlff_attack.grad_based.fgsm import FGSM_MACE
+from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
 
 attack = FGSM_MACE(model=atoms.calc, epsilon=0.05, device="cpu")
 perturbed = attack.attack(atoms, n_steps=1)
