@@ -4,8 +4,8 @@ MACE and UMA relaxation functionality.
 """
 
 import logging
-import torch
 from pathlib import Path
+import torch
 
 from ase.io import read, write
 from ase.optimize import BFGS, LBFGS

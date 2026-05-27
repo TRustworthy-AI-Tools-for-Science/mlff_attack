@@ -112,9 +112,8 @@ def main():
     # Setup output paths
     outdir = Path(args.outdir)
     outdir.mkdir(parents=True, exist_ok=True)
-    log_name = f"{calculator}_calc_single.log"
     logging.basicConfig(
-        filename=outdir / log_name,
+        filename=outdir / "calc_single.log",
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         encoding="utf-8",

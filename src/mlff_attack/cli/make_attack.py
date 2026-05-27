@@ -30,7 +30,7 @@ def parse_args():
 
     parser.add_argument(
         "--model",
-        require=True,
+        required=True,
         help="Path to MACE (include .model) or UMA (omit .pt) file"
     )
 
