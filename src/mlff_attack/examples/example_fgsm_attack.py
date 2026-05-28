@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Example script demonstrating how to use the FGSM_MACE attack class.
+Example script demonstrating how to use the FGSM_ASE attack class.
 
 This script shows:
 1. Basic FGSM attack (single step)
@@ -19,7 +19,7 @@ from ase.io import write
 from mace.calculators import mace_mp
 
 from mlff_attack.attacks import visualize_perturbation
-from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
+from mlff_attack.grad_based.fgsm import FGSM_ASE
 from mlff_attack.relaxation import setup_calculator
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ def basic_fgsm_example():
     logger.info("\nOriginal energy: %.4f eV", orig_energy)
 
     # Create FGSM attack
-    fgsm = FGSM_MACE(
+    fgsm = FGSM_ASE(
         model=atoms.calc,
         epsilon=0.05,  # 0.05 Angstrom perturbation
         device=device,
@@ -110,7 +110,7 @@ def iterative_fgsm_example():
     logger.info("\nOriginal energy: %.4f eV", orig_energy)
 
     # Create I-FGSM attack (smaller epsilon per step)
-    attack = FGSM_MACE(
+    attack = FGSM_ASE(
         model=atoms.calc,
         epsilon=0.01,  # Smaller step size
         device=device,
@@ -170,7 +170,7 @@ def targeted_attack_example():
     logger.info("Target energy: %.4f eV", target_energy)
 
     # Create targeted attack
-    attack = FGSM_MACE(
+    attack = FGSM_ASE(
         model=atoms.calc,
         epsilon=0.02,
         device=device,
@@ -201,7 +201,7 @@ def load_and_analyze_example():
     logger.info("=" * 70)
 
     # Load perturbation data
-    attack = FGSM_MACE(
+    attack = FGSM_ASE(
         model=None,  # Don't need model for loading
         epsilon=0.05,
         device="cpu"

@@ -66,14 +66,14 @@ Using the class-based API:
 
 .. code-block:: python
 
-   from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
+   from mlff_attack.grad_based.fgsm import FGSM_ASE
    from mlff_attack.relaxation import setup_calculator
    
    # Setup calculator
    atoms = setup_calculator(atoms, 'mace-model.model', device='cuda')
    
    # Create attack
-   attack = FGSM_MACE(
+   attack = FGSM_ASE(
        model=atoms.calc,
        epsilon=0.1,
        device='cuda',

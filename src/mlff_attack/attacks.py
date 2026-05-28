@@ -38,7 +38,7 @@ def make_attack(
 ):
     """Perform an adversarial attack on the given atomic structure using a MACE model.
 
-    This is a convenience wrapper around the FGSM_MACE class.
+    This is a convenience wrapper around the FGSM_ASE class.
 
     Parameters
     ----------
@@ -73,14 +73,14 @@ def make_attack(
         Contains details and history of the attack
     """
     # Setup calculator
-    if verbose:
-        logger.info("Setting up %s calculator", calculator.upper())
-        logger.info("Model: %s", model_path)
-        logger.info("Device: %s", device)
-
     calculator_kind = calculator.lower() if isinstance(calculator, str) else calculator
     if calculator_kind is None:
         calculator_kind = "uma" if str(model_path).startswith("uma") else "mace"
+
+    if verbose:
+        logger.info("Setting up %s calculator", calculator_kind.upper())
+        logger.info("Model: %s", model_path)
+        logger.info("Device: %s", device)
 
     atoms = setup_calculator(
         atoms,
@@ -111,14 +111,9 @@ def make_attack(
             logger.info("   Mode: Maximize energy")
 
     if attack_type == "fgsm":
-        if calculator_kind == "uma":
-            from mlff_attack.grad_based.ase_attacks.fgsm import FGSM_ASE
-            attack_cls = FGSM_ASE
-        else:
-            from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
-            attack_cls = FGSM_MACE
+        from mlff_attack.grad_based.fgsm import FGSM_ASE
 
-        attack = attack_cls(
+        attack = FGSM_ASE(
             model=atoms.calc,
             epsilon=epsilon,
             device=device,
@@ -130,14 +125,9 @@ def make_attack(
         if alpha is None:
             alpha = epsilon / n_steps
 
-        if calculator_kind == "uma":
-            from mlff_attack.grad_based.ase_attacks.pgd import PGD_ASE
-            attack_cls = PGD_ASE
-        else:
-            from mlff_attack.grad_based.mace_attacks.pgd import PGD_MACE
-            attack_cls = PGD_MACE
+        from mlff_attack.grad_based.pgd import PGD_ASE
 
-        attack = attack_cls(
+        attack = PGD_ASE(
             model=atoms.calc,
             epsilon=epsilon,
             alpha=alpha,
@@ -186,7 +176,7 @@ def make_attack(
 #     """Perform a forward pass through the MACE model with gradient tracking.
 
 #     .. deprecated::
-#         Use FGSM_MACE class instead. This function is kept for backward compatibility.
+#         Use FGSM_ASE class instead. This function is kept for backward compatibility.
 
 #     This uses the calculator's internal method to prepare the batch,
 #     then replaces positions with a gradient-enabled version.
@@ -306,7 +296,7 @@ def make_attack(
 #     """Perform backpropagation to compute gradients.
 
 #     .. deprecated::
-#         Use FGSM_MACE.compute_gradient() instead. This function is kept for backward compatibility.
+#         Use FGSM_ASE.compute_gradient() instead. This function is kept for backward compatibility.
 
 #     Parameters
 #     ----------
@@ -504,7 +494,7 @@ def load_perturbation(load_path):
 #     """Perform one step of adversarial attack on atomic positions.
 
 #     .. deprecated::
-#         Use FGSM_MACE.attack_step() instead. This function is kept for backward compatibility.
+#         Use FGSM_ASE.attack_step() instead. This function is kept for backward compatibility.
 
 #     Parameters
 #     ----------

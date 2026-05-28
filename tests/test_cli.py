@@ -20,7 +20,6 @@ def test_cli_mace_calc_single():
     cmd = [
         "python",
         "src/mlff_attack/cli/calc_single.py",
-        "--type", "mace",
         "--input", input_cif,
         "--model", model_path,
         "--outdir", outdir,
@@ -63,7 +62,6 @@ def test_cli_uma_calc_single():
     cmd = [
         "python",
         "src/mlff_attack/cli/calc_single.py",
-        "--type", "uma",
         "--input", input_cif,
         "--model", model_path,
         "--outdir", outdir,
@@ -137,9 +135,8 @@ def test_cli_mace_rejects_uma_args():
     cmd = [
         sys.executable,
         "src/mlff_attack/cli/calc_single.py",
-        "--type", "mace",
         "--input", "does_not_exist.cif",
-        "--model", "does_not_exist.model",
+        "--model", "mace_sample.model",
         "--outdir", "tests/output/mace_rejects_uma_charge_test",
         "--task", "omat",
         "--charge", "0",
@@ -149,9 +146,9 @@ def test_cli_mace_rejects_uma_args():
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     assert result.returncode != 0
-    assert "--task can only be used with --type uma" in result.stderr
-    assert "--charge can only be used with --type uma" in result.stderr
-    assert "--spin can only be used with --type uma" in result.stderr
+    assert "--task can only be used with UMA" in result.stderr
+    assert "--charge can only be used with UMA" in result.stderr
+    assert "--spin can only be used with UMA" in result.stderr
 
 
 @pytest.mark.cli

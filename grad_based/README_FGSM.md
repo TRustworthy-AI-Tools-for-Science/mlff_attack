@@ -2,14 +2,14 @@
 
 ## Overview
 
-The `FGSM_MACE` class provides a clean, object-oriented interface for performing Fast Gradient Sign Method attacks on MACE force field models. It extends the abstract `MLFFAttack` base class.
+The `FGSM_ASE` class provides a clean, object-oriented interface for performing Fast Gradient Sign Method attacks on MACE force field models. It extends the abstract `MLFFAttack` base class.
 
 ## Architecture
 
 ```
 MLFFAttack (Abstract Base Class)
     ↓
-FGSM_MACE (MACE-specific implementation)
+FGSM_ASE (MACE-specific implementation)
 ```
 
 ### Key Features
@@ -28,14 +28,14 @@ FGSM_MACE (MACE-specific implementation)
 ```python
 from ase.io import read
 from mlff_attack.relaxation import setup_calculator
-from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
+from mlff_attack.grad_based.fgsm import FGSM_ASE
 
 # Load structure and setup calculator
 atoms = read("structure.cif")
 atoms = setup_calculator(atoms, "mace-model.model", device="cpu")
 
 # Create attack
-attack = FGSM_MACE(
+attack = FGSM_ASE(
     model=atoms.calc,
     epsilon=0.05,  # Max perturbation in Angstroms
     device="cpu",
@@ -54,7 +54,7 @@ summary = attack.get_attack_summary()
 
 ```python
 # Smaller epsilon, multiple steps
-attack = FGSM_MACE(
+attack = FGSM_ASE(
     model=atoms.calc,
     epsilon=0.01,
     device="cpu",
@@ -74,7 +74,7 @@ for i, energy in enumerate(attack.attack_history['energies']):
 # Try to reach specific energy
 target_energy = original_energy + 2.0
 
-attack = FGSM_MACE(
+attack = FGSM_ASE(
     model=atoms.calc,
     epsilon=0.02,
     device="cpu",
@@ -86,7 +86,7 @@ perturbed_atoms = attack.attack(atoms, n_steps=10, clip=True)
 
 ## Class Reference
 
-### `FGSM_MACE`
+### `FGSM_ASE`
 
 **Constructor Parameters:**
 - `model`: MACE calculator attached to atoms
@@ -177,14 +177,14 @@ def custom_loss(energy):
     """Custom loss: penalize deviations from -300 eV"""
     return (energy + 300.0) ** 2
 
-attack = FGSM_MACE(model=calc, epsilon=0.05, device="cpu")
+attack = FGSM_ASE(model=calc, epsilon=0.05, device="cpu")
 gradients = attack.compute_gradient(atoms, loss_fn=custom_loss)
 ```
 
 ### Manual Step-by-Step Control
 
 ```python
-attack = FGSM_MACE(model=calc, epsilon=0.05, device="cpu")
+attack = FGSM_ASE(model=calc, epsilon=0.05, device="cpu")
 
 # Initialize
 attack._original_positions = atoms.get_positions().copy()
@@ -207,7 +207,7 @@ attack._perturbed_positions = perturbed.get_positions().copy()
 ### Analyze History
 
 ```python
-attack = FGSM_MACE(model=calc, epsilon=0.01, device="cpu", track_history=True)
+attack = FGSM_ASE(model=calc, epsilon=0.01, device="cpu", track_history=True)
 perturbed = attack.attack(atoms, n_steps=20)
 
 # Plot energy evolution
@@ -238,9 +238,9 @@ perturbed, orig_e, pert_e, grads = adversarial_attack_step(
 ### New (Object-Oriented API)
 ```python
 # New way - OOP
-from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
+from mlff_attack.grad_based.fgsm import FGSM_ASE
 
-attack = FGSM_MACE(model=atoms.calc, epsilon=0.05, device="cpu")
+attack = FGSM_ASE(model=atoms.calc, epsilon=0.05, device="cpu")
 perturbed = attack.attack(atoms, n_steps=1)
 summary = attack.get_attack_summary()
 ```

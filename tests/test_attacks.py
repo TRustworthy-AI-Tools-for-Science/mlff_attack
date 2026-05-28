@@ -10,8 +10,8 @@ from pathlib import Path
 import torch
 import numpy as np
 from unittest.mock import Mock, patch, MagicMock
-from mlff_attack.grad_based.mace_attacks.fgsm import FGSM_MACE
-from mlff_attack.grad_based.mace_attacks.pgd import PGD_MACE
+from mlff_attack.grad_based.fgsm import FGSM_ASE
+from mlff_attack.grad_based.pgd import PGD_ASE
 
 from mace.calculators import mace_mp
 from mlff_attack.relaxation import setup_calculator
@@ -110,17 +110,17 @@ def test_save_load_perturbation():
     os.remove(save_file)
 
 
-class TestFGSM_MACE:
+class TestFGSM_ASE:
     def test_init(self):
         model = dummy_model()
-        attack = FGSM_MACE(model, epsilon=0.1)
+        attack = FGSM_ASE(model, epsilon=0.1)
         assert attack.epsilon == 0.1
         assert attack.model == model
 
     def test_attack_basic(self):
         atoms = setup_calculator(create_dummy_atoms(), dummy_model(), device="cpu", dtype_str="float32")
 
-        fgsm = FGSM_MACE(atoms.calc, epsilon=0.1, device="cpu")
+        fgsm = FGSM_ASE(atoms.calc, epsilon=0.1, device="cpu")
         perturbed_atoms = fgsm.attack(atoms, n_steps=1, clip=True)
 
         assert perturbed_atoms.get_positions().shape == atoms.get_positions().shape
@@ -129,7 +129,7 @@ class TestFGSM_MACE:
     def test_epsilon_scaling(self):
         model = dummy_model()
 
-        fgsm = FGSM_MACE(model, epsilon=0.5)
+        fgsm = FGSM_ASE(model, epsilon=0.5)
         atoms = create_dummy_atoms()
         atoms = setup_calculator(atoms, model, device="cpu")
 
@@ -141,7 +141,7 @@ class TestFGSM_MACE:
 # class TestPGD:
 #     def test_init(self):
 #         model = dummy_model()
-#         attack = PGD_MACE(model, epsilon=0.1, alpha=0.01, num_iter=10)
+#         attack = PGD_ASE(model, epsilon=0.1, alpha=0.01, num_iter=10)
 #         assert attack.epsilon == 0.1
 #         assert attack.alpha == 0.01
 #         assert attack.num_iter == 10
@@ -149,7 +149,7 @@ class TestFGSM_MACE:
 #     def test_attack_iterations(self):
 #         model = dummy_model()
 
-#         attack = PGD_MACE(model, epsilon=0.1, alpha=0.01, num_iter=5)
+#         attack = PGD_ASE(model, epsilon=0.1, alpha=0.01, num_iter=5)
 #         atoms = create_dummy_atoms()
 #         atoms.calc = [model]
 
@@ -159,7 +159,7 @@ class TestFGSM_MACE:
 #     def test_projection_bounds(self):
 #         model = dummy_model()
 
-#         attack = PGD_MACE(model, epsilon=0.2, alpha=0.1, num_iter=3)
+#         attack = PGD_ASE(model, epsilon=0.2, alpha=0.1, num_iter=3)
 #         positions = torch.zeros((5, 3), requires_grad=True)
 
 #         perturbed = attack.attack(positions)
