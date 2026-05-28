@@ -133,7 +133,7 @@ def test_cli_make_attack():
         shutil.rmtree(outdir)
 
 
-def test_cli_mace_rejects_uma_charge():
+def test_cli_mace_rejects_uma_args():
     cmd = [
         sys.executable,
         "src/mlff_attack/cli/calc_single.py",
@@ -141,29 +141,16 @@ def test_cli_mace_rejects_uma_charge():
         "--input", "does_not_exist.cif",
         "--model", "does_not_exist.model",
         "--outdir", "tests/output/mace_rejects_uma_charge_test",
+        "--task", "omat",
         "--charge", "0",
-    ]
-
-    result = subprocess.run(cmd, capture_output=True, text=True)
-
-    assert result.returncode != 0
-    assert "--charge can only be used with --type uma" in result.stderr
-
-
-def test_cli_mace_rejects_uma_spin():
-    cmd = [
-        sys.executable,
-        "src/mlff_attack/cli/calc_single.py",
-        "--type", "mace",
-        "--input", "does_not_exist.cif",
-        "--model", "does_not_exist.model",
-        "--outdir", "tests/output/mace_rejects_uma_charge_test",
         "--spin", "0",
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
 
     assert result.returncode != 0
+    assert "--task can only be used with --type uma" in result.stderr
+    assert "--charge can only be used with --type uma" in result.stderr
     assert "--spin can only be used with --type uma" in result.stderr
 
 

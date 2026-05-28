@@ -189,7 +189,7 @@ def main():
             uma_spin=uma_spin,
         )
     except (ValueError, NotImplementedError, RuntimeError) as exc:
-        logger.info("[ERROR] Failed to generate attack, run calc-single first and use the same model to generate attack: %s", exc)
+        logger.info("[ERROR] Failed to generate attack. Run calc-single first and use the same model to generate attack: %s", exc)
         return 1
 
     # Visualize perturbation

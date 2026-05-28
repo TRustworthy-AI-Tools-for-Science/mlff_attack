@@ -72,7 +72,7 @@ def main():
 
     parser.add_argument(
         "--task",
-        default="omat",
+        default=None,
         choices=["oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"],
         help="Only used with UMA model",
     )
@@ -81,14 +81,14 @@ def main():
         "--charge",
         type=int,
         default=None,
-        help="Molecular charge only used with UMA model",
+        help="Molecular charge only used with UMA model and --task omol",
     )
 
     parser.add_argument(
         "--spin",
         type=int,
         default=None,
-        help="Spin multiplicity only used with UMA model",
+        help="Spin multiplicity only used with UMA model and --task omol",
     )
 
     args = parser.parse_args()
@@ -99,16 +99,24 @@ def main():
         calculator = "mace"
     else:
         raise SystemExit(
-            "--model must start with 'uma-' for UMA or 'mace' for MACE"
+            "--model must start with 'uma' for UMA or 'mace' for MACE"
         )
+    
+    if calculator == "uma":
+        if args.task is None:
+            args.task = "omat"
+        if args.charge is None:
+            args.charge = 0
+        if args.spin is None:
+            args.spin = 1
 
     if calculator == "mace":
-        if args.model is None:
-            parser.error("--model is required with MACE model")
+        if args.task is not None:
+            parser.error("--task can only be used with --type uma")
         if args.charge is not None:
-            parser.error("--charge can only be used with UMA model")
+            parser.error("--charge can only be used with --type uma")
         if args.spin is not None:
-            parser.error("--spin can only be used with UMA model")
+            parser.error("--spin can only be used with --type uma")
 
     # Setup output paths
     outdir = Path(args.outdir)
@@ -127,6 +135,11 @@ def main():
         logger.info("[ERROR] Failed to load input structure for %s.", args.input)
         return 1
 
+    atoms.info["fmax"] = args.fmax
+    atoms.info["task"] = args.task
+    atoms.info["charge"] = args.charge
+    atoms.info["spin"] = args.spin
+
     # Setup calculator
     atoms = setup_calculator(
         atoms,
@@ -137,6 +150,7 @@ def main():
         uma_charge=args.charge,
         uma_spin=args.spin,
     )
+
     if atoms is None:
         logger.info(
             "[ERROR] Failed to setup %s calculator with model %s.",
@@ -144,11 +158,6 @@ def main():
             args.model,
         )
         return 1
-
-    atoms.info["fmax"] = args.fmax
-    atoms.info["task"] = args.task
-    atoms.info["charge"] = args.charge
-    atoms.info["spin"] = args.spin
 
     # Run relaxation
     success = run_relaxation(

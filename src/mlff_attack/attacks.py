@@ -32,7 +32,7 @@ def make_attack(
     clip=None,
     verbose=True,
     calculator=None,
-    uma_task="omat",
+    uma_task=None,
     uma_charge=None,
     uma_spin=None,
 ):
@@ -80,7 +80,7 @@ def make_attack(
 
     calculator_kind = calculator.lower() if isinstance(calculator, str) else calculator
     if calculator_kind is None:
-        calculator_kind = "uma" if str(model_path).startswith("uma-") else "mace"
+        calculator_kind = "uma" if str(model_path).startswith("uma") else "mace"
 
     atoms = setup_calculator(
         atoms,

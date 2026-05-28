@@ -66,8 +66,8 @@ calc-single --input <structure>.cif --model <uma-variant-version> --outdir <outp
 - `--max-steps`: Maximum relaxation steps (default: 300).
 - `--optimizer`: ASE optimizer to use (BFGS or LBFGS, default: LBFGS).
 - `--task`: UMA task/domain, only used with `--type uma` (default: `omat`).
-- `--charge`: Molecular charge, only used with `--type uma --task omol`.
-- `--spin`: Spin multiplicity, only used with `--type uma --task omol`.
+- `--charge`: Molecular charge, only used with `--type uma`.
+- `--spin`: Spin multiplicity, only used with `--type uma`.
 
 ### Visualizing trajectories
 

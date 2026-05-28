@@ -100,10 +100,6 @@ def setup_calculator(
                 )
                 return None
 
-            if uma_task == "omol":
-                atoms.info["charge"] = uma_charge if uma_charge is not None else 0
-                atoms.info["spin"] = uma_spin if uma_spin is not None else 1
-
             if verbose:
                 logger.info(
                     "[INFO] Loading UMA model: %s on %s with uma_task=%s",
