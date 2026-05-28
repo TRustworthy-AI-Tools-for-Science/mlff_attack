@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 def main():
     """Main entry point for trajectory visualization."""
-    parser = argparse.ArgumentParser(description="Visualize MACE relaxation trajectory.")
+    parser = argparse.ArgumentParser(description="Visualize relaxation trajectory.")
     parser.add_argument("--traj", required=True, help="Path to trajectory file (.traj)")
     parser.add_argument(
         "--outdir", default=".",

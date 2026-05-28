@@ -115,6 +115,8 @@ def test_run_relaxation():
         device="cpu",
         calculator="uma",
         uma_task="omat",
+        uma_charge=0,
+        uma_spin=1,
     )
     assert atoms is not None
     assert atoms.calc is not None

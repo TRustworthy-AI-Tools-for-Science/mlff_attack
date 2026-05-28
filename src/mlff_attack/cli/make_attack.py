@@ -3,6 +3,7 @@
 CLI entry point for MACE single structure attack.
 """
 
+import json
 import argparse
 import logging
 from pathlib import Path
@@ -115,7 +116,7 @@ def parse_args():
 
 
 def main():
-    """Run the MACE adversarial attack CLI."""
+    """Run the adversarial attack CLI."""
     # Parse command line arguments
     args = parse_args()
     attack_type = args.type.lower()
@@ -164,9 +165,26 @@ def main():
     if atoms is None:
         logger.info("[ERROR] Failed to load structure from %s", input_cif)
         return 1
-    uma_task = atoms.info.get("task")
-    uma_charge = atoms.info.get("charge")
-    uma_spin = atoms.info.get("spin")
+
+    metadata_path = Path(input_cif).with_name("metadata.json")
+    metadata = {}
+    if metadata_path.exists():
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+
+    uma_task = metadata.get("task")
+    uma_charge = metadata.get("charge")
+    uma_spin = metadata.get("spin")
+
+    if calculator == "uma":
+        if uma_task is None:
+            uma_task = "omat"
+        if uma_charge is None:
+            uma_charge = 0
+        atoms.info["charge"] = uma_charge
+        if uma_spin is None:
+            uma_spin = 1
+        atoms.info["spin"] = uma_spin
+
     logger.info("   Loaded %s atoms: %s", len(atoms), atoms.get_chemical_formula())
 
     # Generate perturbed structure

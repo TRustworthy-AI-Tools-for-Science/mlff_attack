@@ -3,6 +3,7 @@
 Trajectory visualization functionality.
 """
 
+import json
 import logging
 from pathlib import Path
 
@@ -367,7 +368,10 @@ def create_visualization(
     """
     # Extract data
     steps, energies, max_forces, volumes = extract_trajectory_data(traj)
-    fmax = float(traj[-1].info.get("fmax", fmax))
+    metadata_path = Path(traj_path).with_name("metadata.json")
+    if metadata_path.exists():
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        fmax = float(metadata.get("fmax", fmax))
 
     # Calculate statistics
     stats = calculate_statistics(energies, max_forces, volumes, fmax)
@@ -402,7 +406,7 @@ def create_visualization(
 
     # Print summary to console
     logger.info("\n%s", "=" * 50)
-    logger.info(summary_text)
+    logger.info("%s", summary_text)
     logger.info("%s", "=" * 50)
 
     # Save data to CSV if requested

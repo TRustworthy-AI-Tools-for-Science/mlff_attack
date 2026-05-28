@@ -2,7 +2,7 @@
 """
 CLI entry point for MACE or UMA single structure relaxation.
 """
-
+import json
 import argparse
 import logging
 from pathlib import Path
@@ -112,11 +112,11 @@ def main():
 
     if calculator == "mace":
         if args.task is not None:
-            parser.error("--task can only be used with --type uma")
+            parser.error("--task can only be used with UMA")
         if args.charge is not None:
-            parser.error("--charge can only be used with --type uma")
+            parser.error("--charge can only be used with UMA")
         if args.spin is not None:
-            parser.error("--spin can only be used with --type uma")
+            parser.error("--spin can only be used with UMA")
 
     # Setup output paths
     outdir = Path(args.outdir)
@@ -135,10 +135,16 @@ def main():
         logger.info("[ERROR] Failed to load input structure for %s.", args.input)
         return 1
 
-    atoms.info["fmax"] = args.fmax
-    atoms.info["task"] = args.task
-    atoms.info["charge"] = args.charge
-    atoms.info["spin"] = args.spin
+    metadata_path = outdir / "metadata.json"
+    metadata = {
+        "calculator": calculator,
+        "fmax": args.fmax,
+        "task": args.task,
+        "charge": args.charge,
+        "spin": args.spin,
+    }
+    metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    logger.info("[INFO] Saved required calculation metadata for following visualizations and attacks to: %s", metadata_path)
 
     # Setup calculator
     atoms = setup_calculator(

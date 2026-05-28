@@ -147,8 +147,6 @@ def test_cli_mace_rejects_uma_args():
 
     assert result.returncode != 0
     assert "--task can only be used with UMA" in result.stderr
-    assert "--charge can only be used with UMA" in result.stderr
-    assert "--spin can only be used with UMA" in result.stderr
 
 
 @pytest.mark.cli
