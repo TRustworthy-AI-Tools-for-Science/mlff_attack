@@ -97,6 +97,38 @@ def test_make_attack_mace():
     os.remove(output_cif)
 
 
+def test_make_attack_mace_multihead_pgd():
+    model = dummy_mace_model()
+    model.heads = ["omat_pbe", "omol"]
+    atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32", calculator="mace", mace_head="omat_pbe")
+    output_cif = "perturbed_structure.cif"
+
+    output_path, perturbed_atoms, attack_details = make_attack(
+        atoms=atoms,
+        model_path=model,
+        device="cpu",
+        output_cif=output_cif,
+        attack_type="pgd",
+        epsilon=0.1,
+        n_steps=2,
+        target_energy=None,
+        clip=True,
+        calculator="mace",
+        mace_head="omat_pbe",
+    )
+
+    assert Path(output_path).exists()
+    assert atoms.calc.head == "omat_pbe"
+    assert perturbed_atoms.get_positions().shape == atoms.get_positions().shape
+    assert attack_details is not None
+    assert 'energies' in attack_details
+    assert 'max_forces' in attack_details
+    assert 'perturbations' in attack_details
+    assert 'gradients' in attack_details
+
+    os.remove(output_cif)
+
+
 def test_make_attack_uma():
     pytest.importorskip(
         "fairchem.core",

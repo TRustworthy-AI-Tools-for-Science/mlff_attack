@@ -65,6 +65,7 @@ calc-single --input <structure>.cif --model <uma-variant-version> --outdir <outp
 - `--fmax`: Force convergence criterion in eV/Å (default: 0.01).
 - `--max-steps`: Maximum relaxation steps (default: 300).
 - `--optimizer`: ASE optimizer to use (BFGS or LBFGS, default: LBFGS).
+- `--head`: MACE-MH head, only used with MACE-MH (default: `omat_pbd`).
 - `--task`: UMA task/domain, only used with UMA (default: `omat`).
 - `--charge`: Molecular charge, only used with UMA.
 - `--spin`: Spin multiplicity, only used with UMA.

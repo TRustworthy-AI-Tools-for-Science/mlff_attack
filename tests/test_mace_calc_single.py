@@ -62,6 +62,24 @@ def test_setup_mace_calculator():
     assert atoms_with_mace is not None
 
 
+def test_setup_mace_mh_calculator_sets_head():
+    atoms = build.molecule("H2O")
+    model = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
+    model.heads = ["omat_pbe", "omol"]
+
+    atoms_with_mace = relaxation.setup_calculator(
+        atoms,
+        model,
+        device="cpu",
+        dtype_str="float32",
+        calculator="mace",
+        mace_head="omat_pbe",
+    )
+
+    assert atoms_with_mace is not None
+    assert atoms_with_mace.calc.head == "omat_pbe"
+
+
 def test_get_optimizer_class():
     opt_class = relaxation.get_optimizer_class("BFGS")
     assert opt_class is not None

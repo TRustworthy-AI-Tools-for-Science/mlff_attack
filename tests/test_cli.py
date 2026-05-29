@@ -90,6 +90,38 @@ def test_cli_uma_calc_single():
         shutil.rmtree(outdir)
 
 
+def test_cli_calc_single_accepts_head():
+    cmd = [
+        sys.executable,
+        "src/mlff_attack/cli/calc_single.py",
+        "--input", "does_not_exist.cif",
+        "--model", "mace-mh-1.model",
+        "--outdir", "tests/output/mace_mh_calc_single_test",
+        "--head", "omat_pbe",
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert result.returncode == 1
+    assert "unrecognized arguments" not in result.stderr
+
+
+def test_cli_calc_single_rejects_head():
+    cmd = [
+        sys.executable,
+        "src/mlff_attack/cli/calc_single.py",
+        "--input", "does_not_exist.cif",
+        "--model", "mace_sample.model",
+        "--outdir", "tests/output/mace_mh_calc_single_test",
+        "--head", "omat_pbe",
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert result.returncode == 1
+    assert "unrecognized arguments" not in result.stderr
+
+
 @pytest.mark.cli
 def test_cli_make_attack():
     # Define input parameters
@@ -131,6 +163,21 @@ def test_cli_make_attack():
         shutil.rmtree(outdir)
 
 
+def test_cli_make_attack_accepts_head():
+    cmd = [
+        sys.executable,
+        "src/mlff_attack/cli/make_attack.py",
+        "--input", "does_not_exist.cif",
+        "--model", "mace-mh-1.model",
+        "--head", "omat_pbe",
+        "--type", "fgsm",
+        "--outdir", "tests/output/mace_mh_attack_cli_test",
+        "--no-visualize",
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    assert "unrecognized arguments" not in result.stderr
+
+
 def test_cli_mace_rejects_uma_args():
     cmd = [
         sys.executable,
@@ -147,6 +194,22 @@ def test_cli_mace_rejects_uma_args():
 
     assert result.returncode != 0
     assert "--task can only be used with UMA" in result.stderr
+
+
+def test_cli_uma_rejects_head():
+    cmd = [
+        sys.executable,
+        "src/mlff_attack/cli/calc_single.py",
+        "--input", "does_not_exist.cif",
+        "--model", "uma_sample",
+        "--outdir", "tests/output/mace_rejects_uma_charge_test",
+        "--head", "omat_pbe"
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert result.returncode != 0
+    assert "--head can only be used with MACE-MH" in result.stderr
 
 
 @pytest.mark.cli
