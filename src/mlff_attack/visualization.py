@@ -3,7 +3,6 @@
 Trajectory visualization functionality.
 """
 
-import json
 import logging
 from pathlib import Path
 
@@ -13,8 +12,6 @@ import pandas as pd
 from ase.io import read
 
 logger = logging.getLogger(__name__)
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def load_trajectory(traj_path):
@@ -370,10 +367,7 @@ def create_visualization(
     """
     # Extract data
     steps, energies, max_forces, volumes = extract_trajectory_data(traj)
-    metadata_path = REPO_ROOT / "previous_calculation.json"
-    if metadata_path.exists():
-        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-        fmax = float(metadata.get("fmax", fmax))
+    fmax = float(traj[-1].info["fmax"])
 
     # Calculate statistics
     stats = calculate_statistics(energies, max_forces, volumes, fmax)

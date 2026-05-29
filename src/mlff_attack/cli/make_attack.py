@@ -3,7 +3,6 @@
 CLI entry point for MACE single structure attack.
 """
 
-import json
 import argparse
 import logging
 from pathlib import Path
@@ -14,8 +13,6 @@ from mlff_attack.attacks import make_attack, visualize_perturbation
 from mlff_attack.relaxation import load_structure
 
 logger = logging.getLogger(__name__)
-
-REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def parse_args():
@@ -114,6 +111,34 @@ def parse_args():
         ),
     )
 
+    parser.add_argument(
+        "--mace-head",
+        default=None,
+        choices=["omat_pbe", "omol", "spice_wB97M", "rgd1_b3lyp", "oc20_usemppbe", "matpes_r2scan"],
+        help="Only used with MACE-MH model",
+    )
+
+    parser.add_argument(
+        "--uma-task",
+        default=None,
+        choices=["oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"],
+        help="Only used with UMA model",
+    )
+
+    parser.add_argument(
+        "--uma-charge",
+        type=int,
+        default=None,
+        help="Molecular charge only used with UMA model and --uma-task omol",
+    )
+
+    parser.add_argument(
+        "--uma-spin",
+        type=int,
+        default=None,
+        help="Spin multiplicity only used with UMA model and --uma-task omol",
+    )
+
     return parser.parse_args()
 
 
@@ -127,6 +152,7 @@ def main():
         raise SystemExit("--alpha can only be used with --type pgd")
 
     model_name = Path(args.model).name.lower()
+    is_mace_mh = model_name.startswith("mace-mh")
     if model_name.startswith("uma"):
         calculator = "uma"
     elif model_name.startswith("mace"):
@@ -135,6 +161,29 @@ def main():
         raise SystemExit(
             "--model basename must start with 'uma' for UMA or 'mace' for MACE"
         )
+    
+    if calculator == "mace":
+        if args.uma_task is not None:
+            raise SystemExit("--uma-task can only be used with UMA")
+        if args.uma_charge is not None:
+            raise SystemExit("--uma-charge can only be used with UMA")
+        if args.uma_spin is not None:
+            raise SystemExit("--uma-spin can only be used with UMA")
+        if args.mace_head is None and is_mace_mh:
+            args.mace_head = "omat_pbe"
+
+    if args.mace_head is not None and not is_mace_mh:
+        raise SystemExit("--mace-head can only be used with MACE-MH models")
+
+    if calculator == "uma":
+        if args.mace_head is not None:
+            raise SystemExit("--mace-head can only be used with MACE-MH models")
+        if args.uma_task is None:
+            args.uma_task = "omat"
+        if args.uma_charge is None:
+            args.uma_charge = 0
+        if args.uma_spin is None:
+            args.uma_spin = 1
 
     # Override configuration with command line arguments
     input_cif = args.input
@@ -169,24 +218,13 @@ def main():
         logger.info("[ERROR] Failed to load structure from %s", input_cif)
         return 1
 
-    metadata_path = REPO_ROOT / "previous_calculation.json"
-    metadata = {}
-    if metadata_path.exists():
-        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-
-    mace_head = metadata.get("mace_head")
-    uma_task = metadata.get("uma_task")
-    uma_charge = metadata.get("uma_charge")
-    uma_spin = metadata.get("uma_spin")
+    mace_head = args.mace_head
+    uma_task = args.uma_task
+    uma_charge = args.uma_charge
+    uma_spin = args.uma_spin
 
     if calculator == "uma":
-        if uma_task is None:
-            uma_task = "omat"
-        if uma_charge is None:
-            uma_charge = 0
         atoms.info["charge"] = uma_charge
-        if uma_spin is None:
-            uma_spin = 1
         atoms.info["spin"] = uma_spin
 
     logger.info("   Loaded %s atoms: %s", len(atoms), atoms.get_chemical_formula())

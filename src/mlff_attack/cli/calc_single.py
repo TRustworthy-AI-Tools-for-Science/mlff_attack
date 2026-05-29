@@ -2,7 +2,7 @@
 """
 CLI entry point for MACE or UMA single structure relaxation.
 """
-import json
+
 import argparse
 import logging
 from pathlib import Path
@@ -16,8 +16,6 @@ from mlff_attack.relaxation import (
 )
 
 logger = logging.getLogger(__name__)
-
-REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def main():
@@ -152,19 +150,7 @@ def main():
         logger.info("[ERROR] Failed to load input structure for %s.", args.input)
         return 1
 
-    metadata = {
-        "input": str(Path(args.input).resolve()),
-        "model": Path(args.model).name,
-        "calculator": calculator,
-        "fmax": args.fmax,
-        "mace_head": args.mace_head,
-        "uma_task": args.uma_task,
-        "uma_charge": args.uma_charge,
-        "uma_spin": args.uma_spin,
-    }
-    root_metadata_path = REPO_ROOT / "previous_calculation.json"
-    root_metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-    logger.info("[INFO] Saved required calculation metadata for following visualizations and attacks to: %s", root_metadata_path)
+    atoms.info["fmax"] = args.fmax
 
     # Setup calculator
     atoms = setup_calculator(
