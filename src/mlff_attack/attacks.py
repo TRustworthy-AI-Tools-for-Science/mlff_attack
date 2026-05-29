@@ -75,7 +75,10 @@ def make_attack(
     # Setup calculator
     calculator_kind = calculator.lower() if isinstance(calculator, str) else calculator
     if calculator_kind is None:
-        calculator_kind = "uma" if str(model_path).startswith("uma") else "mace"
+        model_name = (
+            Path(model_path).name if isinstance(model_path, (str, Path)) else str(model_path)
+        )
+        calculator_kind = "uma" if model_name.startswith("uma") else "mace"
 
     if verbose:
         logger.info("Setting up %s calculator", calculator_kind.upper())
