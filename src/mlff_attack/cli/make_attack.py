@@ -124,13 +124,14 @@ def main():
     if attack_type != "pgd" and args.alpha is not None:
         raise SystemExit("--alpha can only be used with --type pgd")
 
-    if args.model.startswith("uma"):
+    model_name = Path(args.model).name.lower()
+    if model_name.startswith("uma"):
         calculator = "uma"
-    elif args.model.startswith("mace"):
+    elif model_name.startswith("mace"):
         calculator = "mace"
     else:
         raise SystemExit(
-            "--model must start with 'uma' for UMA or 'mace' for MACE"
+            "--model basename must start with 'uma' for UMA or 'mace' for MACE"
         )
 
     # Override configuration with command line arguments
