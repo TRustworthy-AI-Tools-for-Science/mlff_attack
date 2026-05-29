@@ -1,18 +1,4 @@
-"""Fast Gradient Sign Method (FGSM) attack implementation for MLFF models.
-
-This module implements FGSM and iterative FGSM for ASE-compatible machine
-learning force field calculators.
-
-Two gradient backends are supported:
-
-- MACE calculators use the underlying torch model directly, allowing gradients
-  to be computed by autograd with respect to atomic positions.
-- UMA and other ASE calculators use calculator forces. ASE forces satisfy
-  ``forces = -dE/dR``, so the energy gradient is ``dE/dR = -forces``.
-
-The public ``FGSM_ASE`` class is the unified implementation for both MACE and
-UMA. ``FGSM_ASE`` is kept as a backwards-compatible alias.
-"""
+"""Fast Gradient Sign Method (FGSM) attack implementation for MLFF models."""
 
 from datetime import datetime
 import logging

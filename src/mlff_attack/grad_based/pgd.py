@@ -1,15 +1,4 @@
-"""Projected Gradient Descent (PGD) attack implementation for MLFF models.
-
-Two gradient backends are supported:
-
-- MACE calculators use the underlying torch model directly, allowing gradients
-  to be computed by autograd with respect to atomic positions.
-- UMA and other ASE calculators use calculator forces. ASE forces satisfy
-  ``forces = -dE/dR``, so the energy gradient is ``dE/dR = -forces``.
-
-The public ``PGD_ASE`` class is the unified implementation for both MACE and
-UMA.
-"""
+"""Projected Gradient Descent (PGD) attack implementation for MLFF models."""
 
 import logging
 from typing import Any, Callable, Optional
