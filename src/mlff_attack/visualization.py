@@ -367,7 +367,7 @@ def create_visualization(
     """
     # Extract data
     steps, energies, max_forces, volumes = extract_trajectory_data(traj)
-    fmax = float(traj[-1].info["fmax"])
+    fmax = float(traj[-1].info.get("fmax", fmax))
 
     # Calculate statistics
     stats = calculate_statistics(energies, max_forces, volumes, fmax)
