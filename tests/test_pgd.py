@@ -97,7 +97,7 @@ def test_make_attack_mace():
     os.remove(output_cif)
 
 
-def test_make_attack_mace_multihead_pgd():
+def test_make_attack_mace_mh_pgd():
     model = dummy_mace_model()
     model.heads = ["omat_pbe", "omol"]
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32", calculator="mace", mace_head="omat_pbe")

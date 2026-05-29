@@ -34,36 +34,56 @@ def make_attack(
     clip=None,
     verbose=True,
     calculator=None,
+    mace_head=None,
     uma_task=None,
     uma_charge=None,
     uma_spin=None,
 ):
-    """Perform an adversarial attack on the given atomic structure using a MACE model.
+    """Perform an adversarial attack on an atomic structure using MACE, MACE-MH, or UMA.
 
-    This is a convenience wrapper around the FGSM_ASE class.
+    This sets up the requested calculator, runs an FGSM or PGD attack, saves the
+    perturbed structure as a CIF file, and returns the attack history.
 
     Parameters
     ----------
     atoms : ase.Atoms
         ASE Atoms object representing the structure to attack
-    model_path : str or Path
-        Path to the MACE model file
+    model_path : str or Path or MACECalculator
+        Path to a MACE/MACE-MH model file, an existing MACECalculator instance,
+        or a UMA model name
     device : str
         Device to run the model on ("cpu" or "cuda")
     output_cif : str or Path
         Path to save the perturbed CIF file
     attack_type : str
-        Type of attack to perform, by default "fgsm"
+        Type of attack to perform: "fgsm" or "pgd"
     epsilon : float
-        Perturbation step size in Angstroms
-    alpha : float, optional
-        PGD step size. If not provided, use epsilon / n_steps
+        Maximum perturbation size in Angstroms
+    alpha : float or None, optional
+        PGD step size. If None and attack_type is "pgd", uses epsilon / n_steps
     n_steps : int, optional
-        Number of steps for iterative attacks (only used for I-FGSM/PGD), by default 1
-    target_energy : float or None
-        Target energy for the attack (if None, maximize energy)
+        Number of attack iterations. Use 1 for FGSM and greater than 1 for
+        iterative FGSM or PGD, by default 1
+    target_energy : float or None, optional
+        Target energy for a targeted attack. If None, the attack maximizes
+        predicted energy
     clip : bool or None, optional
-        Whether to clip perturbations. If None, defaults to False for FGSM and True for PGD.
+        Whether to clip total perturbations to epsilon. If None, the attack
+        class uses its default behavior
+    verbose : bool, optional
+        Whether to log attack setup and summary information, by default True
+    calculator : str or None, optional
+        Calculator type to use: "mace", "uma", or None. If None, the calculator
+        is inferred from model_path
+    mace_head : str or None, optional
+        MACE-MH prediction head to use, such as "omat_pbe". Only valid for
+        multihead MACE models. If None, no head is passed
+    uma_task : str or None, optional
+        UMA task/domain to use, such as "omat" or "omol"
+    uma_charge : int or None, optional
+        Molecular charge for UMA molecular tasks
+    uma_spin : int or None, optional
+        Spin multiplicity for UMA molecular tasks
 
     Returns
     -------
@@ -71,8 +91,9 @@ def make_attack(
         Path to the saved perturbed CIF file
     ase.Atoms
         Atoms object after attack
-    attack.attack_history : dict
-        Contains details and history of the attack
+    dict
+        Attack history containing energies, max forces, perturbations, and
+        gradients
     """
     # Setup calculator
     calculator_kind = calculator.lower() if isinstance(calculator, str) else calculator
@@ -92,6 +113,7 @@ def make_attack(
         model_path,
         device,
         calculator=calculator_kind,
+        mace_head=mace_head,
         uma_task=uma_task,
         uma_charge=uma_charge,
         uma_spin=uma_spin,

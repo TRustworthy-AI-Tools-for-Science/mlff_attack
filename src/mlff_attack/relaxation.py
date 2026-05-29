@@ -44,15 +44,16 @@ def setup_calculator(
     dtype_str="float64",
     verbose=False,
     calculator=None,
+    mace_head=None,
     uma_task="omat",
     uma_charge=None,
     uma_spin=None,
 ):
-    """Initialize and attach MACE or UMA calculator to atoms object.
-
-    This supports two model types:
+    """Initialize and attach a MACE or UMA calculator to an atoms object.
 
     - MACE models: pass a local model path, like "mace-mpa-0-medium.model"
+    - MACE-MH models: pass a local multihead model path, like "mace-mh-1.model",
+      and optionally select a head with mace_head, like "omat_pbe"
     - UMA models: pass a UMA model name, like "uma-s-1p1"
 
     Parameters
@@ -60,13 +61,27 @@ def setup_calculator(
     atoms : ase.Atoms
         ASE Atoms object
     model_path : str or Path or MACECalculator
-        Path to MACE model file or existing MACECalculator instance, or a UMA model name
+        Path to a MACE/MACE-MH model file, an existing MACECalculator instance,
+        or a UMA model name
     device : str, optional
         Device to use (cuda or cpu), by default "cpu"
     dtype_str : str, optional
-        Data type for MACE calculations ("float32" or "float64"), by default "float64"
+        Data type for MACE and MACE-MH calculations ("float32" or "float64"),
+        by default "float64"
     verbose : bool, optional
         Whether to print detailed information, by default False
+    calculator : str or None, optional
+        Calculator type to use: "mace", "uma", or None, by default None
+    mace_head : str or None, optional
+        MACE-MH prediction head to use, such as "omat_pbe". Only valid for
+        multihead MACE models. If None, no head is passed and regular MACE
+        behavior is unchanged.
+    uma_task : str, optional
+        UMA task/domain to use, such as "omat" or "omol", by default "omat"
+    uma_charge : int or None, optional
+        Molecular charge for UMA molecular tasks, by default None
+    uma_spin : int or None, optional
+        Spin multiplicity for UMA molecular tasks, by default None
 
     Returns
     -------
@@ -83,6 +98,9 @@ def setup_calculator(
             return None
 
         if calculator == "uma":
+            if mace_head is not None:
+                logger.info("[ERROR] mace_head can only be used with MACE-MH models")
+                return None
             try:
                 from fairchem.core import pretrained_mlip, FAIRChemCalculator
             except ImportError:
@@ -132,6 +150,18 @@ def setup_calculator(
         if isinstance(model_path, mace.calculators.mace.MACECalculator):
             if verbose:
                 logger.info("[INFO] Model is already a MACECalculator")
+            if mace_head is not None:
+                if not hasattr(model_path, "heads") or model_path.heads is None:
+                    logger.info("[ERROR] mace_head can only be used with MACE-MH models")
+                    return None
+                if mace_head not in model_path.heads:
+                    logger.info(
+                        "[ERROR] Invalid MACE-MH head '%s'. Choose one of: %s",
+                        mace_head,
+                        ", ".join(model_path.heads),
+                    )
+                    return None
+                model_path.head = mace_head
             atoms.calc = model_path
         else:
             # Patch to prevent atoms and models from having different datatypes
@@ -140,16 +170,30 @@ def setup_calculator(
             else:
                 dtype = torch.float64
 
+            model_name = Path(model_id).name.lower()
+            if mace_head is not None and not model_name.startswith("mace-mh"):
+                logger.info("[ERROR] mace_head can only be used with MACE-MH models")
+                return None
+
             if verbose:
                 logger.info("[INFO] Loading MACE model: %s on %s", model_path, device)
-            atoms.calc = mace_calculator.MACECalculator(
-                model_paths=model_path,
-                device=device,
-                default_dtype=dtype
-            )
+
+            if mace_head is None:
+                atoms.calc = mace_calculator.MACECalculator(
+                    model_paths=model_path,
+                    device=device,
+                    default_dtype=dtype,
+                )
+            else:
+                atoms.calc = mace_calculator.MACECalculator(
+                    model_paths=model_path,
+                    device=device,
+                    default_dtype=dtype,
+                    head=mace_head,
+                )
         return atoms
 
-    except (OSError, ValueError, RuntimeError, KeyError) as exc:
+    except (OSError, TypeError, ValueError, RuntimeError, KeyError) as exc:
         logger.info("[ERROR] Failed to setup calculator: %s", exc)
         return None
 

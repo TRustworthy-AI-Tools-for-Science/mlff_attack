@@ -15,6 +15,8 @@ from mlff_attack.relaxation import load_structure
 
 logger = logging.getLogger(__name__)
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
 
 def parse_args():
     """Parse command line arguments."""
@@ -167,14 +169,15 @@ def main():
         logger.info("[ERROR] Failed to load structure from %s", input_cif)
         return 1
 
-    metadata_path = Path(input_cif).with_name("metadata.json")
+    metadata_path = REPO_ROOT / "previous_calculation.json"
     metadata = {}
     if metadata_path.exists():
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
 
-    uma_task = metadata.get("task")
-    uma_charge = metadata.get("charge")
-    uma_spin = metadata.get("spin")
+    mace_head = metadata.get("mace_head")
+    uma_task = metadata.get("uma_task")
+    uma_charge = metadata.get("uma_charge")
+    uma_spin = metadata.get("uma_spin")
 
     if calculator == "uma":
         if uma_task is None:
@@ -203,6 +206,7 @@ def main():
             target_energy=target_energy,
             clip=clip,
             calculator=calculator,
+            mace_head=mace_head,
             uma_task=uma_task,
             uma_charge=uma_charge,
             uma_spin=uma_spin,

@@ -17,6 +17,8 @@ from mlff_attack.relaxation import (
 
 logger = logging.getLogger(__name__)
 
+REPO_ROOT = Path(__file__).resolve().parents[3]
+
 
 def main():
     """Main entry point for MACE or UMA single structure relaxation."""
@@ -71,52 +73,67 @@ def main():
     )
 
     parser.add_argument(
-        "--task",
+        "--mace-head",
+        default=None,
+        choices=["omat_pbe", "omol", "spice_wB97M", "rgd1_b3lyp", "oc20_usemppbe", "matpes_r2scan"],
+        help="Only used with MACE-MH model",
+    )
+
+    parser.add_argument(
+        "--uma-task",
         default=None,
         choices=["oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"],
         help="Only used with UMA model",
     )
 
     parser.add_argument(
-        "--charge",
+        "--uma-charge",
         type=int,
         default=None,
-        help="Molecular charge only used with UMA model and --task omol",
+        help="Molecular charge only used with UMA model and --uma-task omol",
     )
 
     parser.add_argument(
-        "--spin",
+        "--uma-spin",
         type=int,
         default=None,
-        help="Spin multiplicity only used with UMA model and --task omol",
+        help="Spin multiplicity only used with UMA model and --uma-task omol",
     )
 
     args = parser.parse_args()
+    
+    model_name = Path(args.model).name.lower()
+    is_mace_mh = model_name.startswith("mace-mh")
 
-    if args.model.startswith("uma"):
+    if model_name.startswith("uma"):
         calculator = "uma"
-    elif args.model.startswith("mace"):
+    elif model_name.startswith("mace"):
         calculator = "mace"
     else:
         raise SystemExit(
             "--model must start with 'uma' for UMA or 'mace' for MACE"
         )
 
-    if calculator == "uma":
-        if args.task is None:
-            args.task = "omat"
-        if args.charge is None:
-            args.charge = 0
-        if args.spin is None:
-            args.spin = 1
-
     if calculator == "mace":
-        if args.task is not None:
-            parser.error("--task can only be used with UMA")
-        if args.charge is not None:
-            parser.error("--charge can only be used with UMA")
-        if args.spin is not None:
-            parser.error("--spin can only be used with UMA")
+        if args.uma_task is not None:
+            parser.error("--uma-task can only be used with UMA")
+        if args.uma_charge is not None:
+            parser.error("--uma-charge can only be used with UMA")
+        if args.uma_spin is not None:
+            parser.error("--uma-spin can only be used with UMA")
+        if args.mace_head is None and is_mace_mh:
+            args.mace_head = "omat_pbe"
+
+    if args.mace_head is not None and not is_mace_mh:
+        parser.error("--mace-head can only be used with MACE-MH models")
+
+    if calculator == "uma":
+        if args.uma_task is None:
+            args.uma_task = "omat"
+        if args.uma_charge is None:
+            args.uma_charge = 0
+        if args.uma_spin is None:
+            args.uma_spin = 1
 
     # Setup output paths
     outdir = Path(args.outdir)
@@ -135,16 +152,19 @@ def main():
         logger.info("[ERROR] Failed to load input structure for %s.", args.input)
         return 1
 
-    metadata_path = outdir / "metadata.json"
     metadata = {
+        "input": str(Path(args.input).resolve()),
+        "model": Path(args.model).name,
         "calculator": calculator,
         "fmax": args.fmax,
-        "task": args.task,
-        "charge": args.charge,
-        "spin": args.spin,
+        "mace_head": args.mace_head,
+        "uma_task": args.uma_task,
+        "uma_charge": args.uma_charge,
+        "uma_spin": args.uma_spin,
     }
-    metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-    logger.info("[INFO] Saved required calculation metadata for following visualizations and attacks to: %s", metadata_path)
+    root_metadata_path = REPO_ROOT / "previous_calculation.json"
+    root_metadata_path.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+    logger.info("[INFO] Saved required calculation metadata for following visualizations and attacks to: %s", root_metadata_path)
 
     # Setup calculator
     atoms = setup_calculator(
@@ -152,9 +172,10 @@ def main():
         args.model,
         args.device,
         calculator=calculator,
-        uma_task=args.task,
-        uma_charge=args.charge,
-        uma_spin=args.spin,
+        mace_head=args.mace_head,
+        uma_task=args.uma_task,
+        uma_charge=args.uma_charge,
+        uma_spin=args.uma_spin,
     )
 
     if atoms is None:

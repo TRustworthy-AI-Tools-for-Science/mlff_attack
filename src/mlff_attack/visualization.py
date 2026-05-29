@@ -14,6 +14,8 @@ from ase.io import read
 
 logger = logging.getLogger(__name__)
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
 
 def load_trajectory(traj_path):
     """Load a trajectory file and validate it exists.
@@ -368,7 +370,7 @@ def create_visualization(
     """
     # Extract data
     steps, energies, max_forces, volumes = extract_trajectory_data(traj)
-    metadata_path = Path(traj_path).with_name("metadata.json")
+    metadata_path = REPO_ROOT / "previous_calculation.json"
     if metadata_path.exists():
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         fmax = float(metadata.get("fmax", fmax))
