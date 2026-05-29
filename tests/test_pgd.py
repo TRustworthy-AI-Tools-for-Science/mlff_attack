@@ -1,23 +1,15 @@
 # refactored TestPGD_ASE from test_attacks.py to test_pgd.py - DC
 import pytest
-
-mace = pytest.importorskip(
-    "mace",
-    reason="test_pgd.py requires mace-torch dependencies (switch to virtual environment that supports MACE)",
-)
-
-import os
 import torch
 import numpy as np
 
 from ase import build
-from mace.calculators import mace_mp
 
 from mlff_attack.grad_based.pgd import PGD_ASE
 from mlff_attack.relaxation import setup_calculator
-from mlff_attack.attacks import save_perturbation, load_perturbation
 from mlff_attack.attacks import make_attack
 from pathlib import Path
+import os
 
 
 def create_dummy_atoms():
@@ -25,16 +17,39 @@ def create_dummy_atoms():
     return build.molecule("H2O")
 
 
-def dummy_model():
-    import mace
+def dummy_mace_model():
+    mace = pytest.importorskip(
+        "mace",
+        reason="test_pgd.py MACE tests require mace-torch dependencies",
+    )
+    from mace.calculators import mace_mp
+
     model = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
-    model.models = [m.to(dtype=torch.float32) for m in model.models]  # Ensure model tensors use float32
+    model.models = [m.to(dtype=torch.float32) for m in model.models]
     assert isinstance(model, mace.calculators.mace.MACECalculator)
     return model
 
 
-def test_init():
-    model = dummy_model()
+def dummy_uma_atoms():
+    pytest.importorskip(
+        "fairchem.core",
+        reason="test_pgd.py UMA tests require fairchem-core / UMA dependencies",
+    )
+    atoms = setup_calculator(
+        create_dummy_atoms(),
+        "uma-s-1p1",
+        device="cpu",
+        calculator="uma",
+        uma_task="omat",
+        uma_charge=0,
+        uma_spin=1,
+    )
+    assert atoms is not None
+    return atoms
+
+
+def test_init_mace():
+    model = dummy_mace_model()
     attack = PGD_ASE(model, epsilon=0.1, alpha=0.01, num_iter=10)
 
     assert attack.model == model
@@ -43,8 +58,18 @@ def test_init():
     assert attack.num_iter == 10
 
 
-def test_make_attack():
-    model = dummy_model()
+def test_init_uma():
+    atoms = dummy_uma_atoms()
+    attack = PGD_ASE(atoms.calc, epsilon=0.1, alpha=0.01, num_iter=10)
+
+    assert attack.model == atoms.calc
+    assert attack.epsilon == 0.1
+    assert attack.alpha == 0.01
+    assert attack.num_iter == 10
+
+
+def test_make_attack_mace():
+    model = dummy_mace_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
     output_cif = "perturbed_structure.cif"
 
@@ -58,6 +83,7 @@ def test_make_attack():
         n_steps=2,
         target_energy=None,
         clip=True,
+        calculator="mace",
     )
 
     assert Path(output_path).exists()
@@ -71,8 +97,43 @@ def test_make_attack():
     os.remove(output_cif)
 
 
-def test_attack_iterations():
-    model = dummy_model()
+def test_make_attack_uma():
+    pytest.importorskip(
+        "fairchem.core",
+        reason="test_pgd.py UMA tests require fairchem-core / UMA dependencies",
+    )
+    atoms = create_dummy_atoms()
+    output_cif = "perturbed_structure.cif"
+
+    output_path, perturbed_atoms, attack_details = make_attack(
+        atoms=atoms,
+        model_path="uma-s-1p1",
+        device="cpu",
+        output_cif=output_cif,
+        attack_type="pgd",
+        epsilon=0.1,
+        n_steps=2,
+        target_energy=None,
+        clip=True,
+        calculator="uma",
+        uma_task="omat",
+        uma_charge=0,
+        uma_spin=1,
+    )
+
+    assert Path(output_path).exists()
+    assert perturbed_atoms.get_positions().shape == atoms.get_positions().shape
+    assert attack_details is not None
+    assert 'energies' in attack_details
+    assert 'max_forces' in attack_details
+    assert 'perturbations' in attack_details
+    assert 'gradients' in attack_details
+
+    os.remove(output_cif)
+
+
+def test_attack_iterations_mace():
+    model = dummy_mace_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
     pgd = PGD_ASE(atoms.calc, device="cpu", epsilon=0.1, alpha=0.01, num_iter=5)
     num_iter = 5
@@ -83,8 +144,18 @@ def test_attack_iterations():
     assert len(pgd.attack_history["gradients"]) == pgd.num_iter
 
 
+def test_attack_iterations_uma():
+    atoms = dummy_uma_atoms()
+    pgd = PGD_ASE(atoms.calc, device="cpu", epsilon=0.1, alpha=0.01, num_iter=5)
+    perturbed_atoms = pgd.attack(atoms)
+
+    assert perturbed_atoms.get_positions().shape == atoms.get_positions().shape
+    assert len(pgd.attack_history["perturbations"]) == pgd.num_iter
+    assert len(pgd.attack_history["gradients"]) == pgd.num_iter
+
+
 def test_make_attack_defaults_clipping():
-    model = dummy_model()
+    model = dummy_mace_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
     epsilon = 0.2
@@ -103,7 +174,7 @@ def test_make_attack_defaults_clipping():
 
 
 def test_epsilon_bounds_displacement_with_L_infinity():
-    model = dummy_model()
+    model = dummy_mace_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
     epsilon = 0.2
@@ -125,8 +196,8 @@ def test_epsilon_bounds_displacement_with_L_infinity():
     assert np.all(np.abs(displacement) <= epsilon + 1e-6)
 
 
-def test_target_energy():
-    model = dummy_model()
+def test_target_energy_mace():
+    model = dummy_mace_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
     target_energy = atoms.get_potential_energy()
@@ -138,8 +209,20 @@ def test_target_energy():
     assert pgd.target_energy == target_energy
 
 
-def test_compute_gradient():
-    model = dummy_model()
+def test_target_energy_uma():
+    atoms = dummy_uma_atoms()
+
+    target_energy = atoms.get_potential_energy()
+
+    pgd = PGD_ASE(atoms.calc, device="cpu", epsilon=0.001, alpha=0.2, num_iter=3, target_energy=target_energy)
+    perturbed_atoms = pgd.attack(atoms, n_steps=3, clip=True)
+
+    assert perturbed_atoms.get_positions().shape == atoms.get_positions().shape
+    assert pgd.target_energy == target_energy
+
+
+def test_compute_gradient_mace():
+    model = dummy_mace_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
     pgd = PGD_ASE(atoms.calc, device="cpu", epsilon=0.1, alpha=0.01, num_iter=3)
@@ -149,8 +232,18 @@ def test_compute_gradient():
     assert np.all(np.isfinite(gradients))
 
 
+def test_compute_gradient_uma():
+    atoms = dummy_uma_atoms()
+
+    pgd = PGD_ASE(atoms.calc, device="cpu", epsilon=0.1, alpha=0.01, num_iter=3)
+    gradients = pgd.compute_gradient(atoms)
+
+    assert gradients.shape == atoms.get_positions().shape
+    assert np.all(np.isfinite(gradients))
+
+
 def test_random_start_is_within_epsilon():
-    model = dummy_model()
+    model = dummy_mace_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
     epsilon = 0.1
 
@@ -171,7 +264,7 @@ def test_random_start_is_within_epsilon():
 
 
 def test_attack_step():
-    model = dummy_model()
+    model = dummy_mace_model()
     atoms = setup_calculator(create_dummy_atoms(), model, device="cpu", dtype_str="float32")
 
     alpha = 0.01
