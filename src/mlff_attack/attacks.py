@@ -14,6 +14,8 @@ from ase import Atoms
 from ase.io import write
 
 from mlff_attack.relaxation import setup_calculator
+from mlff_attack.grad_based.fgsm import FGSM_ASE
+from mlff_attack.grad_based.pgd import PGD_ASE
 
 logger = logging.getLogger(__name__)
 
@@ -114,8 +116,6 @@ def make_attack(
             logger.info("   Mode: Maximize energy")
 
     if attack_type == "fgsm":
-        from mlff_attack.grad_based.fgsm import FGSM_ASE
-
         attack = FGSM_ASE(
             model=atoms.calc,
             epsilon=epsilon,
@@ -127,9 +127,6 @@ def make_attack(
     elif attack_type == "pgd":
         if alpha is None:
             alpha = epsilon / n_steps
-
-        from mlff_attack.grad_based.pgd import PGD_ASE
-
         attack = PGD_ASE(
             model=atoms.calc,
             epsilon=epsilon,

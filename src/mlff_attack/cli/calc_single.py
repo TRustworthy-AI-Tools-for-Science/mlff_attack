@@ -92,7 +92,7 @@ def main():
     )
 
     args = parser.parse_args()
-    
+
     if args.model.startswith("uma"):
         calculator = "uma"
     elif args.model.startswith("mace"):
@@ -101,7 +101,7 @@ def main():
         raise SystemExit(
             "--model must start with 'uma' for UMA or 'mace' for MACE"
         )
-    
+
     if calculator == "uma":
         if args.task is None:
             args.task = "omat"
