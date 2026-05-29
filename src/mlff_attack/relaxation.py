@@ -108,6 +108,13 @@ def setup_calculator(
                     uma_task,
                 )
 
+            if uma_charge is None:
+                uma_charge = 0
+            if uma_spin is None:
+                uma_spin = 1
+            atoms.info["charge"] = uma_charge
+            atoms.info["spin"] = uma_spin
+
             predictor = pretrained_mlip.get_predict_unit(model_id, device=device)
             atoms.calc = FAIRChemCalculator(predictor, task_name=uma_task)
             return atoms

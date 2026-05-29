@@ -59,15 +59,15 @@ calc-single --input <structure>.cif --model <uma-variant-version> --outdir <outp
 #### Command-line options
 
 - `--input`: Input CIF file (required).
-- `--model`: Path to MACE (include .model) or UMA (omit .pt) file (required).
+- `--model`: Path to MACE (filename starts with mace- and ends with .model) or UMA (filename starts with uma- and omit .pt) file (required).
 - `--outdir`: Output directory (required).
 - `--device`: Device to use (cuda or cpu, default: cpu).
 - `--fmax`: Force convergence criterion in eV/Å (default: 0.01).
 - `--max-steps`: Maximum relaxation steps (default: 300).
 - `--optimizer`: ASE optimizer to use (BFGS or LBFGS, default: LBFGS).
-- `--task`: UMA task/domain, only used with `--type uma` (default: `omat`).
-- `--charge`: Molecular charge, only used with `--type uma`.
-- `--spin`: Spin multiplicity, only used with `--type uma`.
+- `--task`: UMA task/domain, only used with UMA (default: `omat`).
+- `--charge`: Molecular charge, only used with UMA.
+- `--spin`: Spin multiplicity, only used with UMA.
 
 ### Visualizing trajectories
 
@@ -102,7 +102,7 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 
 - `--type`: Type of attack to perform, either `fgsm` or `pgd` (required).
 - `--input`: Path to the input structure file (CIF format) (required).
-- `--model`: Path to MACE (include .model) or UMA (omit .pt) file (required).
+- `--model`: Path to MACE (filename starts with mace- and ends with .model) or UMA (filename starts with uma- and omit .pt) file (required).
 - `--device`: Device to use for computations (cuda or cpu, default: cpu).
 - `--outdir`: Directory to save the results (required).
 - `--visualize`: Generate perturbation visualization plot (default: enabled).
@@ -171,7 +171,7 @@ visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
 ### UMA support
 
 - fairchem-core>=2.0.0
-- huggingface_hub"
+- huggingface_hub
 
 ## License
 
