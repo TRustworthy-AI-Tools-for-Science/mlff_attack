@@ -19,9 +19,9 @@ Attacks against MLFF Models - A Python package for testing and analyzing Machine
 
 | Model Name | Paper |
 | --- | --- |
-| MACE | [link](https://arxiv.org/abs/2206.07697) |
-| MACE-MH | [link](https://arxiv.org/pdf/2510.25380) |
-| UMA | [link](https://ai.meta.com/research/publications/uma-a-family-of-universal-models-for-atoms/) |
+| Message Passing Atomic Cluster Expansion (MACE) | [link](https://arxiv.org/abs/2206.07697) |
+| Multi-Head Message Passing Atomic Cluster Expansion (MACE-MH) | [link](https://arxiv.org/pdf/2510.25380) |
+| Universal Model for Atoms (UMA) | [link](https://ai.meta.com/research/publications/uma-a-family-of-universal-models-for-atoms/) |
 
 ## Installation
 
