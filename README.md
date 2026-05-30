@@ -13,12 +13,19 @@ Attacks against MLFF Models - A Python package for testing and analyzing Machine
 | --- | --- |
 | Fast Gradient Sign Method (FGSM) | [link](https://arxiv.org/abs/1412.6572) |
 | Iterative Fast Gradient Sign Method (I-FGSM) | [link](https://arxiv.org/abs/1607.02533) | 
-| Projected Gradient Method (PGD) | [link](https://arxiv.org/abs/1706.06083) |
+| Projected Gradient Descent (PGD) | [link](https://arxiv.org/abs/1706.06083) |
 
+### Models Supported
+
+| Model Name | Paper |
+| --- | --- |
+| MACE | [link](https://arxiv.org/abs/2206.07697) |
+| MACE-MH | [link](https://arxiv.org/pdf/2510.25380) |
+| UMA | [link](https://ai.meta.com/research/publications/uma-a-family-of-universal-models-for-atoms/) |
 
 ## Installation
 
-### From source (development mode)
+### Install from source (development mode)
 
 ```bash
 # Clone the repository
@@ -32,14 +39,15 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
-### Add MACE or UMA support
+### Install MACE or UMA support
 
-Install with MACE or UMA support (must be in separate Python environments to avoid conflicts)
+MACE and UMA should be installed in separate Python environments because their dependencies can conflict.
 
 ```bash
+# MACE support
 pip install -e ".[mace]"
 
-# UMA must be in Python <= 3.12
+# UMA support must be in Python <= 3.12 and requires access through Hugging Face
 pip install -e ".[uma]"
 hf auth login
 ```
@@ -48,13 +56,28 @@ hf auth login
 
 ### Running calculations
 
-After installation, you can use the `calc-single` commands for MACE or UMA calculations:
+After installation, you can use the `calc-single` commands for MACE, MACE-MH, or UMA calculations:
 
 ```bash
-calc-single --input <structure>.cif --model <mace-model>.model --outdir <output_directory>
+# MACE
+calc-single --input <structure>.cif --model mace-<model>.model --outdir <output_directory>
 
-calc-single --input <structure>.cif --model <uma-variant-version> --outdir <output_directory> --uma-task <task-name>
+# MACE-MH
+calc-single --input <structure>.cif --model mace-mh-<model>.model --outdir <output_directory> --mace-head <head-name>
+
+# UMA
+calc-single --input <structure>.cif --model uma-<variant> --outdir <output_directory> --uma-task <task-name> --uma-charge <charge> --uma-spin <spin>
 ```
+
+`calc-single` decides which calculator to use from the model name:
+
+#### Model Name Rules
+
+| Model type | Model name should start with | Extra options |
+| --- | --- | --- |
+| MACE | `mace` | none |
+| MACE-MH | `mace-mh` | `--mace-head` |
+| UMA | `uma` | `--uma-task`, `--uma-charge`, `--uma-spin` |
 
 #### Command-line options
 
@@ -65,10 +88,10 @@ calc-single --input <structure>.cif --model <uma-variant-version> --outdir <outp
 - `--fmax`: Force convergence criterion in eV/Å (default: 0.01).
 - `--max-steps`: Maximum relaxation steps (default: 300).
 - `--optimizer`: ASE optimizer to use (BFGS or LBFGS, default: LBFGS).
-- `--mace-head`: MACE-MH head, only used with MACE-MH (default: `omat_pbd`).
-- `--uma-task`: UMA task/domain, only used with UMA (default: `omat`).
-- `--uma-charge`: Molecular charge, only used with UMA.
-- `--uma-spin`: Spin multiplicity, only used with UMA.
+- `--mace-head`: MACE-MH head, only for MACE-MH (default: `omat_pbe`).
+- `--uma-task`: UMA task/domain, only for UMA (default: `omat`).
+- `--uma-charge`: Molecular charge, only for UMA.
+- `--uma-spin`: Spin multiplicity, only for UMA.
 
 ### Visualizing trajectories
 
@@ -82,6 +105,7 @@ This will generate a comprehensive plot showing:
 - Energy evolution during relaxation
 - Maximum force convergence
 - Volume changes
+- Noise spectrum of maximum forces
 - Summary statistics
 
 #### Visualization options
@@ -103,7 +127,7 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 
 - `--type`: Type of attack to perform, either `fgsm` or `pgd` (required).
 - `--input`: Path to the input structure file (CIF format) (required).
-- `--model`: Path to MACE (filename starts with mace- and ends with .model) or UMA (filename starts with uma- and omit .pt) file (required).
+- `--model`: Path to MACE (include .model) or UMA (omit .pt) file (required).
 - `--device`: Device to use for computations (cuda or cpu, default: cpu).
 - `--outdir`: Directory to save the results (required).
 - `--visualize`: Generate perturbation visualization plot (default: enabled).
@@ -113,6 +137,10 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 - `--n-steps`: Number of attack iterations (default: 1 for FGSM, >1 for PGD).
 - `--target-energy`: Target energy in eV (default: maximize the predicted energy).
 - `--clip`: Whether to clip perturbations to the epsilon bound. Pass `true` or `false`. If omitted, FGSM defaults to `false`; PGD defaults to `true` and rejects `false`.
+- `--mace-head`: MACE-MH head, only for MACE-MH (default: `omat_pbe`).
+- `--uma-task`: UMA task/domain, only for UMA (default: `omat`).
+- `--uma-charge`: Molecular charge, only for UMA.
+- `--uma-spin`: Spin multiplicity, only for UMA.
 
 #### Example usage
 
@@ -139,10 +167,10 @@ calc-single --input structure.cif --model mace-model.model --outdir output/
 visualize-traj --traj output/relaxed.traj --outdir output/ --show
 
 # Generate an attack
-make-attack --type fgsm --input structure.cif --outdir output_perturbed/
+make-attack --type fgsm --input structure.cif --model mace-model.model --outdir output_perturbed/
 
 # Run MACE relaxation on perturbed structure
-calc-single --input perturbed_structure.cif --model mace-model.model --outdir output_perturbed/
+calc-single --input structure_perturbed.cif --model mace-model.model --outdir output_perturbed/
 
 # Visualize the results of the attack
 visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
@@ -171,7 +199,7 @@ visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
 
 ### UMA support
 
-- fairchem-core>=2.0.0
+- fairchem-core >= 2.0.0
 - huggingface_hub
 
 ## License

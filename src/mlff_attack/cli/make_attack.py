@@ -24,7 +24,7 @@ def parse_args():
 
     parser.add_argument(
         "--input",
-        default="initial_cifs/chemistry_value_isovalent_0_05_18_traj.cif",
+        required=True,
         help="Path to input CIF file"
     )
 
@@ -43,7 +43,7 @@ def parse_args():
 
     parser.add_argument(
         "--outdir",
-        default=None,
+        required=True,
         help=(
             "Path to output directory "
             "(default: auto-generated from input with '_perturbed' suffix)"
