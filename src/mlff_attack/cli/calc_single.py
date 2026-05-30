@@ -142,6 +142,14 @@ def main():
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         encoding="utf-8",
     )
+    logger.info("Calculator: %s", calculator.upper())
+    if args.mace_head is not None:
+        logger.info("MACE-MH head: %s", args.mace_head)
+    if calculator == "uma":
+        logger.info("UMA task: %s", args.uma_task)
+        logger.info("UMA charge: %s", args.uma_charge)
+        logger.info("UMA spin: %s", args.uma_spin)
+
     traj_path = outdir / "relaxed.traj"
 
     # Load structure
