@@ -222,7 +222,7 @@ def main():
     logger.info("\nLoading structure from: %s", input_cif)
     atoms = load_structure(input_cif)
     if atoms is None:
-        logger.info("[ERROR] Failed to load structure from %s", input_cif)
+        logger.error("[error] Failed to load structure from %s", input_cif)
         return 1
 
     mace_head = args.mace_head
@@ -257,7 +257,7 @@ def main():
             uma_spin=uma_spin,
         )
     except (ValueError, NotImplementedError, RuntimeError) as exc:
-        logger.info("[ERROR] Failed to generate attack. Run calc-single first and use the same model to generate attack: %s", exc)
+        logger.error("[error] Failed to generate attack. Run calc-single first and use the same model to generate attack: %s", exc)
         return 1
 
     # Visualize perturbation

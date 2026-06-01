@@ -155,7 +155,7 @@ def main():
     # Load structure
     atoms = load_structure(args.input)
     if atoms is None:
-        logger.info("[ERROR] Failed to load input structure for %s.", args.input)
+        logger.error("[error] Failed to load input structure for %s.", args.input)
         return 1
 
     atoms.info["fmax"] = args.fmax
@@ -190,7 +190,7 @@ def main():
     )
 
     if not success:
-        logger.info("[ERROR] Relaxation failed.")
+        logger.error("[error] Relaxation failed.")
         return 1
 
     # Save results

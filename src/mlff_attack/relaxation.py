@@ -5,10 +5,10 @@ MACE and UMA relaxation functionality.
 
 import logging
 from pathlib import Path
-import torch
 
 from ase.io import read, write
 from ase.optimize import BFGS, LBFGS
+from mlff_attack.calculator import mace_calculator, uma_calculator
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def load_structure(input_path):
         logger.info("[INFO] Chemical formula: %s", atoms.get_chemical_formula())
         return atoms
     except (OSError, ValueError, RuntimeError) as exc:
-        logger.info("[ERROR] Failed to load structure from %s: %s", input_path, exc)
+        logger.error("[error] Failed to load structure from %s: %s", input_path, exc)
         return None
 
 
@@ -89,113 +89,40 @@ def setup_calculator(
         ASE Atoms object with calculator attached, or None if setup fails
     """
     try:
-        model_id = str(model_path)
         if calculator not in {None, "mace", "uma"}:
-            logger.info(
-                "[ERROR] Invalid calculator '%s'. Use 'mace' or 'uma'.",
-                calculator,
-            )
-            return None
+            logger.error("[ERROR] Invalid calculator '%s'. Use 'mace' or 'uma'.", calculator)
+            atoms = None
 
-        if calculator == "uma":
+        elif calculator == "uma":
             if mace_head is not None:
-                logger.info("[ERROR] mace_head can only be used with MACE-MH models")
-                return None
-            try:
-                from fairchem.core import pretrained_mlip, FAIRChemCalculator
-            except ImportError:
-                logger.info(
-                    "[ERROR] UMA requires fairchem-core. Install it with: pip install -e \".[uma]\""
-                )
-                return None
-
-            valid_uma_tasks = {"oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"}
-            if uma_task not in valid_uma_tasks:
-                logger.info(
-                    "[ERROR] Invalid UMA uma_task '%s'. Choose one of: %s",
-                    uma_task,
-                    ", ".join(sorted(valid_uma_tasks)),
-                )
-                return None
-
-            if verbose:
-                logger.info(
-                    "[INFO] Loading UMA model: %s on %s with uma_task=%s",
-                    model_id,
-                    device,
-                    uma_task,
+                logger.error("[ERROR] mace_head can only be used with MACE-MH models")
+                atoms = None
+            else:
+                atoms = uma_calculator(
+                    atoms,
+                    model_path,
+                    device=device,
+                    verbose=verbose,
+                    uma_task=uma_task,
+                    uma_charge=uma_charge,
+                    uma_spin=uma_spin,
                 )
 
-            if uma_charge is None:
-                uma_charge = 0
-            if uma_spin is None:
-                uma_spin = 1
-            atoms.info["charge"] = uma_charge
-            atoms.info["spin"] = uma_spin
-
-            predictor = pretrained_mlip.get_predict_unit(model_id, device=device)
-            atoms.calc = FAIRChemCalculator(predictor, task_name=uma_task)
-            return atoms
-
-        # if calculator == "mace"
-        try:
-            import mace
-            from mace.calculators import mace as mace_calculator
-        except ImportError:
-            logger.info(
-                "[ERROR] MACE requires mace-torch. Install it with: pip install -e \".[mace]\""
-            )
-            return None
-
-        if isinstance(model_path, mace.calculators.mace.MACECalculator):
-            if verbose:
-                logger.info("[INFO] Model is already a MACECalculator")
-            if mace_head is not None:
-                if not hasattr(model_path, "heads") or model_path.heads is None:
-                    logger.info("[ERROR] mace_head can only be used with MACE-MH models")
-                    return None
-                if mace_head not in model_path.heads:
-                    logger.info(
-                        "[ERROR] Invalid MACE-MH head '%s'. Choose one of: %s",
-                        mace_head,
-                        ", ".join(model_path.heads),
-                    )
-                    return None
-                model_path.head = mace_head
-            atoms.calc = model_path
         else:
-            # Patch to prevent atoms and models from having different datatypes
-            if dtype_str == "float32":
-                dtype = torch.float32
-            else:
-                dtype = torch.float64
-
-            model_name = Path(model_id).name.lower()
-            if mace_head is not None and not model_name.startswith("mace-mh"):
-                logger.info("[ERROR] mace_head can only be used with MACE-MH models")
-                return None
-
-            if verbose:
-                logger.info("[INFO] Loading MACE model: %s on %s", model_path, device)
-
-            if mace_head is None:
-                atoms.calc = mace_calculator.MACECalculator(
-                    model_paths=model_path,
-                    device=device,
-                    default_dtype=dtype,
-                )
-            else:
-                atoms.calc = mace_calculator.MACECalculator(
-                    model_paths=model_path,
-                    device=device,
-                    default_dtype=dtype,
-                    head=mace_head,
-                )
-        return atoms
+            atoms = mace_calculator(
+                atoms,
+                model_path,
+                device=device,
+                dtype_str=dtype_str,
+                verbose=verbose,
+                mace_head=mace_head,
+            )
 
     except (OSError, TypeError, ValueError, RuntimeError, KeyError) as exc:
-        logger.info("[ERROR] Failed to setup calculator: %s", exc)
-        return None
+        logger.error("[ERROR] Failed to setup calculator: %s", exc)
+        atoms = None
+
+    return atoms
 
 
 def get_optimizer_class(optimizer_name):
@@ -314,7 +241,7 @@ def run_relaxation(
 
         return True
     except (OSError, ValueError, RuntimeError) as exc:
-        logger.info("[ERROR] Relaxation failed: %s", exc)
+        logger.error("[error] Relaxation failed: %s", exc)
         return False
 
 
@@ -345,5 +272,5 @@ def save_results(atoms, output_dir, base_name="relaxed"):
 
         return cif_path
     except (OSError, ValueError, RuntimeError) as exc:
-        logger.info("[ERROR] Failed to save results: %s", exc)
+        logger.error("[error] Failed to save results: %s", exc)
         return None
