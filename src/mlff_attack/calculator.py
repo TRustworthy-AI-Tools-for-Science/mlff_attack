@@ -16,6 +16,7 @@ def mace_calculator(
     verbose=False,
     mace_head=None,
 ):
+    """Initialize and attach a MACE calculator to an atoms object."""
     try:
         import mace
         from mace.calculators import mace as mace_calculator # TODO: import at the top if venv is fixed - DC
@@ -41,6 +42,7 @@ def mace_calculator(
                 return None
             model_path.head = mace_head
         atoms.calc = model_path
+
     else:
         # Patch to prevent atoms and models from having different datatypes
         if dtype_str == "float32":
@@ -82,6 +84,7 @@ def uma_calculator(
     uma_charge=None,
     uma_spin=None,
 ):
+    """Initialize and attach a UMA calculator to an atoms object."""
     try:
         from fairchem.core import pretrained_mlip, FAIRChemCalculator # TODO: import at the top if venv is fixed - DC
     except ImportError:
@@ -98,7 +101,7 @@ def uma_calculator(
             ", ".join(sorted(valid_uma_tasks)),
         )
         return None
-    
+
     model_id = str(model_path)
 
     if verbose:

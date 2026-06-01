@@ -99,7 +99,7 @@ def main():
     )
 
     args = parser.parse_args()
-    
+
     model_name = Path(args.model).name.lower()
     is_mace_mh = model_name.startswith("mace-mh")
 

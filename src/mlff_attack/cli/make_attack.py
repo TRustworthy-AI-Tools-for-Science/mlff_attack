@@ -161,7 +161,7 @@ def main():
         raise SystemExit(
             "--model basename must start with 'uma' for UMA or 'mace' for MACE"
         )
-    
+
     if calculator == "mace":
         if args.uma_task is not None:
             raise SystemExit("--uma-task can only be used with UMA")
