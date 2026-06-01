@@ -69,16 +69,6 @@ calc-single --input <structure>.cif --model mace-mh-<model>.model --outdir <outp
 calc-single --input <structure>.cif --model uma-<variant> --outdir <output_directory> --uma-task <task-name> --uma-charge <charge> --uma-spin <spin>
 ```
 
-`calc-single` decides which calculator to use from the model name:
-
-#### Model Name Rules
-
-| Model type | Model name should start with | Extra options |
-| --- | --- | --- |
-| MACE | `mace` | none |
-| MACE-MH | `mace-mh` | `--mace-head` |
-| UMA | `uma` | `--uma-task`, `--uma-charge`, `--uma-spin` |
-
 #### Command-line options
 
 - `--input`: Input CIF file (required).
