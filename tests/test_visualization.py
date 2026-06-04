@@ -1,5 +1,3 @@
-"""Unit tests for visualization functions in mlff_attack.cli.visualize_traj."""
-import pytest
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np

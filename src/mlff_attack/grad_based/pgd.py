@@ -1,24 +1,17 @@
-"""Projected Gradient Descent (PGD) attack implementation for MLFF models.
-
-This module implements the PGD update used by Madry et al.:
-take a signed gradient step and project the perturbed input back into the
-allowed epsilon-neighborhood of the original input.
-"""
+"""Projected Gradient Descent (PGD) attack implementation for MLFF models."""
 
 import logging
 from typing import Any, Callable, Optional
 
 import numpy as np
 
-import torch
-from mace.data import AtomicData, config_from_atoms
-
 from mlff_attack.grad_based.mlff_attack_class import MLFFAttack
 
 logger = logging.getLogger(__name__)
 
-class PGD_MACE(MLFFAttack):
-    """Projected Gradient Descent attack for MACE force field models."""
+
+class PGD_ASE(MLFFAttack):
+    """Projected Gradient Descent attack for ASE-compatible MLFF calculators."""
 
     def __init__(
         self,
@@ -26,24 +19,38 @@ class PGD_MACE(MLFFAttack):
         epsilon: float,
         alpha: float,
         num_iter: int,
-        device: str = 'cpu',
+        device: str = "cpu",
         track_history: bool = True,
         target_energy: Optional[float] = None,
         random_start: bool = False,
         rng: Optional[np.random.Generator] = None,
     ):
-        """Initialize the PGD attack.
+        """Initialize the unified PGD attack.
 
-        Args:
-            model: MLFF model with calculator interface
-            epsilon: Maximum absolute displacement per coordinate under L-infinity
-            alpha: Step size for each iteration
-            num_iter: Number of attack iterations
-            device: Device for PyTorch computations
-            track_history: Whether to track attack progression
-            target_energy: Optional target energy objective
-            random_start: Whether to initialize inside the epsilon ball
-            rng: Optional NumPy random generator for deterministic starts
+        Parameters
+        ----------
+        model : Any
+            ASE-compatible calculator. This may be a MACE calculator, UMA
+            calculator, or another calculator that provides energies and forces.
+        epsilon : float
+            Maximum absolute displacement per coordinate under L-infinity.
+        alpha : float
+            Signed-gradient step size for each PGD iteration.
+        num_iter : int
+            Default number of PGD iterations.
+        device : str, optional
+            Device for MACE torch computations, by default "cpu".
+        track_history : bool, optional
+            Whether to track energies, forces, perturbations, and gradients,
+            by default True.
+        target_energy : Optional[float], optional
+            Optional target energy. If None, maximize energy, by default None.
+        random_start : bool, optional
+            Whether to initialize randomly inside the epsilon box, by default
+            False.
+        rng : Optional[np.random.Generator], optional
+            Optional NumPy random generator for deterministic random starts, by
+            default None.
         """
         super().__init__(
             model=model,
@@ -59,14 +66,49 @@ class PGD_MACE(MLFFAttack):
         self.random_start = random_start
         self.rng = rng if rng is not None else np.random.default_rng()
 
+    def _uses_mace_autograd(self, atoms: Any) -> bool:
+        """Return True when the attached calculator looks like a MACE calculator.
+
+        MACE calculators expose ``models``, ``z_table``, and ``r_max``. UMA does
+        not expose this same batch-building interface, so UMA falls through to
+        the generic ASE-force backend.
+        """
+        calc = getattr(atoms, "calc", None)
+        return all(hasattr(calc, attr) for attr in ("models", "z_table", "r_max"))
+
     def _forward_pass_with_gradients(self, atoms: Any) -> tuple:
+        """Perform a differentiable forward pass through a MACE model.
+
+        This method is only used for MACE calculators. It recreates the MACE
+        atomic batch, replaces the position tensor with a gradient-enabled
+        tensor, evaluates the model energy, and computes forces via torch
+        autograd.
+
+        Parameters
+        ----------
+        atoms : Any
+            ASE Atoms object with a MACE calculator attached.
+
+        Returns
+        -------
+        tuple
+            ``(energy, forces, positions)`` where ``energy`` is a scalar torch
+            tensor, ``forces`` has shape ``(n_atoms, 3)``, and ``positions`` is
+            the gradient-enabled torch position tensor. The computation graph is
+            retained so callers can call ``loss.backward()`` afterward.
+        """
+        import torch
+        from mace.data import AtomicData, config_from_atoms
+
         calc = atoms.calc
         model = calc.models[0]
         positions_np = atoms.get_positions()
 
         config = config_from_atoms(atoms)
         atomic_data = AtomicData.from_config(
-            config, z_table=calc.z_table, cutoff=calc.r_max
+            config,
+            z_table=calc.z_table,
+            cutoff=calc.r_max,
         )
         batch = atomic_data.to_dict()
 
@@ -78,12 +120,19 @@ class PGD_MACE(MLFFAttack):
                     batch[key] = batch[key].to(model_dtype)
 
         if "batch" not in batch:
-            batch["batch"] = torch.zeros(len(atoms), dtype=torch.long, device=self.device)
+            batch["batch"] = torch.zeros(
+                len(atoms), dtype=torch.long, device=self.device
+            )
         if "ptr" not in batch:
-            batch["ptr"] = torch.tensor([0, len(atoms)], dtype=torch.long, device=self.device)
+            batch["ptr"] = torch.tensor(
+                [0, len(atoms)], dtype=torch.long, device=self.device
+            )
 
         positions = torch.tensor(
-            positions_np, dtype=model_dtype, device=self.device, requires_grad=True
+            positions_np,
+            dtype=model_dtype,
+            device=self.device,
+            requires_grad=True,
         )
         batch["positions"] = positions
 
@@ -91,11 +140,15 @@ class PGD_MACE(MLFFAttack):
             natoms_val = batch["natoms"]
             if natoms_val.dim() == 0:
                 batch["natoms"] = torch.tensor(
-                    [len(atoms), len(atoms)], dtype=torch.long, device=self.device
+                    [len(atoms), len(atoms)],
+                    dtype=torch.long,
+                    device=self.device,
                 )
             elif natoms_val.dim() == 1 and len(natoms_val) < 2:
                 batch["natoms"] = torch.tensor(
-                    [len(atoms), len(atoms)], dtype=torch.long, device=self.device
+                    [len(atoms), len(atoms)],
+                    dtype=torch.long,
+                    device=self.device,
                 )
         else:
             batch["natoms"] = torch.tensor(
@@ -111,12 +164,13 @@ class PGD_MACE(MLFFAttack):
                 (len(atoms),), head_idx, dtype=torch.long, device=self.device
             )
         elif "head" not in batch:
-            batch["head"] = torch.zeros(len(atoms), dtype=torch.long, device=self.device)
+            batch["head"] = torch.zeros(
+                len(atoms), dtype=torch.long, device=self.device
+            )
 
         model.eval()
 
         with torch.enable_grad():
-            positions.requires_grad_(True)
             batch["positions"] = positions
             output = model(batch, training=False, compute_force=False)
 
@@ -138,27 +192,44 @@ class PGD_MACE(MLFFAttack):
         atoms: Any,
         loss_fn: Optional[Callable] = None,
     ) -> np.ndarray:
-        energy, _forces, positions = self._forward_pass_with_gradients(atoms)
+        """Compute the gradient of the attack loss with respect to positions."""
+        if self._uses_mace_autograd(atoms):
+            energy, _forces, positions = self._forward_pass_with_gradients(atoms)
+
+            if loss_fn is not None:
+                loss = loss_fn(energy)
+            elif self.target_energy is not None:
+                loss = -(energy - self.target_energy) ** 2
+            else:
+                loss = energy
+
+            loss.backward()
+            grad_positions = positions.grad
+            if grad_positions is None:
+                raise RuntimeError(
+                    "Gradient did not flow to positions; check model differentiability."
+                )
+
+            self._last_energy = energy.item()
+            self._last_gradients = grad_positions.detach().cpu().numpy()
+            return self._last_gradients
 
         if loss_fn is not None:
-            loss = loss_fn(energy)
-        elif self.target_energy is not None:
-            # Try to reach target energy (minimize squared error)
-            loss = -(energy - self.target_energy) ** 2
-        else:
-            loss = energy
-
-        loss.backward()
-        grad_positions = positions.grad
-        if grad_positions is None:
-            raise RuntimeError(
-                "Gradient did not flow to positions; check model differentiability."
+            raise NotImplementedError(
+                "Custom torch loss_fn is not supported for ASE-force attacks."
             )
 
-        self._last_energy = energy.item()
-        self._last_gradients = grad_positions.detach().cpu().numpy()
+        energy = float(atoms.get_potential_energy())
+        forces = np.asarray(atoms.get_forces(), dtype=float)
 
-        return self._last_gradients
+        if self.target_energy is None:
+            gradients = -forces
+        else:
+            gradients = -2.0 * (energy - self.target_energy) * forces
+
+        self._last_energy = energy
+        self._last_gradients = gradients
+        return gradients
 
     def attack_step(
         self,
@@ -166,44 +237,20 @@ class PGD_MACE(MLFFAttack):
         step: int = 0,
         loss_fn: Optional[Callable] = None,
     ) -> Any:
-        """Perform one step of the PGD adversarial attack.
-
-        Args:
-            atoms: Current atomic structure
-            step: Current iteration number
-            loss_fn: Optional custom loss function
-
-        Returns:
-            Updated atomic structure after one attack step
-        """
-        if loss_fn is None:
-            gradients = self.compute_gradient(atoms)
-        else:
-            gradients = self.compute_gradient(atoms, loss_fn=loss_fn)
-        direction = -1 if self.target_energy is not None else 1
+        """Perform one PGD signed-gradient step."""
+        gradients = self.compute_gradient(atoms, loss_fn=loss_fn)
+        direction = -1.0 if self.target_energy is not None else 1.0
         perturbation = direction * self.alpha * np.sign(gradients)
 
         perturbed_atoms = atoms.copy()
         perturbed_atoms.set_positions(atoms.get_positions() + perturbation)
         perturbed_atoms.calc = atoms.calc
 
-        if self.track_history:
-            try:
-                perturbed_energy = perturbed_atoms.get_potential_energy()
-                forces = perturbed_atoms.get_forces()
-                max_force = np.max(np.linalg.norm(forces, axis=1))
-
-                self.attack_history['energies'].append(perturbed_energy)
-                self.attack_history['max_forces'].append(max_force)
-                self.attack_history['perturbations'].append(perturbation.copy())
-                self.attack_history['gradients'].append(gradients.copy())
-            except (ValueError, RuntimeError):
-                pass
-
+        self._record_history(perturbed_atoms, perturbation, gradients)
         return perturbed_atoms
 
     def _random_start(self, atoms: Any) -> Any:
-        """Return a copy of atoms randomly initialized inside the L-infinity epsilon box."""
+        """Return atoms randomly initialized inside the L-infinity epsilon box."""
         perturbation = self.rng.uniform(
             low=-self.epsilon,
             high=self.epsilon,
@@ -223,18 +270,7 @@ class PGD_MACE(MLFFAttack):
         random_start: Optional[bool] = None,
         loss_fn: Optional[Callable] = None,
     ) -> Any:
-        """Execute the full PGD attack over the specified number of iterations.
-
-        Args:
-            atoms: Input atomic structure with attached calculator
-            n_steps: Optional override for ``num_iter``
-            clip: Whether to project perturbations within the epsilon ball, by default and always True
-            random_start: Optional override for random initialization
-            loss_fn: Optional custom loss function
-
-        Returns:
-            Final perturbed atomic structure after all attack iterations
-        """
+        """Execute PGD over multiple iterations."""
         if clip is None:
             clip = True
         elif clip is False:
@@ -249,8 +285,7 @@ class PGD_MACE(MLFFAttack):
         use_random_start = self.random_start if random_start is None else random_start
         if use_random_start:
             perturbed_atoms = self._random_start(perturbed_atoms)
-            if clip:
-                self._clip_perturbations(perturbed_atoms)
+            self._clip_perturbations(perturbed_atoms)
 
         total_steps = self.num_iter if n_steps is None else n_steps
         for step in range(total_steps):
@@ -259,25 +294,48 @@ class PGD_MACE(MLFFAttack):
                 step=step,
                 loss_fn=loss_fn,
             )
-            if clip:
-                self._clip_perturbations(perturbed_atoms)
-                if self.target_energy is not None:
-                    try:
-                        current_energy = perturbed_atoms.get_potential_energy()
-                        energy_diff = abs(current_energy - self.target_energy)
-                        if energy_diff < 0.01:  # Within 0.01 eV of target
-                            logger.info(
-                                "Target energy reached at step %s: %.4f eV "
-                                "(target: %.4f eV)",
-                                step + 1,
-                                current_energy,
-                                self.target_energy,
-                            )
-                            break
-                    except (ValueError, RuntimeError):
-                        pass
+            self._clip_perturbations(perturbed_atoms)
+
+            if self.target_energy is not None:
+                try:
+                    current_energy = perturbed_atoms.get_potential_energy()
+                    energy_diff = abs(current_energy - self.target_energy)
+                    if energy_diff < 0.01:
+                        logger.info(
+                            "Target energy reached at step %s: %.4f eV "
+                            "(target: %.4f eV)",
+                            step + 1,
+                            current_energy,
+                            self.target_energy,
+                        )
+                        break
+                except (ValueError, RuntimeError):
+                    pass
+
         self._perturbed_positions = perturbed_atoms.get_positions().copy()
         return perturbed_atoms
+
+    def _record_history(
+        self,
+        atoms: Any,
+        perturbation: np.ndarray,
+        gradients: np.ndarray,
+    ) -> None:
+        """Record energy, force, perturbation, and gradient history."""
+        if not self.track_history:
+            return
+
+        try:
+            energy = float(atoms.get_potential_energy())
+            forces = np.asarray(atoms.get_forces(), dtype=float)
+            max_force = float(np.max(np.linalg.norm(forces, axis=1)))
+        except (ValueError, RuntimeError):
+            return
+
+        self.attack_history["energies"].append(energy)
+        self.attack_history["max_forces"].append(max_force)
+        self.attack_history["perturbations"].append(perturbation.copy())
+        self.attack_history["gradients"].append(gradients.copy())
 
     def _reset_history(self) -> None:
         """Clear tracked attack history."""

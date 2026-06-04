@@ -26,41 +26,69 @@ classifiers = [
 ]
 dependencies = [
     "ase>=3.22.0",
-    "mace-torch>=0.3.0",
     "torch>=2.0.0",
     "matplotlib>=3.5.0",
     "numpy>=1.20.0",
+    "scipy>=1.7.0",
+    "pandas>=1.3.0",
+    "tqdm>=4.60.0",
+    "seaborn",
     "spglib",
     "mp_api",
-    "seaborn",
-    "ipywidgets",
-    "jupyterlab",
-    "pandas"
 ]
 
 [project.optional-dependencies]
+mace = [
+    "mace-torch>=0.3.0",
+]
+
+uma = [
+    "fairchem-core>=2.0.0,<3.0.0",
+    "huggingface_hub",
+]
+
+
+notebooks = [
+    "jupyterlab>=3.0",
+    "ipywidgets>=8.0",
+    "ipykernel",
+]
+
 dev = [
     "pytest",
     "pytest-cov",
+    "pylint",
     "black>=22.0",
     "flake8>=5.0",
     "mypy>=0.990",
     "ipython",
-    "ipykernel",
-    "sphinx"
-]
-
-uma = [
-    "fairchem-core>=2.0.0",
-    "huggingface_hub",
+    "sphinx",
+    "furo",
 ]
 
 [project.scripts]
-mace-calc-single = "mlff_attack.cli.mace_calc_single:main"
-uma-calc-single = "mlff_attack.cli.uma_calc_single:main"
+calc-single    = "mlff_attack.cli.calc_single:main"
 visualize-traj = "mlff_attack.cli.visualize_traj:main"
-make-attack = "mlff_attack.cli.make_attack:main"
+make-attack    = "mlff_attack.cli.make_attack:main"
+# Phase-space CLI entry points (BUG-001): modules not yet committed to the package.
+# Uncomment when mlff_attack.cli.{phase_space_to_csv,analyze_phase_space,
+# mace_analysis,create_plots,run_pipeline} exist:
+# phase-space-to-csv       = "mlff_attack.cli.phase_space_to_csv:main"
+# analyze-phase-space      = "mlff_attack.cli.analyze_phase_space:main"
+# mace-analysis            = "mlff_attack.cli.mace_analysis:main"
+# create-plots             = "mlff_attack.cli.create_plots:main"
+# run-phase-space-pipeline = "mlff_attack.cli.run_pipeline:main"
 
 [project.urls]
-Homepage = "https://trustworthy-ai-tools-for-science.github.io/mlff_attack/"
+Homepage   = "https://trustworthy-ai-tools-for-science.github.io/mlff_attack/"
 Repository = "https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack"
+
+[tool.uv]
+managed = true
+# mace-torch pins e3nn==0.4.4; fairchem-core requires e3nn>=0.5.
+# mace-torch 0.3.x uses e3nn internals that break at runtime with e3nn>=0.5,
+# so these extras cannot share a single resolved environment.
+# Install one at a time: `uv sync --extra mace` or `uv sync --extra uma`.
+conflicts = [
+  [{ extra = "mace" }, { extra = "uma" }],
+]

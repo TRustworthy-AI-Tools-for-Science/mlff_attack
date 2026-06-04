@@ -29,7 +29,7 @@ def calculate_spectral_flatness(signal):
         arithmetic_mean = np.mean(np.abs(signal) + 1e-10)
         spectral_flatness = geometric_mean / arithmetic_mean
     except ValueError as exc:
-        logger.info("[ERROR] Failed to calculate spectral flatness: %s", exc)
+        logger.error("[ERROR] Failed to calculate spectral flatness: %s", exc)
         spectral_flatness = np.nan
 
     return spectral_flatness

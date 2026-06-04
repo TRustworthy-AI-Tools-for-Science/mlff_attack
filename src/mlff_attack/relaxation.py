@@ -6,11 +6,9 @@ MACE and UMA relaxation functionality.
 import logging
 from pathlib import Path
 
-import mace
 from ase.io import read, write
 from ase.optimize import BFGS, LBFGS
-from mace.calculators import mace as mace_calculator
-import torch
+from mlff_attack.calculator import mace_calculator, uma_calculator
 
 logger = logging.getLogger(__name__)
 
@@ -35,39 +33,55 @@ def load_structure(input_path):
         logger.info("[INFO] Chemical formula: %s", atoms.get_chemical_formula())
         return atoms
     except (OSError, ValueError, RuntimeError) as exc:
-        logger.info("[ERROR] Failed to load structure from %s: %s", input_path, exc)
+        logger.error("[error] Failed to load structure from %s: %s", input_path, exc)
         return None
 
 
 def setup_calculator(
     atoms,
     model_path,
-    device="cuda",
+    device="cpu",
     dtype_str="float64",
     verbose=False,
-    uma_task_name="omat",
+    calculator=None,
+    mace_head=None,
+    uma_task="omat",
     uma_charge=None,
-    uma_spin=None
+    uma_spin=None,
 ):
-    """Initialize and attach MACE or UMA calculator to atoms object.
-
-    This supports two model types:
+    """Initialize and attach a MACE or UMA calculator to an atoms object.
 
     - MACE models: pass a local model path, like "mace-mpa-0-medium.model"
-    - UMA models: pass a UMA model name, like "uma-s-1p2"
+    - MACE-MH models: pass a local multihead model path, like "mace-mh-1.model",
+      and optionally select a head with mace_head, like "omat_pbe"
+    - UMA models: pass a UMA model name, like "uma-s-1p1"
 
     Parameters
     ----------
     atoms : ase.Atoms
         ASE Atoms object
     model_path : str or Path or MACECalculator
-        Path to MACE model file or existing MACECalculator instance, or a UMA model name
+        Path to a MACE/MACE-MH model file, an existing MACECalculator instance,
+        or a UMA model name
     device : str, optional
-        Device to use (cuda or cpu), by default "cuda"
+        Device to use (cuda or cpu), by default "cpu"
     dtype_str : str, optional
-        Data type for MACE calculations ("float32" or "float64"), by default "float64"
+        Data type for MACE and MACE-MH calculations ("float32" or "float64"),
+        by default "float64"
     verbose : bool, optional
         Whether to print detailed information, by default False
+    calculator : str or None, optional
+        Calculator type to use: "mace", "uma", or None, by default None
+    mace_head : str or None, optional
+        MACE-MH prediction head to use, such as "omat_pbe". Only valid for
+        multihead MACE models. If None, no head is passed and regular MACE
+        behavior is unchanged.
+    uma_task : str, optional
+        UMA task/domain to use, such as "omat" or "omol", by default "omat"
+    uma_charge : int or None, optional
+        Molecular charge for UMA molecular tasks, by default None
+    uma_spin : int or None, optional
+        Spin multiplicity for UMA molecular tasks, by default None
 
     Returns
     -------
@@ -75,65 +89,40 @@ def setup_calculator(
         ASE Atoms object with calculator attached, or None if setup fails
     """
     try:
-        model_id = str(model_path)
+        if calculator not in {None, "mace", "uma"}:
+            logger.error("[ERROR] Invalid calculator '%s'. Use 'mace' or 'uma'.", calculator)
+            atoms = None
 
-        if model_id.startswith("uma-"):
-            try:
-                from fairchem.core import pretrained_mlip, FAIRChemCalculator
-            except ImportError:
-                logger.info(
-                    "[ERROR] UMA requires fairchem-core. Install it with: pip install -e \".[uma]\""
-                )
-                return None
-
-            valid_uma_tasks = {"oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"}
-            if uma_task_name not in valid_uma_tasks:
-                logger.info(
-                    "[ERROR] Invalid UMA task_name '%s'. Choose one of: %s",
-                    uma_task_name,
-                    ", ".join(sorted(valid_uma_tasks)),
-                )
-                return None
-
-            if uma_task_name == "omol":
-                atoms.info["charge"] = uma_charge if uma_charge is not None else 0
-                atoms.info["spin"] = uma_spin if uma_spin is not None else 1
-
-            if verbose:
-                logger.info(
-                    "[INFO] Loading UMA model: %s on %s with task_name=%s",
-                    model_id,
-                    device,
-                    uma_task_name,
-                )
-
-            predictor = pretrained_mlip.get_predict_unit(model_id, device=device)
-            atoms.calc = FAIRChemCalculator(predictor, task_name=uma_task_name)
-            return atoms
-
-        if isinstance(model_path, mace.calculators.mace.MACECalculator):
-            if verbose:
-                logger.info("[INFO] Model is already a MACECalculator")
-            atoms.calc = model_path
-        else:
-            # Patch to prevent atoms and models from having different datatypes
-            if dtype_str == "float32":
-                dtype = torch.float32
+        elif calculator == "uma":
+            if mace_head is not None:
+                logger.error("[ERROR] mace_head can only be used with MACE-MH models")
+                atoms = None
             else:
-                dtype = torch.float64
+                atoms = uma_calculator(
+                    atoms,
+                    model_path,
+                    device=device,
+                    verbose=verbose,
+                    uma_task=uma_task,
+                    uma_charge=uma_charge,
+                    uma_spin=uma_spin,
+                )
 
-            if verbose:
-                logger.info("[INFO] Loading MACE model: %s on %s", model_path, device)
-            atoms.calc = mace_calculator.MACECalculator(
-                model_paths=model_path,
+        else:
+            atoms = mace_calculator(
+                atoms,
+                model_path,
                 device=device,
-                default_dtype=dtype
+                dtype_str=dtype_str,
+                verbose=verbose,
+                mace_head=mace_head,
             )
-        return atoms
 
-    except (OSError, ValueError, RuntimeError) as exc:
-        logger.info("[ERROR] Failed to setup calculator: %s", exc)
-        return None
+    except (OSError, TypeError, ValueError, RuntimeError, KeyError) as exc:
+        logger.error("[ERROR] Failed to setup calculator: %s", exc)
+        atoms = None
+
+    return atoms
 
 
 def get_optimizer_class(optimizer_name):
@@ -162,7 +151,7 @@ def run_relaxation(
     optimizer="LBFGS",
     verbose=True,
     checkpoint_interval=None,
-    checkpoint_dir=None
+    checkpoint_dir=None,
 ):
     """Run structural relaxation.
 
@@ -252,7 +241,7 @@ def run_relaxation(
 
         return True
     except (OSError, ValueError, RuntimeError) as exc:
-        logger.info("[ERROR] Relaxation failed: %s", exc)
+        logger.error("[error] Relaxation failed: %s", exc)
         return False
 
 
@@ -283,5 +272,5 @@ def save_results(atoms, output_dir, base_name="relaxed"):
 
         return cif_path
     except (OSError, ValueError, RuntimeError) as exc:
-        logger.info("[ERROR] Failed to save results: %s", exc)
+        logger.error("[error] Failed to save results: %s", exc)
         return None

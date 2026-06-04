@@ -1,4 +1,10 @@
 import pytest
+
+mace = pytest.importorskip(
+    "mace",
+    reason="test_examples.py requires mace-torch dependencies (switch to virtual environment that supports MACE)",
+)
+
 import shutil
 import os
 from mlff_attack.examples.example_fgsm_attack import basic_fgsm_example
@@ -7,7 +13,7 @@ from mlff_attack.examples.example_fgsm_attack import targeted_attack_example
 from mlff_attack.examples.example_fgsm_attack import load_and_analyze_example
 
 from ase.atoms import Atoms
-from mlff_attack.grad_based.fgsm import FGSM_MACE
+from mlff_attack.grad_based.fgsm import FGSM_ASE
 
 @pytest.mark.smoke
 def test_example_fgsm_attack():
@@ -15,7 +21,7 @@ def test_example_fgsm_attack():
 
     assert isinstance(atoms, Atoms)
     assert isinstance(perturbed, Atoms)
-    assert isinstance(attack, FGSM_MACE)
+    assert isinstance(attack, FGSM_ASE)
     assert atoms.get_positions().shape == perturbed.get_positions().shape
 
     # Clean up after test
@@ -29,7 +35,7 @@ def test_example_iterative_fgsm_attack():
 
     assert isinstance(atoms, Atoms)
     assert isinstance(perturbed, Atoms)
-    assert isinstance(attack, FGSM_MACE)
+    assert isinstance(attack, FGSM_ASE)
     assert atoms.get_positions().shape == perturbed.get_positions().shape
 
     # Clean up after test
@@ -43,7 +49,7 @@ def test_example_targeted_fgsm_attack():
 
     assert isinstance(atoms, Atoms)
     assert isinstance(perturbed, Atoms)
-    assert isinstance(attack, FGSM_MACE)
+    assert isinstance(attack, FGSM_ASE)
     assert atoms.get_positions().shape == perturbed.get_positions().shape
 
     # Clean up after test

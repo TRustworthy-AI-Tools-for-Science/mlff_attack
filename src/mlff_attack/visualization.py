@@ -29,7 +29,7 @@ def load_trajectory(traj_path):
     """
     traj_path = Path(traj_path)
     if not traj_path.exists():
-        logger.info("[ERROR] Trajectory file not found: %s", traj_path)
+        logger.error("[error] Trajectory file not found: %s", traj_path)
         return None
 
     logger.info("[INFO] Reading trajectory: %s", traj_path)
@@ -41,7 +41,7 @@ def load_trajectory(traj_path):
         logger.info("[INFO] Trajectory contains %s frames", len(traj))
         return traj
     except (OSError, ValueError, RuntimeError) as exc:
-        logger.info("[ERROR] Failed to read trajectory: %s", exc)
+        logger.error("[error] Failed to read trajectory: %s", exc)
         return None
 
 
@@ -341,7 +341,7 @@ def create_visualization(
     output_format='png',
     show=False,
     save_to_csv=True,
-    fmax=0.01
+    fmax=0.01,
 ):
     """Create visualization plots for trajectory data.
 
@@ -402,7 +402,7 @@ def create_visualization(
 
     # Print summary to console
     logger.info("\n%s", "=" * 50)
-    logger.info(summary_text)
+    logger.info("%s", summary_text)
     logger.info("%s", "=" * 50)
 
     # Save data to CSV if requested

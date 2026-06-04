@@ -24,21 +24,18 @@ def parse_args():
 
     parser.add_argument(
         "--input",
-        type=str,
-        default="initial_cifs/chemistry_value_isovalent_0_05_18_traj.cif",
+        required=True,
         help="Path to input CIF file"
     )
 
     parser.add_argument(
         "--model",
-        type=str,
-        default="mace-mpa-0-medium.model",
-        help="Path to MACE model file"
+        required=True,
+        help="Path to MACE (include .model) or UMA (omit .pt) file"
     )
 
     parser.add_argument(
         "--device",
-        type=str,
         default="cpu",
         choices=["cpu", "cuda"],
         help="Device to run model on"
@@ -46,8 +43,7 @@ def parse_args():
 
     parser.add_argument(
         "--outdir",
-        type=str,
-        default=None,
+        required=True,
         help=(
             "Path to output directory "
             "(default: auto-generated from input with '_perturbed' suffix)"
@@ -70,8 +66,7 @@ def parse_args():
 
     parser.add_argument(
         "--type",
-        type=str,
-        default="fgsm",
+        required=True,
         choices=["fgsm", "FGSM", "pgd", "PGD"],
         help="Type of adversarial attack to perform"
     )
@@ -116,17 +111,79 @@ def parse_args():
         ),
     )
 
+    parser.add_argument(
+        "--mace-head",
+        default=None,
+        choices=["omat_pbe", "omol", "spice_wB97M", "rgd1_b3lyp", "oc20_usemppbe", "matpes_r2scan"],
+        help="Only used with MACE-MH model",
+    )
+
+    parser.add_argument(
+        "--uma-task",
+        default=None,
+        choices=["oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"],
+        help="Only used with UMA model",
+    )
+
+    parser.add_argument(
+        "--uma-charge",
+        type=int,
+        default=None,
+        help="Molecular charge only used with UMA model and --uma-task omol",
+    )
+
+    parser.add_argument(
+        "--uma-spin",
+        type=int,
+        default=None,
+        help="Spin multiplicity only used with UMA model and --uma-task omol",
+    )
+
     return parser.parse_args()
 
 
 def main():
-    """Run the MACE adversarial attack CLI."""
+    """Run the adversarial attack CLI."""
     # Parse command line arguments
     args = parse_args()
     attack_type = args.type.lower()
 
     if attack_type != "pgd" and args.alpha is not None:
         raise SystemExit("--alpha can only be used with --type pgd")
+
+    model_name = Path(args.model).name.lower()
+    is_mace_mh = model_name.startswith("mace-mh")
+    if model_name.startswith("uma"):
+        calculator = "uma"
+    elif model_name.startswith("mace"):
+        calculator = "mace"
+    else:
+        raise SystemExit(
+            "--model basename must start with 'uma' for UMA or 'mace' for MACE"
+        )
+
+    if calculator == "mace":
+        if args.uma_task is not None:
+            raise SystemExit("--uma-task can only be used with UMA")
+        if args.uma_charge is not None:
+            raise SystemExit("--uma-charge can only be used with UMA")
+        if args.uma_spin is not None:
+            raise SystemExit("--uma-spin can only be used with UMA")
+        if args.mace_head is None and is_mace_mh:
+            args.mace_head = "omat_pbe"
+
+    if args.mace_head is not None and not is_mace_mh:
+        raise SystemExit("--mace-head can only be used with MACE-MH models")
+
+    if calculator == "uma":
+        if args.mace_head is not None:
+            raise SystemExit("--mace-head can only be used with MACE-MH models")
+        if args.uma_task is None:
+            args.uma_task = "omat"
+        if args.uma_charge is None:
+            args.uma_charge = 0
+        if args.uma_spin is None:
+            args.uma_spin = 1
 
     # Override configuration with command line arguments
     input_cif = args.input
@@ -153,13 +210,30 @@ def main():
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         encoding="utf-8",
     )
+    logger.info("Calculator: %s", calculator.upper())
+    if args.mace_head is not None:
+        logger.info("MACE-MH head: %s", args.mace_head)
+    if calculator == "uma":
+        logger.info("UMA task: %s", args.uma_task)
+        logger.info("UMA charge: %s", args.uma_charge)
+        logger.info("UMA spin: %s", args.uma_spin)
 
     # Load structure
     logger.info("\nLoading structure from: %s", input_cif)
     atoms = load_structure(input_cif)
     if atoms is None:
-        logger.info("[ERROR] Failed to load structure from %s", input_cif)
+        logger.error("[error] Failed to load structure from %s", input_cif)
         return 1
+
+    mace_head = args.mace_head
+    uma_task = args.uma_task
+    uma_charge = args.uma_charge
+    uma_spin = args.uma_spin
+
+    if calculator == "uma":
+        atoms.info["charge"] = uma_charge
+        atoms.info["spin"] = uma_spin
+
     logger.info("   Loaded %s atoms: %s", len(atoms), atoms.get_chemical_formula())
 
     # Generate perturbed structure
@@ -176,9 +250,14 @@ def main():
             n_steps=n_steps,
             target_energy=target_energy,
             clip=clip,
+            calculator=calculator,
+            mace_head=mace_head,
+            uma_task=uma_task,
+            uma_charge=uma_charge,
+            uma_spin=uma_spin,
         )
     except (ValueError, NotImplementedError, RuntimeError) as exc:
-        logger.info("[ERROR] Failed to generate attack: %s", exc)
+        logger.error("[error] Failed to generate attack. Run calc-single first and use the same model to generate attack: %s", exc)
         return 1
 
     # Visualize perturbation

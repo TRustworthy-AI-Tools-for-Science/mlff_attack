@@ -14,7 +14,7 @@ Overview
 This package provides tools for:
 
 - **Adversarial Attacks**: Implement various attack methods (FGSM, PGD) on MLFF models
-- **MACE Integration**: Seamless integration with MACE force field models
+- **MACE / UMA Integration**: Supports MACE, MACE-MH, and Meta UMA force field calculators
 - **Structure Relaxation**: Tools for performing geometry optimization with MLFF models
 - **Visualization**: Comprehensive plotting and analysis of attack results and trajectories
 
@@ -30,13 +30,27 @@ Key Features
 Installation
 ------------
 
-From source (development mode):
+``uv`` is the recommended package manager. MACE and UMA **require separate
+environments** due to an incompatible ``e3nn`` version pin — see
+:doc:`installation` for the full explanation and two-venv setup.
+
+Quick start (MACE):
 
 .. code-block:: bash
 
    git clone https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack.git
    cd mlff_attack
-   pip install -e ."[dev]"
+   uv sync --extra mace --extra dev
+
+Quick start (UMA):
+
+.. code-block:: bash
+
+   uv sync --extra uma --extra dev
+   hf auth login
+
+See :doc:`installation` for pip instructions, the ``[notebooks]`` extra,
+and details on running both backends side-by-side.
 
 Quick Start
 -----------
@@ -66,14 +80,14 @@ Using the class-based API:
 
 .. code-block:: python
 
-   from mlff_attack.grad_based.fgsm import FGSM_MACE
+   from mlff_attack.grad_based.fgsm import FGSM_ASE
    from mlff_attack.relaxation import setup_calculator
    
    # Setup calculator
    atoms = setup_calculator(atoms, 'mace-model.model', device='cuda')
    
    # Create attack
-   attack = FGSM_MACE(
+   attack = FGSM_ASE(
        model=atoms.calc,
        epsilon=0.1,
        device='cuda',
@@ -92,6 +106,7 @@ Contents
 .. toctree::
    :maxdepth: 2
 
+   installation
    attacks
    examples
    modules

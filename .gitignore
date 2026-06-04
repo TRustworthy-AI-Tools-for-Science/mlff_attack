@@ -137,9 +137,9 @@ celerybeat.pid
 # Environments
 .env
 .envrc
-.venv
+.venv*
 env/
-venv/
+venv*/
 ENV/
 env.bak/
 venv.bak/
@@ -209,8 +209,10 @@ __marimo__/
 # Custom
 tests/data
 pytest.ini
+output*/
+figures*/
+*.npz
 *.traj
 *.cif
-output*/
-*.npz
-figures*/
+*.model
+*.pt
