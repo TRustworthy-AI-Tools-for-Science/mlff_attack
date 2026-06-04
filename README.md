@@ -25,32 +25,56 @@ Attacks against MLFF Models - A Python package for testing and analyzing Machine
 
 ## Installation
 
-### Install from source (development mode)
+### Prerequisites
+
+`uv` is the recommended package manager. Install it once if you don't have it:
 
 ```bash
-# Clone the repository
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+### Clone the repository
+
+```bash
 git clone https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack.git
 cd mlff_attack
-
-# Install in editable mode
-pip install -e .
-
-# Or install with development dependencies
-pip install -e ".[dev]"
 ```
 
-### Install MACE or UMA support
-
-MACE and UMA should be installed in separate Python environments because their dependencies can conflict.
+### MACE environment (default)
 
 ```bash
-# MACE support
-pip install -e ".[mace]"
-
-# UMA support must be in Python <= 3.12 and requires access through Hugging Face
-pip install -e ".[uma]"
-hf auth login
+uv sync --extra mace --extra dev
+uv run make-attack --help      # verify entry points are available
 ```
+
+### UMA environment
+
+```bash
+uv sync --extra uma --extra dev
+uv run python -c "import fairchem; print('UMA ready')"
+hf auth login                  # authenticate with Hugging Face to download UMA weights
+```
+
+### Why MACE and UMA cannot share an environment
+
+`mace-torch` hard-pins `e3nn==0.4.4`. Every release of `fairchem-core` (the UMA backend) requires `e3nn>=0.5`. The e3nn 0.5 release changed internal code-generation APIs that MACE relies on, so installing a newer e3nn breaks MACE at runtime even if the package resolver accepts it.
+
+`pyproject.toml` declares these as `conflicts` in `[tool.uv]`, so `uv` will reject attempts to install both at once and give a clear error. Maintain two separate `.venv` directories if you need both backends on the same machine:
+
+```bash
+# in the repo root
+uv sync --extra mace --extra dev            # creates .venv (MACE)
+uv venv .venv-uma && uv sync --extra uma --extra dev --venv .venv-uma
+```
+
+Activate whichever environment matches the model you are using:
+
+```bash
+source .venv/bin/activate        # MACE / MACE-MH models
+source .venv-uma/bin/activate    # UMA models
+```
+
+When the upstream packages resolve the e3nn conflict (tracked in [BUGS.md](BUGS.md) as BUG-001 and in the respective issue trackers), the `conflicts` declaration can be removed and a single environment will suffice.
 
 ## Usage
 
@@ -175,22 +199,30 @@ visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
 - ase >= 3.22.0
 - torch >= 2.0.0
 - numpy >= 1.20.0
+- scipy >= 1.7.0
 - matplotlib >= 3.5.0
-- pandas
+- pandas >= 1.3.0
+- tqdm >= 4.60.0
 - seaborn
 - spglib
 - mp_api
-- ipywidgets
-- jupyterlab
 
-### MACE support
+### MACE support (`[mace]` extra)
 
-- mace-torch >= 0.3.0
+- mace-torch >= 0.3.0, e3nn == 0.4.4 (pinned by mace-torch)
 
-### UMA support
+### UMA support (`[uma]` extra)
 
-- fairchem-core >= 2.0.0
+- fairchem-core >= 2.0.0, < 3.0.0, e3nn >= 0.5 (required by fairchem-core)
 - huggingface_hub
+
+> **Note:** MACE and UMA cannot be installed in the same environment — see [Installation](#installation) for details.
+
+### Notebook extras (`[notebooks]` extra)
+
+- jupyterlab >= 3.0
+- ipywidgets >= 8.0
+- ipykernel
 
 ## License
 
@@ -202,7 +234,7 @@ If you use this library in your research, please consider citing:
 ```bibtex
 @software{mlff_attack,
   title = {MLFF Attack: A library for attacking MLFF models},
-  author = {Ashley S. Dale AND Hao Wan},
+  author = {Ashley S. Dale AND Hao Wan AND Declan Chan},
   url = {https://github.com/Trustworthy-AI-Tools-for-Science/mlff_attack},
   year = {2025}
 }

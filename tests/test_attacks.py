@@ -19,7 +19,7 @@ from mlff_attack.relaxation import setup_calculator
 from ase import Atoms
 from ase import build
 from ase.io import write, read
-from pathlib import Path
+
 
 def create_dummy_atoms():
     """Create a dummy ASE Atoms object for testing."""
