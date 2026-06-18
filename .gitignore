@@ -210,7 +210,6 @@ __marimo__/
 tests/data
 pytest.ini
 output*/
-figures*/
 *.npz
 *.traj
 *.cif
