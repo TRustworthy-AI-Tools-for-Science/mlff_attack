@@ -180,18 +180,19 @@ def plot_energy(ax, steps, energies):
     """
     if not all(np.isnan(energies)):
         ax.plot(steps, energies, 'b-o', markersize=4, label="Energy")
-        ax.legend()
-        ax.set_xlabel('Step')
-        ax.set_ylabel('Energy (eV)')
-        ax.set_title('Total Energy')
+        ax.legend(fontsize=12)
+        ax.set_xlabel('Step', fontsize=14)
+        ax.set_ylabel('Energy (eV)', fontsize=14)
+        ax.set_title('Total Energy', fontsize=16)
+        ax.tick_params(axis='both', labelsize=12)
         ax.grid(True, alpha=0.3)
     else:
         ax.text(
             0.5, 0.5, 'Energy data not available',
             ha='center', va='center', transform=ax.transAxes
         )
-        ax.set_title('Total Energy')
-
+        ax.set_title('Total Energy', fontsize=16)
+        ax.tick_params(axis='both', labelsize=12)
 
 def plot_forces(ax, steps, max_forces, fmax=0.01):
     """Plot force convergence.
@@ -223,19 +224,20 @@ def plot_forces(ax, steps, max_forces, fmax=0.01):
                 linestyle='--',
                 label=f'fmax={fmax:g} eV/Å'
             )
-        ax.set_xlabel('Step')
-        ax.set_ylabel('Max Force (eV/Å)')
-        ax.set_title('Maximum Force')
+        ax.set_xlabel('Step', fontsize=14)
+        ax.set_ylabel('Max Force (eV/Å)', fontsize=14)
+        ax.set_title('Maximum Force', fontsize=16)
         ax.set_yscale('log')
-        ax.legend()
+        ax.legend(fontsize=12)
+        ax.tick_params(axis='both', labelsize=12)
         ax.grid(True, alpha=0.3)
     else:
         ax.text(
             0.5, 0.5, 'Force data not available',
             ha='center', va='center', transform=ax.transAxes
         )
-        ax.set_title('Maximum Force')
-
+        ax.set_title('Maximum Force', fontsize=16)
+        ax.tick_params(axis='both', labelsize=12)
 
 def plot_volume(ax, steps, volumes):
     """Plot volume evolution.
@@ -250,9 +252,10 @@ def plot_volume(ax, steps, volumes):
         Volume values at each step
     """
     ax.plot(steps, volumes, 'g-o', markersize=4)
-    ax.set_xlabel('Step')
-    ax.set_ylabel('Volume (Å³)')
-    ax.set_title('Cell Volume')
+    ax.set_xlabel('Step', fontsize=14)
+    ax.set_ylabel('Volume (Å³)', fontsize=14)
+    ax.set_title('Cell Volume', fontsize=16)
+    ax.tick_params(axis='both', labelsize=12)
     ax.grid(True, alpha=0.3)
 
 
@@ -299,8 +302,8 @@ def plot_summary(ax, stats, n_frames, fmax=0.01):
     summary_text += f"Volume change: {stats['volume_change_percent']:+.2f}%"
 
     ax.text(0.1, 0.95, summary_text, transform=ax.transAxes,
-             fontsize=10, verticalalignment='top', fontfamily='monospace',
-             bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5})
+             fontsize=12, verticalalignment='top', fontfamily='monospace',
+             bbox={"boxstyle": "round", "facecolor": "lightblue", "alpha": 0.2, "pad": 1})
 
     return summary_text
 
@@ -320,18 +323,19 @@ def plot_noise(ax, freq, spectrum):
 
     if not all(np.isnan(spectrum)):
         ax.plot(freq, spectrum, 'm-', label="Noise Spectrum")
-        ax.legend()
-        ax.set_xlabel('Frequency (1/steps)')
-        ax.set_ylabel('Power Spectrum')
-        ax.set_title('Noise Spectrum of Max Forces')
+        ax.legend(fontsize=12)
+        ax.set_xlabel('Frequency (1/steps)', fontsize=14)
+        ax.set_ylabel('Power Spectrum', fontsize=14)
+        ax.set_title('Noise Spectrum of Max Forces', fontsize=16)
+        ax.tick_params(axis='both', labelsize=12)
         ax.grid(True, alpha=0.3)
     else:
         ax.text(
             0.5, 0.5, 'Force data not available',
             ha='center', va='center', transform=ax.transAxes
         )
-        ax.set_title('Noise Spectrum of Max Forces')
-
+        ax.set_title('Noise Spectrum of Max Forces', fontsize=16)
+        ax.tick_params(axis='both', labelsize=12)
 
 def create_visualization(
     traj,
@@ -376,8 +380,12 @@ def create_visualization(
     freq, spectrum = calculate_noise_spectrum(max_forces)
 
     # Create figure
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-    fig.suptitle(f'Relaxation Trajectory: {traj_path.name}', fontsize=14, fontweight='bold')
+    fig, axes = plt.subplots(2, 2, figsize=(14, 11), constrained_layout=True)
+    fig.suptitle(
+        f'Relaxation Trajectory: {traj_path.name}',
+        fontsize=18,
+        fontweight='bold'
+    )
 
     # Create plots
     plot_energy(axes[0, 0], steps, energies)
@@ -386,8 +394,6 @@ def create_visualization(
     plot_noise(axes[1, 0], freq, spectrum)
 
     summary_text = plot_summary(axes[1, 1], stats, len(traj) - 1, fmax)
-
-    plt.tight_layout()
 
     # Save figure
     output_file = outdir / f"relaxation_analysis.{output_format}"

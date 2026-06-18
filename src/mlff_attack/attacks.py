@@ -606,7 +606,7 @@ def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None)
     displacement_mag = np.linalg.norm(displacement, axis=1)
 
     # Create figure - large 3D plot with statistics on the side
-    fig = plt.figure(figsize=(18, 10))
+    fig = plt.figure(figsize=(20, 12))
 
     # Main 3D plot showing all atoms and displacements
     ax_3d = plt.subplot(1, 2, 1, projection='3d')
@@ -639,10 +639,15 @@ def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None)
                  arrow_length_ratio=0.2, color='black', linewidth=0.5)
 
     # Set labels and title
-    ax_3d.set_xlabel('X (Å)', fontsize=12)
-    ax_3d.set_ylabel('Y (Å)', fontsize=12)
-    ax_3d.set_zlabel('Z (Å)', fontsize=12)
-    ax_3d.set_title(f'Atomic Displacement Visualization (ε={epsilon} Å)', fontsize=14, fontweight='bold')
+    ax_3d.set_xlabel('X (Å)', fontsize=14)
+    ax_3d.set_ylabel('Y (Å)', fontsize=14)
+    ax_3d.set_zlabel('Z (Å)', fontsize=14)
+    ax_3d.set_title(
+        f'Atomic Displacement Visualization (ε={epsilon} Å)',
+        fontsize=18,
+        fontweight='bold'
+    )
+    ax_3d.tick_params(axis='both', labelsize=12)
 
     # Add legend for atom types
     legend_elements = [plt.Line2D([0], [0], marker='o', color='w',
@@ -655,7 +660,7 @@ def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None)
         plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='gray',
                    markersize=10, label='Perturbed', markeredgecolor='red', markeredgewidth=2)
     ])
-    ax_3d.legend(handles=legend_elements, loc='upper left', fontsize=9)
+    ax_3d.legend(handles=legend_elements, loc='upper left', fontsize=12)
 
     # Make the plot look better
     ax_3d.grid(True, alpha=0.3)
@@ -716,15 +721,15 @@ Displacement Distribution:
     logger.info("\n%s", stats_text)
 
     ax_stats.text(0.05, 0.98, stats_text, transform=ax_stats.transAxes,
-                  fontsize=10, verticalalignment='top', fontfamily='monospace',
+                  fontsize=12, verticalalignment='top', fontfamily='monospace',
                   bbox={"boxstyle": "round", "facecolor": "lightblue", "alpha": 0.2, "pad": 1})
 
     # Adjust layout manually to avoid tight_layout warning with mixed axes
-    plt.subplots_adjust(left=0.05, right=0.98, top=0.95, bottom=0.05)
+    plt.subplots_adjust(left=0.04, right=0.98, top=0.93, bottom=0.08, wspace=0.18)
 
     # Save figure - use the perturbed atoms file path if available
     if outdir is not None:
-        outdir = Path(outdir)
+        outdir = Path(outdir)   
         outdir.mkdir(parents=True, exist_ok=True)
 
         # Try to determine filename from atoms_after if it has a file path
