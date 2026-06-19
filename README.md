@@ -75,6 +75,7 @@ calc-single --input <structure>.cif --model uma-<variant> --outdir <output_direc
 - `--model`: Path to MACE (filename starts with mace- and ends with .model) or UMA (filename starts with uma- and omit .pt) file (required).
 - `--outdir`: Output directory (required).
 - `--device`: Device to use (cuda or cpu, default: cpu).
+- `--dtype`: Data type for calculations ("float32" or "float64") (default: float64).
 - `--fmax`: Force convergence criterion in eV/Å (default: 0.01).
 - `--max-steps`: Maximum relaxation steps (default: 300).
 - `--optimizer`: ASE optimizer to use (BFGS or LBFGS, default: LBFGS).

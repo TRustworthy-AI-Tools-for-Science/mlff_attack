@@ -42,6 +42,14 @@ def parse_args():
     )
 
     parser.add_argument(
+        "--dtype",
+        dest="dtype_str",
+        default="float64",
+        choices=["float32", "float64"],
+        help="Floating point precision to request for calculator setup",
+    )
+
+    parser.add_argument(
         "--outdir",
         required=True,
         help=(
@@ -189,6 +197,7 @@ def main():
     input_cif = args.input
     model_path = args.model
     device = args.device
+    dtype_str = args.dtype_str
     epsilon = args.epsilon
     alpha = args.alpha
     n_steps = args.n_steps
@@ -243,6 +252,7 @@ def main():
             atoms=atoms,
             model_path=model_path,
             device=device,
+            dtype_str=dtype_str,
             output_cif=output_cif,
             attack_type=attack_type,
             epsilon=epsilon,

@@ -25,6 +25,7 @@ def make_attack(
     atoms,
     model_path,
     device,
+    dtype_str="float64",
     output_cif,
     attack_type,
     epsilon,
@@ -107,11 +108,13 @@ def make_attack(
         logger.info("Setting up %s calculator", calculator_kind.upper())
         logger.info("Model: %s", model_path)
         logger.info("Device: %s", device)
+        logger.info("Dtype: %s", dtype_str)
 
     atoms = setup_calculator(
         atoms,
         model_path,
         device,
+        dtype_str=dtype_str,
         calculator=calculator_kind,
         mace_head=mace_head,
         uma_task=uma_task,

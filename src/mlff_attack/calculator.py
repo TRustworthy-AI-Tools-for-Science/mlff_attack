@@ -8,6 +8,57 @@ import torch
 logger = logging.getLogger(__name__)
 
 
+def dtype_from_string(dtype_str):
+    """Convert a dtype string into a torch dtype."""
+    dtype_str = str(dtype_str).strip().lower()
+    if dtype_str == "float32":
+        return torch.float32
+    if dtype_str == "float64":
+        return torch.float64
+    raise ValueError("dtype_str must be 'float32' or 'float64'")
+
+
+def cast_torch_modules_dtype(obj, dtype):
+    """Best-effort cast of torch modules reachable from an object."""
+    seen = set()
+    changed = False
+
+    def visit(value):
+        nonlocal changed
+
+        if value is None:
+            return
+        value_id = id(value)
+        if value_id in seen:
+            return
+        seen.add(value_id)
+
+        if isinstance(value, torch.nn.Module):
+            value.to(dtype=dtype)
+            changed = True
+            return
+
+        if isinstance(value, (str, bytes, int, float, bool, Path)):
+            return
+
+        if isinstance(value, dict):
+            for item in value.values():
+                visit(item)
+            return
+
+        if isinstance(value, (list, tuple, set)):
+            for item in value:
+                visit(item)
+            return
+
+        if hasattr(value, "__dict__"):
+            for item in vars(value).values():
+                visit(item)
+
+    visit(obj)
+    return changed
+
+
 def mace_calculator(
     atoms,
     model_path,
@@ -44,11 +95,7 @@ def mace_calculator(
         atoms.calc = model_path
 
     else:
-        # Patch to prevent atoms and models from having different datatypes
-        if dtype_str == "float32":
-            dtype = torch.float32
-        else:
-            dtype = torch.float64
+        dtype = dtype_from_string(dtype_str)
 
         model_id = str(model_path)
         model_name = Path(model_id).name.lower()
@@ -79,6 +126,7 @@ def uma_calculator(
     atoms,
     model_path,
     device="cpu",
+    dtype_str="float64",
     verbose=False,
     uma_task="omat",
     uma_charge=None,
@@ -119,6 +167,21 @@ def uma_calculator(
     atoms.info["charge"] = uma_charge
     atoms.info["spin"] = uma_spin
 
-    predictor = pretrained_mlip.get_predict_unit(model_id, device=device)
+    dtype = dtype_from_string(dtype_str)
+    previous_default_dtype = torch.get_default_dtype()
+    torch.set_default_dtype(dtype)
+    try:
+        predictor = pretrained_mlip.get_predict_unit(model_id, device=device)
+    finally:
+        torch.set_default_dtype(previous_default_dtype)
+
+    changed_dtype = cast_torch_modules_dtype(predictor, dtype)
+    if verbose:
+        logger.info(
+            "[INFO] UMA dtype requested: %s; cast torch modules: %s",
+            dtype_str,
+            changed_dtype,
+        )
+
     atoms.calc = FAIRChemCalculator(predictor, task_name=uma_task)
     return atoms
