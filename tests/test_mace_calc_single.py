@@ -1,4 +1,5 @@
 import pytest
+import torch
 
 mace = pytest.importorskip(
     "mace",
@@ -147,3 +148,18 @@ def test_saving_results_to_files():
         output_dir.parent.rmdir()
     except OSError:
         pass
+
+def test_dtype_toggle():
+    for dtype_str, expected_dtype in [
+        ("float32", torch.float32),
+        ("float64", torch.float64),
+    ]:
+        calc = mace_mp(
+            model="small",
+            dispersion=False,
+            default_dtype=dtype_str,
+            device="cpu",
+        )
+
+        for parameter in calc.models[0].parameters():
+            assert parameter.dtype == expected_dtype

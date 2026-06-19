@@ -1,4 +1,5 @@
 import pytest
+import torch
 
 fairchem_core = pytest.importorskip(
     "fairchem.core",
@@ -176,3 +177,23 @@ def test_saving_results_to_files():
         output_dir.parent.rmdir()
     except OSError:
         pass
+
+def test_dtype_toggle():
+    for dtype_str, expected_dtype in [
+        ("float32", torch.float32),
+        ("float64", torch.float64),
+    ]:
+        atoms = build.molecule("H2O")
+        atoms = relaxation.setup_calculator(
+            atoms,
+            "uma-s-1p1",
+            device="cpu",
+            dtype_str=dtype_str,
+            calculator="uma",
+            uma_task="omat",
+        )
+
+        assert atoms is not None
+
+        for parameter in atoms.calc.predictor.model.parameters():
+            assert parameter.dtype == expected_dtype
