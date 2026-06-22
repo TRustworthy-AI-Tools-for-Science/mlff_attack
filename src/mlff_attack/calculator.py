@@ -5,6 +5,8 @@ from pathlib import Path
 
 import torch
 
+from mlff_attack.random_seed import set_random_seed
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,10 +66,14 @@ def mace_calculator(
     model_path,
     device="cpu",
     dtype_str="float64",
+    seed=None,
     verbose=False,
     mace_head=None,
 ):
     """Initialize and attach a MACE calculator to an atoms object."""
+    if seed is not None:
+        set_random_seed(seed)
+
     try:
         import mace
         from mace.calculators import mace as mace_calculator # TODO: import at the top if venv is fixed - DC
@@ -127,12 +133,16 @@ def uma_calculator(
     model_path,
     device="cpu",
     dtype_str="float64",
+    seed=None,
     verbose=False,
     uma_task="omat",
     uma_charge=None,
     uma_spin=None,
 ):
     """Initialize and attach a UMA calculator to an atoms object."""
+    if seed is not None:
+        set_random_seed(seed)
+
     try:
         from fairchem.core import pretrained_mlip, FAIRChemCalculator # TODO: import at the top if venv is fixed - DC
     except ImportError:
@@ -184,4 +194,8 @@ def uma_calculator(
         )
 
     atoms.calc = FAIRChemCalculator(predictor, task_name=uma_task)
+
+    if seed is not None:
+        set_random_seed(seed)
+
     return atoms

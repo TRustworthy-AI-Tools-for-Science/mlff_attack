@@ -11,6 +11,7 @@ import sys
 import matplotlib.pyplot as plt
 from mlff_attack.attacks import make_attack, visualize_perturbation
 from mlff_attack.relaxation import load_structure
+from mlff_attack.random_seed import set_random_seed
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,13 @@ def parse_args():
         default="float64",
         choices=["float32", "float64"],
         help="Floating point precision to request for calculator setup",
+    )
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for MACE/UMA calculator setup and PGD random start",
     )
 
     parser.add_argument(
@@ -198,6 +206,7 @@ def main():
     model_path = args.model
     device = args.device
     dtype_str = args.dtype_str
+    seed = args.seed
     epsilon = args.epsilon
     alpha = args.alpha
     n_steps = args.n_steps
@@ -219,6 +228,11 @@ def main():
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         encoding="utf-8",
     )
+
+    logger.info("Dtype: %s", args.dtype_str)
+    logger.info("Random seed: %s", args.seed)
+    set_random_seed(args.seed)
+
     logger.info("Calculator: %s", calculator.upper())
     if args.mace_head is not None:
         logger.info("MACE-MH head: %s", args.mace_head)
@@ -253,6 +267,7 @@ def main():
             model_path=model_path,
             device=device,
             dtype_str=dtype_str,
+            seed=seed,
             output_cif=output_cif,
             attack_type=attack_type,
             epsilon=epsilon,
