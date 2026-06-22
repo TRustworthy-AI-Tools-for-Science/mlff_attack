@@ -126,6 +126,9 @@ def mace_calculator(
                 head=mace_head,
             )
 
+    if seed is not None:
+        set_random_seed(seed)
+
     return atoms
 
 def uma_calculator(
