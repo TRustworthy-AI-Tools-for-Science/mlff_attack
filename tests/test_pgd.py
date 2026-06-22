@@ -311,3 +311,40 @@ def test_attack_step():
     expected_displacement = alpha * np.sign(temp_g)
 
     assert np.allclose(displacement, expected_displacement, atol=1e-6)
+
+def test_random_start_is_deterministic_with_same_seed():
+    model = dummy_mace_model()
+    atoms = setup_calculator(
+        create_dummy_atoms(),
+        model,
+        device="cpu",
+        dtype_str="float32",
+    )
+    epsilon = 0.1
+
+    pgd_a = PGD_ASE(
+        atoms.calc,
+        epsilon=epsilon,
+        alpha=0.01,
+        num_iter=3,
+        device="cpu",
+        random_start=True,
+        rng=np.random.default_rng(42),
+    )
+    pgd_b = PGD_ASE(
+        atoms.calc,
+        epsilon=epsilon,
+        alpha=0.01,
+        num_iter=3,
+        device="cpu",
+        random_start=True,
+        rng=np.random.default_rng(42),
+    )
+
+    start_a = pgd_a._random_start(atoms)
+    start_b = pgd_b._random_start(atoms)
+
+    displacement_a = start_a.get_positions() - atoms.get_positions()
+    displacement_b = start_b.get_positions() - atoms.get_positions()
+
+    assert np.allclose(displacement_a, displacement_b, atol=1e-6)

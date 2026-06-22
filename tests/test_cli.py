@@ -205,6 +205,8 @@ def test_cli_fgsm_accepts_all_arguments():
         "--input", "does_not_exist.cif",
         "--model", "does_not_exist.model",
         "--device", "cpu",
+        "--dtype", "float32",
+        "--seed", "43",
         "--epsilon", "0.05",
         "--outdir", "tests/output/make_attack_test",
         "--target-energy", "1.5",
@@ -248,6 +250,8 @@ def test_cli_pgd_accepts_all_arguments():
         "--input", "does_not_exist.cif",
         "--model", "does_not_exist.model",
         "--device", "cpu",
+        "--dtype", "float32",
+        "--seed", "43",
         "--epsilon", "0.05",
         "--alpha", "0.01",
         "--outdir", "tests/output/make_attack_test",
@@ -299,3 +303,20 @@ def test_cli_visualize_traj():
     if os.path.exists(outdir):
         import shutil
         shutil.rmtree(outdir)
+
+def test_cli_calc_single_accepts_seed_and_dtype():
+    cmd = [
+        sys.executable,
+        "src/mlff_attack/cli/calc_single.py",
+        "--input", "does_not_exist.cif",
+        "--model", "mace_sample.model",
+        "--outdir", "tests/output/calc_single_seed_dtype_test",
+        "--device", "cpu",
+        "--dtype", "float32",
+        "--seed", "43",
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    assert result.returncode == 1
+    assert "unrecognized arguments" not in result.stderr

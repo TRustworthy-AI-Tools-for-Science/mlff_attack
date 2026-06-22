@@ -1,6 +1,8 @@
 import pytest
 import torch
 
+from mlff_attack.random_seed import set_random_seed
+
 fairchem_core = pytest.importorskip(
     "fairchem.core",
     reason="test_uma_calc_single.py requires fairchem-core / UMA dependencies",
@@ -197,3 +199,32 @@ def test_dtype_toggle():
 
         for parameter in atoms.calc.predictor.model.parameters():
             assert parameter.dtype == expected_dtype
+
+
+def test_seed_sets_torch_rng():
+    seed = 43
+
+    set_random_seed(seed)
+    first_draw = torch.rand(5)
+
+    set_random_seed(seed)
+    second_draw = torch.rand(5)
+
+    assert torch.initial_seed() == seed
+    assert torch.allclose(first_draw, second_draw)
+
+    set_random_seed(seed)
+    atoms = build.molecule("H2O")
+    atoms = relaxation.setup_calculator(
+        atoms,
+        "uma-s-1p1",
+        device="cpu",
+        dtype_str="float32",
+        seed=seed,
+        calculator="uma",
+        uma_task="omat",
+    )
+
+    assert atoms is not None
+    assert atoms.calc is not None
+    assert torch.initial_seed() == seed

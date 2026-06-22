@@ -1,6 +1,8 @@
 import pytest
 import torch
 
+from mlff_attack.random_seed import set_random_seed
+
 mace = pytest.importorskip(
     "mace",
     reason="test_mace_calc_single.py requires mace-torch dependencies (switch to virtual environment that supports MACE)",
@@ -163,3 +165,25 @@ def test_dtype_toggle():
 
         for parameter in calc.models[0].parameters():
             assert parameter.dtype == expected_dtype
+
+
+def test_seed_sets_torch_rng():
+    seed = 43
+
+    set_random_seed(seed)
+    atoms = build.molecule("H2O")
+    model = mace_mp(model="small", dispersion=False, default_dtype="float32", device="cpu")
+
+    atoms = relaxation.setup_calculator(
+        atoms,
+        model,
+        device="cpu",
+        dtype_str="float32",
+        seed=seed,
+        calculator="mace",
+        seed=seed,
+    )
+
+    assert atoms is not None
+    assert atoms.calc is not None
+    assert torch.initial_seed() == seed
