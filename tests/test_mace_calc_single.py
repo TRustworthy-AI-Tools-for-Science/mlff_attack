@@ -1,4 +1,5 @@
 import pytest
+import torch
 
 mace = pytest.importorskip(
     "mace",
@@ -9,6 +10,7 @@ from ase import Atoms, build
 from ase.io import write
 from mace.calculators import mace_mp
 from mlff_attack import relaxation
+from mlff_attack.random_seed import set_random_seed
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -147,3 +149,39 @@ def test_saving_results_to_files():
         output_dir.parent.rmdir()
     except OSError:
         pass
+
+def test_dtype_toggle():
+    for dtype_str, expected_dtype in [
+        ("float32", torch.float32),
+        ("float64", torch.float64),
+    ]:
+        calc = mace_mp(
+            model="small",
+            dispersion=False,
+            default_dtype=dtype_str,
+            device="cpu",
+        )
+
+        for parameter in calc.models[0].parameters():
+            assert parameter.dtype == expected_dtype
+
+
+def test_seed_sets_torch_rng():
+    seed = 43
+
+    set_random_seed(seed)
+    atoms = build.molecule("H2O")
+    model = mace_mp(model="small", dispersion=False, default_dtype="float32", device="cpu")
+
+    atoms = relaxation.setup_calculator(
+        atoms,
+        model,
+        device="cpu",
+        dtype_str="float32",
+        seed=seed,
+        calculator="mace",
+    )
+
+    assert atoms is not None
+    assert atoms.calc is not None
+    assert torch.initial_seed() == seed

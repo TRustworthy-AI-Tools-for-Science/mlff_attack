@@ -42,6 +42,7 @@ def setup_calculator(
     model_path,
     device="cpu",
     dtype_str="float64",
+    seed=None,
     verbose=False,
     calculator=None,
     mace_head=None,
@@ -66,8 +67,9 @@ def setup_calculator(
     device : str, optional
         Device to use (cuda or cpu), by default "cpu"
     dtype_str : str, optional
-        Data type for MACE and MACE-MH calculations ("float32" or "float64"),
-        by default "float64"
+        Data type for calculations ("float32" or "float64"), by default "float64"
+    seed : int or None, optional
+        Random seed for calculator setup. If provided, passed to MACE/UMA setup.
     verbose : bool, optional
         Whether to print detailed information, by default False
     calculator : str or None, optional
@@ -102,6 +104,8 @@ def setup_calculator(
                     atoms,
                     model_path,
                     device=device,
+                    dtype_str=dtype_str,
+                    seed=seed,
                     verbose=verbose,
                     uma_task=uma_task,
                     uma_charge=uma_charge,
@@ -114,6 +118,7 @@ def setup_calculator(
                 model_path,
                 device=device,
                 dtype_str=dtype_str,
+                seed=seed,
                 verbose=verbose,
                 mace_head=mace_head,
             )

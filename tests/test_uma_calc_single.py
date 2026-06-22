@@ -1,4 +1,5 @@
 import pytest
+import torch
 
 fairchem_core = pytest.importorskip(
     "fairchem.core",
@@ -9,6 +10,7 @@ from ase import Atoms, build
 from ase.io import write
 from fairchem.core import FAIRChemCalculator, pretrained_mlip
 from mlff_attack import relaxation
+from mlff_attack.random_seed import set_random_seed
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -176,3 +178,52 @@ def test_saving_results_to_files():
         output_dir.parent.rmdir()
     except OSError:
         pass
+
+def test_dtype_toggle():
+    for dtype_str, expected_dtype in [
+        ("float32", torch.float32),
+        ("float64", torch.float64),
+    ]:
+        atoms = build.molecule("H2O")
+        atoms = relaxation.setup_calculator(
+            atoms,
+            "uma-s-1p1",
+            device="cpu",
+            dtype_str=dtype_str,
+            calculator="uma",
+            uma_task="omat",
+        )
+
+        assert atoms is not None
+
+        for parameter in atoms.calc.predictor.model.parameters():
+            assert parameter.dtype == expected_dtype
+
+
+def test_seed_sets_torch_rng():
+    seed = 43
+
+    set_random_seed(seed)
+    first_draw = torch.rand(5)
+
+    set_random_seed(seed)
+    second_draw = torch.rand(5)
+
+    assert torch.initial_seed() == seed
+    assert torch.allclose(first_draw, second_draw)
+
+    set_random_seed(seed)
+    atoms = build.molecule("H2O")
+    atoms = relaxation.setup_calculator(
+        atoms,
+        "uma-s-1p1",
+        device="cpu",
+        dtype_str="float32",
+        seed=seed,
+        calculator="uma",
+        uma_task="omat",
+    )
+
+    assert atoms is not None
+    assert atoms.calc is not None
+    assert torch.initial_seed() == seed

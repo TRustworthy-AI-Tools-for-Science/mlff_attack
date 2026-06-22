@@ -99,6 +99,8 @@ calc-single --input <structure>.cif --model uma-<variant> --outdir <output_direc
 - `--model`: Path to MACE (filename starts with mace- and ends with .model) or UMA (filename starts with uma- and omit .pt) file (required).
 - `--outdir`: Output directory (required).
 - `--device`: Device to use (cuda or cpu, default: cpu).
+- `--seed`: Random seed for MACE/UMA calculator setup (default: `42`).
+- `--dtype`: Data type for calculations ("float32" or "float64") (default: float64).
 - `--fmax`: Force convergence criterion in eV/Å (default: 0.01).
 - `--max-steps`: Maximum relaxation steps (default: 300).
 - `--optimizer`: ASE optimizer to use (BFGS or LBFGS, default: LBFGS).
@@ -143,6 +145,8 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 - `--input`: Path to the input structure file (CIF format) (required).
 - `--model`: Path to MACE (include .model) or UMA (omit .pt) file (required).
 - `--device`: Device to use for computations (cuda or cpu, default: cpu).
+- `--dtype`: Data type for calculations (`float32` or `float64`, default: `float64`).
+- `--seed`: Random seed for MACE/UMA calculator setup and PGD random start (default: `42`).
 - `--outdir`: Directory to save the results (required).
 - `--visualize`: Generate perturbation visualization plot (default: enabled).
 - `--no-visualize`: Skip perturbation visualization plot generation.

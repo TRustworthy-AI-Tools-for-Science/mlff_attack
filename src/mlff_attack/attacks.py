@@ -16,6 +16,7 @@ from ase.io import write
 from mlff_attack.relaxation import setup_calculator
 from mlff_attack.grad_based.fgsm import FGSM_ASE
 from mlff_attack.grad_based.pgd import PGD_ASE
+from mlff_attack.random_seed import set_random_seed
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,8 @@ def make_attack(
     atoms,
     model_path,
     device,
+    dtype_str="float64",
+    seed=42,
     output_cif,
     attack_type,
     epsilon,
@@ -53,6 +56,10 @@ def make_attack(
         or a UMA model name
     device : str
         Device to run the model on ("cpu" or "cuda")
+    dtype : str
+        Data type for calculations ("float32" or "float64")
+    seed : int, optional
+        Random seed used for MACE/UMA setup and PGD random start, by default 42
     output_cif : str or Path
         Path to save the perturbed CIF file
     attack_type : str
@@ -107,11 +114,17 @@ def make_attack(
         logger.info("Setting up %s calculator", calculator_kind.upper())
         logger.info("Model: %s", model_path)
         logger.info("Device: %s", device)
+        logger.info("Dtype: %s", dtype_str)
+        logger.info("Random seed: %s", seed)
+
+    set_random_seed(seed)
 
     atoms = setup_calculator(
         atoms,
         model_path,
         device,
+        dtype_str=dtype_str,
+        seed=seed,
         calculator=calculator_kind,
         mace_head=mace_head,
         uma_task=uma_task,
@@ -157,6 +170,8 @@ def make_attack(
             device=device,
             track_history=True,
             target_energy=target_energy,
+            random_start=True,
+            rng=np.random.default_rng(seed),
         )
 
     else:

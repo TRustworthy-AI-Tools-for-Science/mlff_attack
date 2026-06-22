@@ -22,7 +22,7 @@ class PGD_ASE(MLFFAttack):
         device: str = "cpu",
         track_history: bool = True,
         target_energy: Optional[float] = None,
-        random_start: bool = False,
+        random_start: bool = True,
         rng: Optional[np.random.Generator] = None,
     ):
         """Initialize the unified PGD attack.
@@ -47,7 +47,7 @@ class PGD_ASE(MLFFAttack):
             Optional target energy. If None, maximize energy, by default None.
         random_start : bool, optional
             Whether to initialize randomly inside the epsilon box, by default
-            False.
+            True.
         rng : Optional[np.random.Generator], optional
             Optional NumPy random generator for deterministic random starts, by
             default None.

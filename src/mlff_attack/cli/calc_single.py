@@ -15,6 +15,8 @@ from mlff_attack.relaxation import (
     save_results,
 )
 
+from mlff_attack.random_seed import set_random_seed
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,6 +49,21 @@ def main():
         default="cpu",
         choices=["cuda", "cpu"],
         help="Device",
+    )
+
+    parser.add_argument(
+        "--dtype",
+        dest="dtype_str",
+        default="float64",
+        choices=["float32", "float64"],
+        help="Floating point precision to request for calculator setup",
+    )
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for MACE/UMA calculator setup",
     )
 
     parser.add_argument(
@@ -160,11 +177,17 @@ def main():
 
     atoms.info["fmax"] = args.fmax
 
+    logger.info("Dtype: %s", args.dtype_str)
+    logger.info("Random seed: %s", args.seed)
+    set_random_seed(args.seed)
+
     # Setup calculator
     atoms = setup_calculator(
         atoms,
         args.model,
         args.device,
+        dtype_str=args.dtype_str,
+        seed=args.seed,
         calculator=calculator,
         mace_head=args.mace_head,
         uma_task=args.uma_task,
