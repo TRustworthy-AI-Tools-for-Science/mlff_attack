@@ -1,8 +1,6 @@
 import pytest
 import torch
 
-from mlff_attack.random_seed import set_random_seed
-
 mace = pytest.importorskip(
     "mace",
     reason="test_mace_calc_single.py requires mace-torch dependencies (switch to virtual environment that supports MACE)",
@@ -12,6 +10,7 @@ from ase import Atoms, build
 from ase.io import write
 from mace.calculators import mace_mp
 from mlff_attack import relaxation
+from mlff_attack.random_seed import set_random_seed
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -181,7 +180,6 @@ def test_seed_sets_torch_rng():
         dtype_str="float32",
         seed=seed,
         calculator="mace",
-        seed=seed,
     )
 
     assert atoms is not None

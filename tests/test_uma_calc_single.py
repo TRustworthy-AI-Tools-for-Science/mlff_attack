@@ -1,8 +1,6 @@
 import pytest
 import torch
 
-from mlff_attack.random_seed import set_random_seed
-
 fairchem_core = pytest.importorskip(
     "fairchem.core",
     reason="test_uma_calc_single.py requires fairchem-core / UMA dependencies",
@@ -12,6 +10,7 @@ from ase import Atoms, build
 from ase.io import write
 from fairchem.core import FAIRChemCalculator, pretrained_mlip
 from mlff_attack import relaxation
+from mlff_attack.random_seed import set_random_seed
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
