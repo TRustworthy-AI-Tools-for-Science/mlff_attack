@@ -21,7 +21,7 @@ def dtype_from_string(dtype_str):
 
 
 def cast_torch_modules_dtype(obj, dtype):
-    """Best-effort cast of torch modules reachable from an object."""
+    """Update any PyTorch modules found inside a value to use the requested dtype."""
     seen = set()
     changed = False
 
