@@ -142,6 +142,7 @@ def test_cli_make_attack():
         "--model", model_path,
         "--outdir", outdir,
         "--device", "cpu",
+        "--type", "fgsm",
         "--epsilon", "0.05"
     ]
 
