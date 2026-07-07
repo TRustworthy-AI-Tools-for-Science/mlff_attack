@@ -22,6 +22,7 @@ Attacks against MLFF Models - A Python package for testing and analyzing Machine
 | Message Passing Atomic Cluster Expansion (MACE) | [link](https://arxiv.org/abs/2206.07697) |
 | Multi-Head Message Passing Atomic Cluster Expansion (MACE-MH) | [link](https://arxiv.org/pdf/2510.25380) |
 | Universal Model for Atoms (UMA) | [link](https://ai.meta.com/research/publications/uma-a-family-of-universal-models-for-atoms/) |
+| Crystal Hamiltonian Graph Neural Network (CHGNet) | [link](https://chgnet.lbl.gov/) |
 
 ## Installation
 
@@ -50,13 +51,16 @@ pip install -e ".[mace]"
 # UMA support must be in Python <= 3.12 and requires access through Hugging Face
 pip install -e ".[uma]"
 hf auth login
+
+# CHGNet support
+pip install -e ".[chgnet]"
 ```
 
 ## Usage
 
 ### Running calculations
 
-After installation, you can use the `calc-single` commands for MACE, MACE-MH, or UMA calculations:
+After installation, you can use the `calc-single` commands for MACE, MACE-MH, UMA, or CHGNet calculations:
 
 ```bash
 # MACE
@@ -67,12 +71,15 @@ calc-single --input <structure>.cif --model mace-mh-<model>.model --outdir <outp
 
 # UMA
 calc-single --input <structure>.cif --model uma-<variant> --outdir <output_directory> --uma-task <task-name> --uma-charge <charge> --uma-spin <spin>
+
+# CHGNet
+calc-single --input <structure>.cif --model chgnet-<type> --outdir <output_directory>
 ```
 
 #### Command-line options
 
 - `--input`: Input CIF file (required).
-- `--model`: Path to MACE (filename starts with mace- and ends with .model) or UMA (filename starts with uma- and omit .pt) file (required).
+- `--model`: MACE model path, UMA model name, or CHGNet model name (required).
 - `--outdir`: Output directory (required).
 - `--device`: Device to use (cuda or cpu, default: cpu).
 - `--seed`: Random seed for MACE/UMA calculator setup (default: `42`).
@@ -119,7 +126,7 @@ make-attack --type <attack_type> --input <input_file> --model <model_file> --out
 
 - `--type`: Type of attack to perform, either `fgsm` or `pgd` (required).
 - `--input`: Path to the input structure file (CIF format) (required).
-- `--model`: Path to MACE (include .model) or UMA (omit .pt) file (required).
+- `--model`: MACE model path, UMA model name, CHGNet model name (required).
 - `--device`: Device to use for computations (cuda or cpu, default: cpu).
 - `--dtype`: Data type for calculations (`float32` or `float64`, default: `float64`).
 - `--seed`: Random seed for MACE/UMA calculator setup and PGD random start (default: `42`).

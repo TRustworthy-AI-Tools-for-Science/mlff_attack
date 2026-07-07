@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-MACE and UMA relaxation functionality.
+MACE, UMA, and CHGNet relaxation functionality.
 """
 
 import logging
@@ -8,7 +8,11 @@ from pathlib import Path
 
 from ase.io import read, write
 from ase.optimize import BFGS, LBFGS
-from mlff_attack.calculator import mace_calculator, uma_calculator
+from mlff_attack.calculator import (
+    chgnet_calculator,
+    mace_calculator,
+    uma_calculator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -91,8 +95,11 @@ def setup_calculator(
         ASE Atoms object with calculator attached, or None if setup fails
     """
     try:
-        if calculator not in {None, "mace", "uma"}:
-            logger.error("[ERROR] Invalid calculator '%s'. Use 'mace' or 'uma'.", calculator)
+        if calculator not in {None, "mace", "uma", "chgnet"}:
+            logger.error(
+                "[ERROR] Invalid calculator '%s'. Use 'mace', 'uma', or 'chgnet'.",
+                calculator,
+            )
             atoms = None
 
         elif calculator == "uma":
@@ -110,6 +117,23 @@ def setup_calculator(
                     uma_task=uma_task,
                     uma_charge=uma_charge,
                     uma_spin=uma_spin,
+                )
+
+        elif calculator == "chgnet":
+            if mace_head is not None:
+                logger.error("[ERROR] mace_head can only be used with MACE-MH models")
+                atoms = None
+            elif any(value is not None for value in (uma_charge, uma_spin)):
+                logger.error("[ERROR] UMA charge/spin options cannot be used with CHGNet")
+                atoms = None
+            else:
+                atoms = chgnet_calculator(
+                    atoms,
+                    model_path,
+                    device=device,
+                    dtype_str=dtype_str,
+                    seed=seed,
+                    verbose=verbose,
                 )
 
         else:

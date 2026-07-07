@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI entry point for MACE single structure attack.
+CLI entry point for MACE, UMA, or CHGNet adversarial attacks.
 """
 
 import argparse
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Perform adversarial attack on atomic structures using MACE model",
+        description="Perform adversarial attacks on atomic structures using MACE, UMA, or CHGNet",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 
@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument(
         "--model",
         required=True,
-        help="Path to MACE (include .model) or UMA (omit .pt) file"
+        help="MACE model path, UMA model name, CHGNet model name"
     )
 
     parser.add_argument(
@@ -54,7 +54,7 @@ def parse_args():
         "--seed",
         type=int,
         default=42,
-        help="Random seed for MACE/UMA calculator setup and PGD random start",
+        help="Random seed for MACE/UMA/CHGNet calculator setup and PGD random start",
     )
 
     parser.add_argument(
@@ -169,13 +169,15 @@ def main():
 
     model_name = Path(args.model).name.lower()
     is_mace_mh = model_name.startswith("mace-mh")
-    if model_name.startswith("uma"):
-        calculator = "uma"
-    elif model_name.startswith("mace"):
+    if model_name.startswith("mace"):
         calculator = "mace"
+    elif model_name.startswith("uma"):
+        calculator = "uma"
+    elif model_name.startswith("chgnet"):
+        calculator = "chgnet"
     else:
         raise SystemExit(
-            "--model basename must start with 'uma' for UMA or 'mace' for MACE"
+            "--model must start with 'uma', 'mace', or 'chgnet'"
         )
 
     if calculator == "mace":
@@ -200,6 +202,18 @@ def main():
             args.uma_charge = 0
         if args.uma_spin is None:
             args.uma_spin = 1
+
+    if calculator == "chgnet":
+        if args.mace_head is not None:
+            raise SystemExit(
+                "--mace-head can only be used with MACE-MH models"
+            )
+        if args.uma_task is not None:
+            raise SystemExit("--uma-task can only be used with UMA")
+        if args.uma_charge is not None:
+            raise SystemExit("--uma-charge can only be used with UMA")
+        if args.uma_spin is not None:
+            raise SystemExit("--uma-spin can only be used with UMA")
 
     # Override configuration with command line arguments
     input_cif = args.input

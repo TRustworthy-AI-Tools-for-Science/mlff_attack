@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI entry point for MACE or UMA single structure relaxation.
+CLI entry point for MACE, UMA, or CHGNet single-structure relaxation.
 """
 
 import argparse
@@ -21,9 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    """Main entry point for MACE or UMA single structure relaxation."""
+    """Main entry point for MACE, UMA, or CHGNet relaxation."""
     parser = argparse.ArgumentParser(
-        description="Relax a single CIF with MACE or UMA."
+        description="Relax a single CIF with MACE, UMA, or CHGNet."
     )
 
     parser.add_argument(
@@ -35,7 +35,7 @@ def main():
     parser.add_argument(
         "--model",
         required=True,
-        help="Path to MACE (include .model) or UMA (omit .pt) file",
+        help="MACE model path, UMA model name, CHGNet model name",
     )
 
     parser.add_argument(
@@ -63,7 +63,7 @@ def main():
         "--seed",
         type=int,
         default=42,
-        help="Random seed for MACE/UMA calculator setup",
+        help="Random seed for MACE/UMA/CHGNet calculator setup",
     )
 
     parser.add_argument(
@@ -120,13 +120,15 @@ def main():
     model_name = Path(args.model).name.lower()
     is_mace_mh = model_name.startswith("mace-mh")
 
-    if model_name.startswith("uma"):
-        calculator = "uma"
-    elif model_name.startswith("mace"):
+    if model_name.startswith("mace"):
         calculator = "mace"
+    elif model_name.startswith("uma"):
+        calculator = "uma"
+    elif model_name.startswith("chgnet"):
+        calculator = "chgnet"
     else:
         raise SystemExit(
-            "--model must start with 'uma' for UMA or 'mace' for MACE"
+            "--model must start with 'uma', 'mace', or 'chgnet'"
         )
 
     if calculator == "mace":
@@ -149,6 +151,16 @@ def main():
             args.uma_charge = 0
         if args.uma_spin is None:
             args.uma_spin = 1
+
+    if calculator == "chgnet":
+        if args.mace_head is not None:
+            parser.error("--mace-head can only be used with MACE-MH models")
+        if args.uma_task is not None:
+            parser.error("--uma-task can only be used with UMA")
+        if args.uma_charge is not None:
+            parser.error("--uma-charge can only be used with UMA")
+        if args.uma_spin is not None:
+            parser.error("--uma-spin can only be used with UMA")
 
     # Setup output paths
     outdir = Path(args.outdir)

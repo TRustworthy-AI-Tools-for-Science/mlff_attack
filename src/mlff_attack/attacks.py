@@ -42,7 +42,7 @@ def make_attack(
     uma_charge=None,
     uma_spin=None,
 ):
-    """Perform an adversarial attack on an atomic structure using MACE, MACE-MH, or UMA.
+    """Perform an adversarial attack on an atomic structure using MACE, MACE-MH, UMA, or CHGNet.
 
     This sets up the requested calculator, runs an FGSM or PGD attack, saves the
     perturbed structure as a CIF file, and returns the attack history.
@@ -108,7 +108,17 @@ def make_attack(
         model_name = (
             Path(model_path).name if isinstance(model_path, (str, Path)) else str(model_path)
         )
-        calculator_kind = "uma" if model_name.startswith("uma") else "mace"
+        model_name = model_name.lower()
+        if model_name.startswith("mace"):
+            calculator_kind = "mace"
+        elif model_name.startswith("uma"):
+            calculator_kind = "uma"
+        elif model_name.startswith("chgnet"):
+            calculator_kind = "chgnet"
+        else:
+            raise ValueError(
+                "model_path must identify a MACE, UMA, or CHGNet model"
+            )
 
     if verbose:
         logger.info("Setting up %s calculator", calculator_kind.upper())
