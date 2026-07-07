@@ -52,7 +52,7 @@ pip install -e ".[mace]"
 pip install -e ".[uma]"
 hf auth login
 
-# CHGNet support
+# CHGNet support must be in Python <= 3.12
 pip install -e ".[chgnet]"
 ```
 
