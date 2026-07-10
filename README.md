@@ -60,11 +60,13 @@ pip install -e ".[chgnet]"
 conda env create -f environment-mtp.yml
 ```
 
+> **Reminder to activate your environment:** Before running calculations, make sure to activate the respective MLFF environment for the targeted model.
+
 ## Usage
 
 ### Running calculations
 
-After installation, you can use the `calc-single` commands for MACE, MACE-MH, UMA, or CHGNet calculations:
+After installation, you can use the `calc-single` commands for MLFF calculations:
 
 ```bash
 # MACE
