@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI entry point for MACE, UMA, or CHGNet single-structure relaxation.
+CLI entry point for MACE, UMA, CHGNet, or MTP single-structure relaxation.
 """
 
 import argparse
@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 import sys
 
+from mlff_attack.calculators import infer_calculator_type
 from mlff_attack.relaxation import (
     load_structure,
     setup_calculator,
@@ -21,9 +22,9 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-    """Main entry point for MACE, UMA, or CHGNet relaxation."""
+    """Main entry point for MACE, UMA, CHGNet, or MTP relaxation."""
     parser = argparse.ArgumentParser(
-        description="Relax a single CIF with MACE, UMA, or CHGNet."
+        description="Relax a single CIF with MACE, UMA, CHGNet, or MTP."
     )
 
     parser.add_argument(
@@ -35,7 +36,7 @@ def main():
     parser.add_argument(
         "--model",
         required=True,
-        help="MACE model path, UMA model name, CHGNet model name",
+        help="MACE model path, UMA model name, CHGNet model name, or MTP .almtp path",
     )
 
     parser.add_argument(
@@ -63,7 +64,7 @@ def main():
         "--seed",
         type=int,
         default=42,
-        help="Random seed for MACE/UMA/CHGNet calculator setup",
+        help="Random seed for MACE/UMA/CHGNet/MTP calculator setup",
     )
 
     parser.add_argument(
@@ -120,16 +121,10 @@ def main():
     model_name = Path(args.model).name.lower()
     is_mace_mh = model_name.startswith("mace-mh")
 
-    if model_name.startswith("mace"):
-        calculator = "mace"
-    elif model_name.startswith("uma"):
-        calculator = "uma"
-    elif model_name.startswith("chgnet"):
-        calculator = "chgnet"
-    else:
-        raise SystemExit(
-            "--model must start with 'uma', 'mace', or 'chgnet'"
-        )
+    try:
+        calculator = infer_calculator_type(args.model)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     if calculator == "mace":
         if args.uma_task is not None:
@@ -144,7 +139,7 @@ def main():
     if args.mace_head is not None and not is_mace_mh:
         parser.error("--mace-head can only be used with MACE-MH models")
 
-    if calculator == "uma":
+    elif calculator == "uma":
         if args.uma_task is None:
             args.uma_task = "omat"
         if args.uma_charge is None:
@@ -152,7 +147,21 @@ def main():
         if args.uma_spin is None:
             args.uma_spin = 1
 
-    if calculator == "chgnet":
+    elif calculator == "chgnet":
+        if args.mace_head is not None:
+            parser.error("--mace-head can only be used with MACE-MH models")
+        if args.uma_task is not None:
+            parser.error("--uma-task can only be used with UMA")
+        if args.uma_charge is not None:
+            parser.error("--uma-charge can only be used with UMA")
+        if args.uma_spin is not None:
+            parser.error("--uma-spin can only be used with UMA")
+
+    elif calculator == "mtp":
+        if args.device != "cpu":
+            parser.error("MTP only supports --device cpu")
+        if args.dtype_str != "float64":
+            parser.error("MTP only supports --dtype float64")
         if args.mace_head is not None:
             parser.error("--mace-head can only be used with MACE-MH models")
         if args.uma_task is not None:

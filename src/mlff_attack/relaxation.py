@@ -8,11 +8,7 @@ from pathlib import Path
 
 from ase.io import read, write
 from ase.optimize import BFGS, LBFGS
-from mlff_attack.calculator import (
-    chgnet_calculator,
-    mace_calculator,
-    uma_calculator,
-)
+from mlff_attack.calculators import calculator as setup_mlff_calculator
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +50,7 @@ def setup_calculator(
     uma_charge=None,
     uma_spin=None,
 ):
-    """Initialize and attach a MACE or UMA calculator to an atoms object.
+    """Initialize and attach a calculator to an atoms object.
 
     - MACE models: pass a local model path, like "mace-mpa-0-medium.model"
     - MACE-MH models: pass a local multihead model path, like "mace-mh-1.model",
@@ -95,25 +91,46 @@ def setup_calculator(
         ASE Atoms object with calculator attached, or None if setup fails
     """
     try:
-        if calculator not in {None, "mace", "uma", "chgnet"}:
+        if calculator not in {None, "mace", "uma", "chgnet", "mtp"}:
             logger.error(
-                "[ERROR] Invalid calculator '%s'. Use 'mace', 'uma', or 'chgnet'.",
+                "[ERROR] Invalid calculator '%s'. Use 'mace', 'uma', 'chgnet', or 'mtp'.",
                 calculator,
             )
             atoms = None
+
+        elif calculator == "mace":
+            if any(value is not None for value in (uma_charge, uma_spin)):
+                logger.error("[ERROR] UMA charge/spin options cannot be used with MACE")
+                atoms = None
+            else:
+                atoms = setup_mlff_calculator(
+                    atoms,
+                    model_path,
+                    calculator_type=calculator,
+                    device=device,
+                    dtype_str=dtype_str,
+                    seed=seed,
+                    verbose=verbose,
+                    mace_head=mace_head,
+                    uma_task=uma_task,
+                    uma_charge=uma_charge,
+                    uma_spin=uma_spin,
+                )
 
         elif calculator == "uma":
             if mace_head is not None:
                 logger.error("[ERROR] mace_head can only be used with MACE-MH models")
                 atoms = None
             else:
-                atoms = uma_calculator(
+                atoms = setup_mlff_calculator(
                     atoms,
                     model_path,
+                    calculator_type=calculator,
                     device=device,
                     dtype_str=dtype_str,
                     seed=seed,
                     verbose=verbose,
+                    mace_head=mace_head,
                     uma_task=uma_task,
                     uma_charge=uma_charge,
                     uma_spin=uma_spin,
@@ -123,13 +140,38 @@ def setup_calculator(
             if mace_head is not None:
                 logger.error("[ERROR] mace_head can only be used with MACE-MH models")
                 atoms = None
+            elif uma_task is not None and uma_task != "omat":
+                logger.error("[ERROR] UMA task options cannot be used with CHGNet")
+                atoms = None
             elif any(value is not None for value in (uma_charge, uma_spin)):
                 logger.error("[ERROR] UMA charge/spin options cannot be used with CHGNet")
                 atoms = None
             else:
-                atoms = chgnet_calculator(
+                atoms = setup_mlff_calculator(
                     atoms,
                     model_path,
+                    calculator_type=calculator,
+                    device=device,
+                    dtype_str=dtype_str,
+                    seed=seed,
+                    verbose=verbose,
+                )
+
+        elif calculator == "mtp":
+            if mace_head is not None:
+                logger.error("[ERROR] mace_head can only be used with MACE-MH models")
+                atoms = None
+            elif uma_task is not None and uma_task != "omat":
+                logger.error("[ERROR] UMA task options cannot be used with MTP")
+                atoms = None
+            elif any(value is not None for value in (uma_charge, uma_spin)):
+                logger.error("[ERROR] UMA charge/spin options cannot be used with MTP")
+                atoms = None
+            else:
+                atoms = setup_mlff_calculator(
+                    atoms,
+                    model_path,
+                    calculator_type=calculator,
                     device=device,
                     dtype_str=dtype_str,
                     seed=seed,
@@ -137,9 +179,10 @@ def setup_calculator(
                 )
 
         else:
-            atoms = mace_calculator(
+            atoms = setup_mlff_calculator(
                 atoms,
                 model_path,
+                calculator_type="mace",
                 device=device,
                 dtype_str=dtype_str,
                 seed=seed,

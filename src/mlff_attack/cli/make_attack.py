@@ -10,6 +10,7 @@ import sys
 
 import matplotlib.pyplot as plt
 from mlff_attack.attacks import make_attack, visualize_perturbation
+from mlff_attack.calculators import infer_calculator_type
 from mlff_attack.relaxation import load_structure
 from mlff_attack.random_seed import set_random_seed
 
@@ -32,7 +33,7 @@ def parse_args():
     parser.add_argument(
         "--model",
         required=True,
-        help="MACE model path, UMA model name, CHGNet model name"
+        help="MACE model path, UMA model name, CHGNet model name, or MTP model path"
     )
 
     parser.add_argument(
@@ -169,16 +170,11 @@ def main():
 
     model_name = Path(args.model).name.lower()
     is_mace_mh = model_name.startswith("mace-mh")
-    if model_name.startswith("mace"):
-        calculator = "mace"
-    elif model_name.startswith("uma"):
-        calculator = "uma"
-    elif model_name.startswith("chgnet"):
-        calculator = "chgnet"
-    else:
-        raise SystemExit(
-            "--model must start with 'uma', 'mace', or 'chgnet'"
-        )
+
+    try:
+        calculator = infer_calculator_type(args.model)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
 
     if calculator == "mace":
         if args.uma_task is not None:
@@ -208,6 +204,20 @@ def main():
             raise SystemExit(
                 "--mace-head can only be used with MACE-MH models"
             )
+        if args.uma_task is not None:
+            raise SystemExit("--uma-task can only be used with UMA")
+        if args.uma_charge is not None:
+            raise SystemExit("--uma-charge can only be used with UMA")
+        if args.uma_spin is not None:
+            raise SystemExit("--uma-spin can only be used with UMA")
+
+    if calculator == "mtp":
+        if args.device != "cpu":
+            raise SystemExit("MTP only supports --device cpu")
+        if args.dtype_str != "float64":
+            raise SystemExit("MTP only supports --dtype float64")
+        if args.mace_head is not None:
+            raise SystemExit("--mace-head can only be used with MACE-MH models")
         if args.uma_task is not None:
             raise SystemExit("--uma-task can only be used with UMA")
         if args.uma_charge is not None:

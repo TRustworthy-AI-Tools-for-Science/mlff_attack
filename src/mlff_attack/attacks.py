@@ -14,6 +14,7 @@ from ase import Atoms
 from ase.io import write
 
 from mlff_attack.relaxation import setup_calculator
+from mlff_attack.calculators import infer_calculator_type
 from mlff_attack.grad_based.fgsm import FGSM_ASE
 from mlff_attack.grad_based.pgd import PGD_ASE
 from mlff_attack.random_seed import set_random_seed
@@ -105,20 +106,10 @@ def make_attack(
     # Setup calculator
     calculator_kind = calculator.lower() if isinstance(calculator, str) else calculator
     if calculator_kind is None:
-        model_name = (
-            Path(model_path).name if isinstance(model_path, (str, Path)) else str(model_path)
-        )
-        model_name = model_name.lower()
-        if model_name.startswith("mace"):
+        if not isinstance(model_path, (str, Path)):
             calculator_kind = "mace"
-        elif model_name.startswith("uma"):
-            calculator_kind = "uma"
-        elif model_name.startswith("chgnet"):
-            calculator_kind = "chgnet"
         else:
-            raise ValueError(
-                "model_path must identify a MACE, UMA, or CHGNet model"
-            )
+            calculator_kind = infer_calculator_type(model_path)
 
     if verbose:
         logger.info("Setting up %s calculator", calculator_kind.upper())
