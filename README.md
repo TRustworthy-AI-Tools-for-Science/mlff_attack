@@ -23,6 +23,7 @@ Attacks against MLFF Models - A Python package for testing and analyzing Machine
 | Multi-Head Message Passing Atomic Cluster Expansion (MACE-MH) | [link](https://arxiv.org/pdf/2510.25380) |
 | Universal Model for Atoms (UMA) | [link](https://ai.meta.com/research/publications/uma-a-family-of-universal-models-for-atoms/) |
 | Crystal Hamiltonian Graph Neural Network (CHGNet) | [link](https://chgnet.lbl.gov/) |
+| Moment Tensor Potential (MTP) | [link](https://github.com/gitliwq/LiCOHPF_database_1) |
 
 ## Installation
 
@@ -40,9 +41,9 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
-### Install MACE or UMA support
+### Install targeted MLFF support
 
-MACE and UMA should be installed in separate Python environments because their dependencies can conflict.
+Each MLFF should be installed in separate Python environments because their dependencies can conflict.
 
 ```bash
 # MACE support
@@ -54,6 +55,9 @@ hf auth login
 
 # CHGNet support must be in Python <= 3.12
 pip install -e ".[chgnet]"
+
+# MTP support uses the external MLIP-3 `mlp` executable
+conda env create -f environment-mtp.yml
 ```
 
 ## Usage
@@ -74,12 +78,15 @@ calc-single --input <structure>.cif --model uma-<variant> --outdir <output_direc
 
 # CHGNet
 calc-single --input <structure>.cif --model chgnet-<type> --outdir <output_directory>
+
+# MTP
+calc-single --input <structure>.xyz --model <type>.almtp --outdir <output_directory>
 ```
 
 #### Command-line options
 
 - `--input`: Input CIF file (required).
-- `--model`: MACE model path, UMA model name, or CHGNet model name (required).
+- `--model`: MLFF model filename (required).
 - `--outdir`: Output directory (required).
 - `--device`: Device to use (cuda or cpu, default: cpu).
 - `--seed`: Random seed for MACE/UMA calculator setup (default: `42`).
@@ -197,11 +204,25 @@ visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
 ### MACE support
 
 - mace-torch >= 0.3.0
+- `.model` file
 
 ### UMA support
 
 - fairchem-core >= 2.0.0
 - huggingface_hub
+- `.pt` file
+
+### CHGNet support
+
+- chgnet >= 0.4.2
+
+### MTP support
+
+- MLIP-3 `mlp` executable
+- WSL Ubuntu or Linux recommended
+- Conda environment recommended
+- CPU and float64 only
+- `.almtp` and `.almtp.elements` file
 
 ## License
 
