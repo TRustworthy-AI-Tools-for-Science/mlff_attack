@@ -1,0 +1,10 @@
+name: env-mtp
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - mlip-3
+  - pytest
+  - pip
+  - pip:
+      - -e .
