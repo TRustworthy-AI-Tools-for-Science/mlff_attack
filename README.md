@@ -60,7 +60,7 @@ pip install -e ".[chgnet]"
 conda env create -f environment-mtp.yml
 ```
 
-> **Reminder to activate your environment:** Before running calculations, make sure to activate the respective MLFF environment for the targeted model.
+> **Reminder to activate environment:** Before running calculations, make sure to activate the correct MLFF environment for the targeted model.
 
 ## Usage
 
