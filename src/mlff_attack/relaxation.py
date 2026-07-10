@@ -191,7 +191,7 @@ def setup_calculator(
             )
 
     except (OSError, TypeError, ValueError, RuntimeError, KeyError) as exc:
-        logger.error("[ERROR] Failed to setup calculator: %s", exc)
+        logger.error("[ERROR] Failed to setup calculator: %s, switch to or download the correct MLFF environment/backend", exc)
         atoms = None
 
     return atoms
