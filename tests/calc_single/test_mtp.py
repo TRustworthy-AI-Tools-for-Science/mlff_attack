@@ -1,13 +1,24 @@
-from pathlib import Path
+import shutil
 
 import numpy as np
+import pytest
 import torch
+
+mlp_path = shutil.which("mlp")
+if mlp_path is None:
+    pytest.skip(
+        "test_mtp.py requires the MLIP-3 'mlp' executable. "
+        "Switch to env-mtp.",
+        allow_module_level=True,
+    )
+
 from ase import Atoms, build
 from ase.io import write
 
 from mlff_attack import relaxation
 from mlff_attack.calc_setup.mtp import MTPCalculator
 from mlff_attack.random_seed import set_random_seed
+from pathlib import Path
 
 
 def test_load_mtp_dependency():

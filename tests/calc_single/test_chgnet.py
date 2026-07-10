@@ -3,7 +3,7 @@ import torch
 
 chgnet = pytest.importorskip(
     "chgnet",
-    reason="test_chgnet_calc_single.py requires CHGNet dependencies",
+    reason="test_chgnet.py requires CHGNet dependencies",
 )
 
 from ase import Atoms, build

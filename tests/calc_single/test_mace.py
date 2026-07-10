@@ -3,7 +3,7 @@ import torch
 
 mace = pytest.importorskip(
     "mace",
-    reason="test_mace_calc_single.py requires mace-torch dependencies (switch to virtual environment that supports MACE)",
+    reason="test_mace.py requires mace-torch dependencies (switch to virtual environment that supports MACE)",
 )
 
 from ase import Atoms, build

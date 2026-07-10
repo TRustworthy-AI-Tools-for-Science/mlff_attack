@@ -48,17 +48,14 @@ def test_cli_mace_calc_single():
 
 
 def test_cli_uma_calc_single():
-    # Define input parameters
-    input_cif = 'does_not_exist.cif'  # Intentionally incorrect path
-    model_path = 'does_not_exist.model'  # Intentionally incorrect path
+    input_cif = 'does_not_exist.cif'
+    model_path = 'uma-sample'
     outdir = "tests/output/uma_calc_single_test"
 
-    # Ensure output directory is clean
     if os.path.exists(outdir):
         import shutil
         shutil.rmtree(outdir)
 
-    # Construct command
     cmd = [
         "python",
         "src/mlff_attack/cli/calc_single.py",
@@ -72,19 +69,15 @@ def test_cli_uma_calc_single():
         "--optimizer", "LBFGS"
     ]
 
-    # Run the CLI command
     result = subprocess.run(cmd, capture_output=True, text=True)
 
-    # Check that the command executed successfully
     assert result.returncode == 1, f"CLI failed with error: {result.stderr}"
 
-    # Check that output files are created
     traj_path = Path(outdir) / "relaxed.traj"
     cif_path = Path(outdir) / "relaxed.cif"
     assert not traj_path.exists(), "Trajectory file should not have been created."
     assert not cif_path.exists(), "Relaxed CIF file should not have been created."
 
-    # Clean up after test
     if os.path.exists(outdir):
         import shutil
         shutil.rmtree(outdir)
@@ -187,7 +180,7 @@ def test_cli_uma_rejects_head():
         sys.executable,
         "src/mlff_attack/cli/calc_single.py",
         "--input", "does_not_exist.cif",
-        "--model", "uma_sample",
+        "--model", "uma-sample",
         "--outdir", "tests/output/mace_rejects_uma_charge_test",
         "--mace-head", "omat_pbe"
     ]

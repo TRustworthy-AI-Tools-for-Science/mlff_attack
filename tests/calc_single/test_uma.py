@@ -3,7 +3,7 @@ import torch
 
 fairchem_core = pytest.importorskip(
     "fairchem.core",
-    reason="test_uma_calc_single.py requires fairchem-core / UMA dependencies",
+    reason="test_uma.py requires fairchem-core / UMA dependencies",
 )
 
 from ase import Atoms, build
