@@ -1,4 +1,4 @@
-name: env-mtp
+name: .venv-mtp
 channels:
   - conda-forge
 dependencies:
