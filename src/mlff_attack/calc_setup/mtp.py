@@ -19,7 +19,11 @@ logger = logging.getLogger(__name__)
 class MTPCalculator(FileIOCalculator):
     """ASE calculator for MLIP-3 .almtp potentials."""
 
-    implemented_properties = ["energy", "forces"]
+    implemented_properties = [
+        "energy",
+        "free_energy",
+        "forces",
+    ]
     name = "mtp"
 
     def __init__(
@@ -258,8 +262,11 @@ class MTPCalculator(FileIOCalculator):
         for atom_id, force in forces:
             ordered_forces[atom_id - 1] = force
 
+        energy = float(energy)
+
         self.results = {
-            "energy": float(energy),
+            "energy": energy,
+            "free_energy": energy,
             "forces": ordered_forces,
         }
 
