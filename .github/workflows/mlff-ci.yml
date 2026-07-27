@@ -107,7 +107,6 @@ jobs:
         uses: Vampire/setup-wsl@v7
         with:
           distribution: Ubuntu-24.04
-          update: "true"
           additional-packages: sudo curl ca-certificates
 
       - name: Run setup inside WSL
