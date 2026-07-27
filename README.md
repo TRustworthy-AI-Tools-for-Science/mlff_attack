@@ -43,21 +43,15 @@ pip install -e ".[dev]"
 
 ### Install targeted MLFF support
 
-Each MLFF should be installed in separate Python environments because their dependencies can conflict.
+Each MLFF model should be installed in separate Python environments because their dependencies can conflict:
+* MACE support
+* UMA support must be in Python <= 3.12 and requires access through Hugging Face
+* CHGNet support must be in Python <= 3.12
+* MTP support uses the external MLIP-3 `mlp` executable
 
 ```bash
-# MACE support
-pip install -e ".[mace]"
-
-# UMA support must be in Python <= 3.12 and requires access through Hugging Face
-pip install -e ".[uma]"
-hf auth login
-
-# CHGNet support must be in Python <= 3.12
-pip install -e ".[chgnet]"
-
-# MTP support uses the external MLIP-3 `mlp` executable
-conda env create -f environment-mtp.yml
+git switch mlff-<model>
+bash setup.sh
 ```
 
 > **Reminder to activate environment:** Before running calculations, make sure to activate the correct MLFF environment for the targeted model.
