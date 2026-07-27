@@ -16,5 +16,5 @@ if [ ! -x .venv-uma/bin/python ]; then python3.12 -m venv .venv-uma; fi
 .venv-uma/bin/python -m pip install -e ".[uma]"
 
 source .venv-uma/bin/activate
-echo "UMA setup complete: `source .venv-mace/bin/activate` to activate."
+echo "UMA setup complete. Activate it with: source .venv-mace/bin/activate."
 echo "Authenticate if required: .venv-uma/bin/hf auth login"
