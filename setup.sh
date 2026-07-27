@@ -16,4 +16,4 @@ if [ ! -x .venv-chgnet/bin/python ]; then python3.12 -m venv .venv-chgnet; fi
 .venv-chgnet/bin/python -m pip install -e ".[chgnet]"
 
 source .venv-chgnet/bin/activate
-echo "CHGNet setup complete: `source .venv-chgnet/bin/activate` to activate"
+echo "CHGNet setup complete. Activate it with: source .venv-chgnet/bin/activate"
