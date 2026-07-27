@@ -1,0 +1,130 @@
+name: MLFF CI
+
+on:
+  push:
+    branches:
+      - mlff-mace
+      - mlff-uma
+      - mlff-chgnet
+      - mlff-mtp
+
+  pull_request:
+    branches:
+      - main
+      - mlff-mace
+      - mlff-uma
+      - mlff-chgnet
+      - mlff-mtp
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mlff-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-ubuntu-test:
+    name: Native Ubuntu
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Run setup
+        run: |
+          echo "Running on native Ubuntu"
+          uname -a
+
+          if grep -q "command -v conda" setup.sh; then
+            curl -L https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -o /tmp/miniforge.sh
+            bash /tmp/miniforge.sh -b -p "$HOME/miniforge3"
+            export PATH="$HOME/miniforge3/bin:$PATH"
+          fi
+
+          bash setup.sh
+
+      - name: Verify installed environment
+        run: |
+          if [ -x .venv-mace/bin/python ]; then
+            .venv-mace/bin/python -c "import mlff_attack, mace"
+            .venv-mace/bin/calc-single --help >/dev/null
+            echo "MACE installation passed"
+
+          elif [ -x .venv-uma/bin/python ]; then
+            .venv-uma/bin/python -c "import mlff_attack, fairchem.core"
+            .venv-uma/bin/calc-single --help >/dev/null
+            echo "UMA installation passed"
+
+          elif [ -x .venv-chgnet/bin/python ]; then
+            .venv-chgnet/bin/python -c "import mlff_attack, chgnet"
+            .venv-chgnet/bin/calc-single --help >/dev/null
+            echo "CHGNet installation passed"
+
+          else
+            export PATH="$HOME/miniforge3/bin:$PATH"
+            source "$HOME/miniforge3/etc/profile.d/conda.sh"
+            conda run --name env-mtp python -c "import mlff_attack"
+            conda run --name env-mtp bash -lc "command -v mlp"
+            echo "MTP installation passed"
+          fi
+
+  wsl-ubuntu-test:
+    name: Ubuntu through WSL
+    runs-on: windows-2022
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Install Ubuntu in WSL
+        uses: Vampire/setup-wsl@v7
+        with:
+          distribution: Ubuntu-24.04
+          update: "true"
+          additional-packages: sudo curl ca-certificates
+
+      - name: Run setup inside WSL
+        shell: wsl-bash {0}
+        run: |
+          echo "Running inside Ubuntu through WSL"
+          uname -a
+
+          if grep -q "command -v conda" setup.sh; then
+            curl -L https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -o /tmp/miniforge.sh
+            bash /tmp/miniforge.sh -b -p "$HOME/miniforge3"
+            export PATH="$HOME/miniforge3/bin:$PATH"
+          fi
+
+          bash setup.sh
+
+      - name: Verify installed environment
+        shell: wsl-bash {0}
+        run: |
+          if [ -x .venv-mace/bin/python ]; then
+            .venv-mace/bin/python -c "import mlff_attack, mace"
+            .venv-mace/bin/calc-single --help >/dev/null
+            echo "MACE installation passed"
+
+          elif [ -x .venv-uma/bin/python ]; then
+            .venv-uma/bin/python -c "import mlff_attack, fairchem.core"
+            .venv-uma/bin/calc-single --help >/dev/null
+            echo "UMA installation passed"
+
+          elif [ -x .venv-chgnet/bin/python ]; then
+            .venv-chgnet/bin/python -c "import mlff_attack, chgnet"
+            .venv-chgnet/bin/calc-single --help >/dev/null
+            echo "CHGNet installation passed"
+
+          else
+            export PATH="$HOME/miniforge3/bin:$PATH"
+            source "$HOME/miniforge3/etc/profile.d/conda.sh"
+            conda run --name env-mtp python -c "import mlff_attack"
+            conda run --name env-mtp bash -lc "command -v mlp"
+            echo "MTP installation passed"
+          fi
