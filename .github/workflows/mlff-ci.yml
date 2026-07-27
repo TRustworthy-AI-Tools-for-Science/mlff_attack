@@ -28,6 +28,10 @@ concurrency:
 jobs:
   native-ubuntu-test:
     name: Native Ubuntu
+    if: >-
+      startsWith(github.ref_name, 'mlff-') ||
+      startsWith(github.head_ref, 'mlff-') ||
+      startsWith(github.base_ref, 'mlff-')
     runs-on: ubuntu-24.04
     timeout-minutes: 90
 
@@ -40,10 +44,20 @@ jobs:
           echo "Running on native Ubuntu"
           uname -a
 
+          if [ ! -f setup.sh ]; then
+            echo "ERROR: This MLFF branch does not contain setup.sh."
+            exit 1
+          fi
+
           if grep -q "command -v conda" setup.sh; then
-            curl -L https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -o /tmp/miniforge.sh
-            bash /tmp/miniforge.sh -b -p "$HOME/miniforge3"
-            export PATH="$HOME/miniforge3/bin:$PATH"
+            if ! command -v conda >/dev/null 2>&1; then
+              if [ ! -x "$HOME/miniforge3/bin/conda" ]; then
+                curl -L https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -o /tmp/miniforge.sh
+                bash /tmp/miniforge.sh -b -p "$HOME/miniforge3"
+              fi
+
+              export PATH="$HOME/miniforge3/bin:$PATH"
+            fi
           fi
 
           bash setup.sh
@@ -66,8 +80,11 @@ jobs:
             echo "CHGNet installation passed"
 
           else
-            export PATH="$HOME/miniforge3/bin:$PATH"
-            source "$HOME/miniforge3/etc/profile.d/conda.sh"
+            if [ -x "$HOME/miniforge3/bin/conda" ]; then
+              export PATH="$HOME/miniforge3/bin:$PATH"
+            fi
+
+            source "$(conda info --base)/etc/profile.d/conda.sh"
             conda run --name env-mtp python -c "import mlff_attack"
             conda run --name env-mtp bash -lc "command -v mlp"
             echo "MTP installation passed"
@@ -75,6 +92,10 @@ jobs:
 
   wsl-ubuntu-test:
     name: Ubuntu through WSL
+    if: >-
+      startsWith(github.ref_name, 'mlff-') ||
+      startsWith(github.head_ref, 'mlff-') ||
+      startsWith(github.base_ref, 'mlff-')
     runs-on: windows-2022
     timeout-minutes: 90
 
@@ -95,10 +116,20 @@ jobs:
           echo "Running inside Ubuntu through WSL"
           uname -a
 
+          if [ ! -f setup.sh ]; then
+            echo "ERROR: This MLFF branch does not contain setup.sh."
+            exit 1
+          fi
+
           if grep -q "command -v conda" setup.sh; then
-            curl -L https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -o /tmp/miniforge.sh
-            bash /tmp/miniforge.sh -b -p "$HOME/miniforge3"
-            export PATH="$HOME/miniforge3/bin:$PATH"
+            if ! command -v conda >/dev/null 2>&1; then
+              if [ ! -x "$HOME/miniforge3/bin/conda" ]; then
+                curl -L https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh -o /tmp/miniforge.sh
+                bash /tmp/miniforge.sh -b -p "$HOME/miniforge3"
+              fi
+
+              export PATH="$HOME/miniforge3/bin:$PATH"
+            fi
           fi
 
           bash setup.sh
@@ -122,8 +153,11 @@ jobs:
             echo "CHGNet installation passed"
 
           else
-            export PATH="$HOME/miniforge3/bin:$PATH"
-            source "$HOME/miniforge3/etc/profile.d/conda.sh"
+            if [ -x "$HOME/miniforge3/bin/conda" ]; then
+              export PATH="$HOME/miniforge3/bin:$PATH"
+            fi
+
+            source "$(conda info --base)/etc/profile.d/conda.sh"
             conda run --name env-mtp python -c "import mlff_attack"
             conda run --name env-mtp bash -lc "command -v mlp"
             echo "MTP installation passed"
