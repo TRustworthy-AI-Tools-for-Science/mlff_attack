@@ -15,6 +15,14 @@ Attacks against MLFF Models - A Python package for testing and analyzing Machine
 | Iterative Fast Gradient Sign Method (I-FGSM) | [link](https://arxiv.org/abs/1607.02533) | 
 | Projected Gradient Descent (PGD) | [link](https://arxiv.org/abs/1706.06083) |
 
+<p align="center">
+  <img src="figures/attacks_visualization.png" alt="Visualization of implemented MLFF adversarial attacks" width="700">
+</p>
+
+<p align="center">
+  <em>Visual overview of the adversarial attacks.</em>
+</p>
+
 ### Models Supported
 
 | Model Name | Paper |
