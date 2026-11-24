@@ -2,19 +2,19 @@
 
 ## Overview
 
-The `FGSM_ASE` class provides a clean, object-oriented interface for performing Fast Gradient Sign Method attacks on MACE force field models. It extends the abstract `MLFFAttack` base class.
+The `FGSM_ASE` class provides a clean, object-oriented interface for performing Fast Gradient Sign Method attacks on MACE/UMA force field models. It extends the abstract `MLFFAttack` base class.
 
 ## Architecture
 
 ```
 MLFFAttack (Abstract Base Class)
     ↓
-FGSM_ASE (MACE-specific implementation)
+FGSM_ASE (MACE/UMA implementation)
 ```
 
 ### Key Features
 
-1. **Automatic gradient computation** through MACE models
+1. **Automatic gradient computation** through MACE/UMA models
 2. **History tracking** for analysis (energies, forces, perturbations)
 3. **Perturbation clipping** to enforce epsilon bounds
 4. **Flexible attack modes**: maximize energy or target specific energy
@@ -89,7 +89,7 @@ perturbed_atoms = attack.attack(atoms, n_steps=10, clip=True)
 ### `FGSM_ASE`
 
 **Constructor Parameters:**
-- `model`: MACE calculator attached to atoms
+- `model`: MACE/UMA calculator attached to atoms
 - `epsilon`: Perturbation step size (Angstroms)
 - `device`: PyTorch device ('cpu' or 'cuda')
 - `track_history`: Enable history tracking (default: True)
@@ -99,7 +99,7 @@ perturbed_atoms = attack.attack(atoms, n_steps=10, clip=True)
 
 #### `attack(atoms, n_steps=1, clip=True)`
 Execute the attack.
-- `atoms`: Input structure with MACE calculator
+- `atoms`: Input structure with MACE/UMA calculator
 - `n_steps`: Number of iterations (1 for FGSM, >1 for I-FGSM)
 - `clip`: Enforce epsilon bound
 - Returns: Perturbed atoms object
