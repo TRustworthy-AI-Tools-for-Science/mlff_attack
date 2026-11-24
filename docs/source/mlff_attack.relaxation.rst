@@ -1,7 +1,7 @@
 mlff\_attack.relaxation module
 ===============================
 
-This module provides utilities for structure loading, MACE calculator setup,
+This module provides utilities for structure loading, MACE/UMA calculator setup,
 and geometry optimization (relaxation) of atomic structures.
 
 .. automodule:: mlff_attack.relaxation

@@ -1,21 +1,24 @@
 import pytest
-from mlff_attack import relaxation
-import mace
+import torch
+
+mace = pytest.importorskip(
+    "mace",
+    reason="test_mace.py requires mace-torch dependencies (switch to virtual environment that supports MACE)",
+)
+
+from ase import Atoms, build
+from ase.io import write
 from mace.calculators import mace_mp
-from ase import build
-from ase import Atoms
+from mlff_attack import relaxation
+from mlff_attack.random_seed import set_random_seed
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 def test_load_mace_model():
     calc = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
     assert isinstance(calc, mace.calculators.mace.MACECalculator)
 
 def test_load_structure():
-    """Test loading a structure file."""
-    from ase import Atoms
-    from ase.io import write, read
-    from pathlib import Path
-
     # Create a temporary structure file
     struct_file = Path(__file__).parent / "data" / "sample_struct.xyz"
     struct_file.parent.mkdir(parents=True, exist_ok=True)
@@ -33,42 +36,64 @@ def test_load_structure():
     except OSError:
         pass
 
-def test_setup_calculator():
-    """Test setting up MACE calculator."""
-
+def test_setup_mace_calculator():
     # Create a dummy atoms object
     atoms = build.molecule("H2O")
-                
+
     # Use a non-existent model path for testing
     model_path = Path(__file__).parent / "data" / "non_existent_model.pth"
 
-    atoms_with_calc = relaxation.setup_calculator(atoms, str(model_path), device="cpu", dtype_str="float32")
+    atoms_with_calc = relaxation.setup_calculator(
+        atoms,
+        str(model_path),
+        device="cpu",
+        dtype_str="float32",
+        calculator="mace",
+    )
     assert atoms_with_calc is None  # Should fail to load model
 
     model = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
 
-    atoms_with_mace = relaxation.setup_calculator(atoms, model, device="cpu", dtype_str="float32")
+    atoms_with_mace = relaxation.setup_calculator(
+        atoms,
+        model,
+        device="cpu",
+        dtype_str="float32",
+        calculator="mace",
+    )
+    assert atoms_with_mace is not None
+
+
+def test_setup_mace_mh_calculator_sets_head():
+    atoms = build.molecule("H2O")
+    model = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
+    model.heads = ["omat_pbe", "omol"]
+
+    atoms_with_mace = relaxation.setup_calculator(
+        atoms,
+        model,
+        device="cpu",
+        dtype_str="float32",
+        calculator="mace",
+        mace_head="omat_pbe",
+    )
 
     assert atoms_with_mace is not None
-    
+    assert atoms_with_mace.calc.head == "omat_pbe"
+
 
 def test_get_optimizer_class():
-    """Test getting optimizer class."""
     opt_class = relaxation.get_optimizer_class("BFGS")
     assert opt_class is not None
 
     opt_class = relaxation.get_optimizer_class("LBFGS")
     assert opt_class is not None
 
-def test_run_relaxation():
-    """Test running relaxation (mocked)."""
-    from ase import Atoms
-    from unittest.mock import patch, MagicMock
-    from pathlib import Path
 
+def test_run_relaxation():
     atoms = build.molecule("H2O")
     atoms.calc = mace_mp(model='small', dispersion=False, default_dtype='float32', device='cpu')
-    
+
     traj_path = Path(__file__).parent / "data" / "test_traj.traj"
     traj_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -77,25 +102,25 @@ def test_run_relaxation():
         mock_opt_instance = MagicMock()
         mock_opt_instance.run = MagicMock()
         mock_opt_instance.nsteps = 5
-        
+
         # Create a mock optimizer class that returns the instance when called
         mock_opt_class = MagicMock(return_value=mock_opt_instance)
         mock_get_opt.return_value = mock_opt_class
-        
+
         success = relaxation.run_relaxation(atoms, str(traj_path), optimizer="BFGS", fmax=0.01, max_steps=10)
-        
+
         # Verify the optimizer class getter was called with correct optimizer name
         mock_get_opt.assert_called_once_with("BFGS")
-        
+
         # Verify the optimizer class was instantiated
         mock_opt_class.assert_called_once()
-        
+
         # Verify the optimizer's run method was called
         mock_opt_instance.run.assert_called_once_with(fmax=0.01, steps=10)
-        
+
         # The function should return True on success
         assert success == True
-    
+
     # Cleanup
     if traj_path.exists():
         traj_path.unlink()
@@ -105,13 +130,7 @@ def test_run_relaxation():
         pass
 
 
-
-
-def test_save_results():
-    """Test saving results to files."""
-    from ase import Atoms
-    from pathlib import Path
-
+def test_saving_results_to_files():
     atoms = Atoms('H2O', positions=[[0, 0, 0], [0.76, 0.58, 0], [-0.76, 0.58, 0]])
 
     output_dir = Path(__file__).parent / "data" / "output"
@@ -130,3 +149,39 @@ def test_save_results():
         output_dir.parent.rmdir()
     except OSError:
         pass
+
+def test_dtype_toggle():
+    for dtype_str, expected_dtype in [
+        ("float32", torch.float32),
+        ("float64", torch.float64),
+    ]:
+        calc = mace_mp(
+            model="small",
+            dispersion=False,
+            default_dtype=dtype_str,
+            device="cpu",
+        )
+
+        for parameter in calc.models[0].parameters():
+            assert parameter.dtype == expected_dtype
+
+
+def test_seed_sets_torch_rng():
+    seed = 43
+
+    set_random_seed(seed)
+    atoms = build.molecule("H2O")
+    model = mace_mp(model="small", dispersion=False, default_dtype="float32", device="cpu")
+
+    atoms = relaxation.setup_calculator(
+        atoms,
+        model,
+        device="cpu",
+        dtype_str="float32",
+        seed=seed,
+        calculator="mace",
+    )
+
+    assert atoms is not None
+    assert atoms.calc is not None
+    assert torch.initial_seed() == seed

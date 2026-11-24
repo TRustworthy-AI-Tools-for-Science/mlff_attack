@@ -1,79 +1,79 @@
 #!/usr/bin/env python3
 """
-CLI entry point for MACE single structure attack.
+CLI entry point for MACE, UMA, or CHGNet adversarial attacks.
 """
 
 import argparse
+import logging
 from pathlib import Path
-import torch
-import numpy as np
-import argparse
-
+import sys
 
 import matplotlib.pyplot as plt
-from mlff_attack.relaxation import (
-    load_structure,
-    setup_calculator,
-)
 from mlff_attack.attacks import make_attack, visualize_perturbation
+from mlff_attack.calculators import infer_calculator_type
+from mlff_attack.relaxation import load_structure
+from mlff_attack.random_seed import set_random_seed
+
+logger = logging.getLogger(__name__)
+
 
 def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
-        description="Perform adversarial attack on atomic structures using MACE model",
+        description="Perform adversarial attacks on atomic structures using MACE, UMA, or CHGNet",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
-    
+
     parser.add_argument(
         "--input",
-        type=str,
-        default="initial_cifs/chemistry_value_isovalent_0_05_18_traj.cif",
+        required=True,
         help="Path to input CIF file"
     )
-    
+
     parser.add_argument(
         "--model",
-        type=str,
-        default="mace-mpa-0-medium.model",
-        help="Path to MACE model file"
+        required=True,
+        help="MACE model path, UMA model name, CHGNet model name, or MTP model path"
     )
-    
+
     parser.add_argument(
         "--device",
-        type=str,
         default="cpu",
         choices=["cpu", "cuda"],
         help="Device to run model on"
     )
-    
+
     parser.add_argument(
-        "--epsilon",
-        type=float,
-        default=0.05,
-        help="Perturbation step size in Angstroms"
+        "--dtype",
+        dest="dtype_str",
+        default="float64",
+        choices=["float32", "float64"],
+        help="Floating point precision to request for calculator setup",
     )
-    
+
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for MACE/UMA/CHGNet calculator setup and PGD random start",
+    )
+
     parser.add_argument(
         "--outdir",
-        type=str,
-        default=None,
-        help="Path to output directory (default: auto-generated from input with '_perturbed' suffix)"
+        required=True,
+        help=(
+            "Path to output directory "
+            "(default: auto-generated from input with '_perturbed' suffix)"
+        )
     )
-    
-    parser.add_argument(
-        "--target-energy",
-        type=float,
-        default=None,
-        help="Target energy for attack (if None, maximize energy)"
-    )
-    
+
     parser.add_argument(
         "--visualize",
         action="store_true",
         default=True,
         help="Generate visualization plot"
     )
-    
+
     parser.add_argument(
         "--no-visualize",
         action="store_false",
@@ -83,67 +83,249 @@ def parse_args():
 
     parser.add_argument(
         "--type",
-        type=str,
-        default="fgsm",
-        choices=["fgsm", "pgd", "bim"],
+        required=True,
+        choices=["fgsm", "FGSM", "pgd", "PGD"],
         help="Type of adversarial attack to perform"
     )
-    
+
+    parser.add_argument(
+        "--epsilon",
+        type=float,
+        default=0.05,
+        help="Perturbation step size in Angstroms"
+    )
+
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=None,
+        help="PGD step size. If not provided, use epsilon / n_steps",
+    )
+
+    parser.add_argument(
+        "--n-steps",
+        type=int,
+        default=1,
+        help="Number of attack iterations",
+    )
+
+    parser.add_argument(
+        "--target-energy",
+        type=float,
+        default=None,
+        help="Target energy for attack (if None, maximize energy)"
+    )
+
+    parser.add_argument(
+        "--clip",
+        nargs="?",
+        const="true",
+        default=None,
+        choices=["true", "True", "false", "False"],
+        help=(
+            "Clip total perturbation displacements to epsilon. "
+            "Use --clip or --clip true to enable, --clip false to disable."
+        ),
+    )
+
+    parser.add_argument(
+        "--mace-head",
+        default=None,
+        choices=["omat_pbe", "omol", "spice_wB97M", "rgd1_b3lyp", "oc20_usemppbe", "matpes_r2scan"],
+        help="Only used with MACE-MH model",
+    )
+
+    parser.add_argument(
+        "--uma-task",
+        default=None,
+        choices=["oc20", "oc22", "oc25", "omat", "omol", "odac", "omc"],
+        help="Only used with UMA model",
+    )
+
+    parser.add_argument(
+        "--uma-charge",
+        type=int,
+        default=None,
+        help="Molecular charge only used with UMA model and --uma-task omol",
+    )
+
+    parser.add_argument(
+        "--uma-spin",
+        type=int,
+        default=None,
+        help="Spin multiplicity only used with UMA model and --uma-task omol",
+    )
+
     return parser.parse_args()
 
 
-
 def main():
-
+    """Run the adversarial attack CLI."""
     # Parse command line arguments
     args = parse_args()
-    
+    attack_type = args.type.lower()
+
+    if attack_type != "pgd" and args.alpha is not None:
+        raise SystemExit("--alpha can only be used with --type pgd")
+
+    model_name = Path(args.model).name.lower()
+    is_mace_mh = model_name.startswith("mace-mh")
+
+    try:
+        calculator = infer_calculator_type(args.model)
+    except ValueError as exc:
+        raise SystemExit(str(exc)) from exc
+
+    if calculator == "mace":
+        if args.uma_task is not None:
+            raise SystemExit("--uma-task can only be used with UMA")
+        if args.uma_charge is not None:
+            raise SystemExit("--uma-charge can only be used with UMA")
+        if args.uma_spin is not None:
+            raise SystemExit("--uma-spin can only be used with UMA")
+        if args.mace_head is None and is_mace_mh:
+            args.mace_head = "omat_pbe"
+
+    if args.mace_head is not None and not is_mace_mh:
+        raise SystemExit("--mace-head can only be used with MACE-MH models")
+
+    if calculator == "uma":
+        if args.mace_head is not None:
+            raise SystemExit("--mace-head can only be used with MACE-MH models")
+        if args.uma_task is None:
+            args.uma_task = "omat"
+        if args.uma_charge is None:
+            args.uma_charge = 0
+        if args.uma_spin is None:
+            args.uma_spin = 1
+
+    if calculator == "chgnet":
+        if args.mace_head is not None:
+            raise SystemExit(
+                "--mace-head can only be used with MACE-MH models"
+            )
+        if args.uma_task is not None:
+            raise SystemExit("--uma-task can only be used with UMA")
+        if args.uma_charge is not None:
+            raise SystemExit("--uma-charge can only be used with UMA")
+        if args.uma_spin is not None:
+            raise SystemExit("--uma-spin can only be used with UMA")
+
+    if calculator == "mtp":
+        if args.device != "cpu":
+            raise SystemExit("MTP only supports --device cpu")
+        if args.dtype_str != "float64":
+            raise SystemExit("MTP only supports --dtype float64")
+        if args.mace_head is not None:
+            raise SystemExit("--mace-head can only be used with MACE-MH models")
+        if args.uma_task is not None:
+            raise SystemExit("--uma-task can only be used with UMA")
+        if args.uma_charge is not None:
+            raise SystemExit("--uma-charge can only be used with UMA")
+        if args.uma_spin is not None:
+            raise SystemExit("--uma-spin can only be used with UMA")
+
     # Override configuration with command line arguments
     input_cif = args.input
     model_path = args.model
     device = args.device
+    dtype_str = args.dtype_str
+    seed = args.seed
     epsilon = args.epsilon
+    alpha = args.alpha
+    n_steps = args.n_steps
     target_energy = args.target_energy
-    attack_type = args.type
-    
+    clip = args.clip
+    if clip is not None:
+        clip = clip in ("true", "True")
+
     # Determine output path
     if args.outdir is not None:
         output_cif = Path(args.outdir) / (Path(input_cif).stem + "_perturbed.cif")
     else:
         output_cif = Path(input_cif).with_name(Path(input_cif).stem + "_perturbed.cif")
 
+    output_cif.parent.mkdir(parents=True, exist_ok=True)
+    logging.basicConfig(
+        filename=output_cif.parent / "make_attack.log",
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        encoding="utf-8",
+    )
+
+    logger.info("Dtype: %s", args.dtype_str)
+    logger.info("Random seed: %s", args.seed)
+    set_random_seed(args.seed)
+
+    logger.info("Calculator: %s", calculator.upper())
+    if args.mace_head is not None:
+        logger.info("MACE-MH head: %s", args.mace_head)
+    if calculator == "uma":
+        logger.info("UMA task: %s", args.uma_task)
+        logger.info("UMA charge: %s", args.uma_charge)
+        logger.info("UMA spin: %s", args.uma_spin)
+
     # Load structure
-    print(f"\nLoading structure from: {input_cif}")
+    logger.info("\nLoading structure from: %s", input_cif)
     atoms = load_structure(input_cif)
     if atoms is None:
-        raise RuntimeError(f"Failed to load structure from {input_cif}")
-    print(f"   Loaded {len(atoms)} atoms: {atoms.get_chemical_formula()}")
+        logger.error("[error] Failed to load structure from %s", input_cif)
+        return 1
+
+    mace_head = args.mace_head
+    uma_task = args.uma_task
+    uma_charge = args.uma_charge
+    uma_spin = args.uma_spin
+
+    if calculator == "uma":
+        atoms.info["charge"] = uma_charge
+        atoms.info["spin"] = uma_spin
+
+    logger.info("   Loaded %s atoms: %s", len(atoms), atoms.get_chemical_formula())
 
     # Generate perturbed structure
-    print(f"\nGenerating perturbed structure with epsilon={epsilon} Å")
-    output_file, perturbed_atoms, attack_details = make_attack(
-        atoms=atoms,
-        model_path=model_path,
-        device=device,
-        epsilon=epsilon,
-        target_energy=target_energy,
-        output_cif=output_cif,
-        attack_type=attack_type
-    )
+    logger.info("\nGenerating perturbed structure with epsilon=%s Å", epsilon)
+    try:
+        output_file, perturbed_atoms, _attack_details = make_attack(
+            atoms=atoms,
+            model_path=model_path,
+            device=device,
+            dtype_str=dtype_str,
+            seed=seed,
+            output_cif=output_cif,
+            attack_type=attack_type,
+            epsilon=epsilon,
+            alpha=alpha,
+            n_steps=n_steps,
+            target_energy=target_energy,
+            clip=clip,
+            calculator=calculator,
+            mace_head=mace_head,
+            uma_task=uma_task,
+            uma_charge=uma_charge,
+            uma_spin=uma_spin,
+        )
+    except (ValueError, NotImplementedError, RuntimeError) as exc:
+        logger.error("[error] Failed to generate attack. Run calc-single first and use the same model to generate attack: %s", exc)
+        return 1
 
     # Visualize perturbation
     if args.visualize:
-        print(f"\nVisualizing perturbation")
+        logger.info("\nVisualizing perturbation")
         # Store output filename in atoms info for visualization
         perturbed_atoms.info['filename'] = str(output_cif)
-        fig = visualize_perturbation(atoms, perturbed_atoms, epsilon=epsilon, outdir=Path(output_cif).parent)
+        fig = visualize_perturbation(
+            atoms,
+            perturbed_atoms,
+            epsilon=epsilon,
+            outdir=Path(output_cif).parent,
+        )
         plt.close(fig)
 
     if output_file:
         return 0
-    else:
-        return 1
+    return 1
 
-    
+
 if __name__ == "__main__":
-    exit(main())
+    sys.exit(main())

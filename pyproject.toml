@@ -7,7 +7,7 @@ name = "mlff_attack"
 version = "0.1.0"
 description = "Attacks against MLFF Models"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Trustworthy AI Tools for Science"}
@@ -64,7 +64,7 @@ dev = [
 ]
 
 [project.scripts]
-mace-calc-single = "mlff_attack.cli.mace_calc_single:main"
+calc-single = "mlff_attack.cli.calc_single:main"
 visualize-traj = "mlff_attack.cli.visualize_traj:main"
 make-attack = "mlff_attack.cli.make_attack:main"
 
