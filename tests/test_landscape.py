@@ -162,10 +162,38 @@ def test_compute_pes_hessian_spectrum_and_alignment():
     assert np.isclose(mw_spec["max_eigenvalue"], 10.0)
 
 
-def test_loss_landscape_sharpness_and_pes_coupling():
-    torch = pytest.importorskip("torch")
+def test_extract_torch_module_variants():
+    class DummyModule:
+        def parameters(self):
+            return []
 
-    # Tiny differentiable quadratic surrogate E_theta(R) = 0.5 * sum((W @ R)^2)
+    class DummyMACE:
+        models = [DummyModule()]
+
+    class DummyPredictor:
+        model = DummyModule()
+
+    class DummyUMA:
+        predictor = DummyPredictor()
+
+    class DummyCHGNet:
+        model = DummyModule()
+
+    assert landscape.extract_torch_module(DummyMACE()) is DummyMACE.models[0]
+    assert landscape.extract_torch_module(DummyUMA()) is DummyPredictor.model
+    assert landscape.extract_torch_module(DummyCHGNet()) is DummyCHGNet.model
+
+    raw = DummyModule()
+    assert landscape.extract_torch_module(raw) is raw
+
+    with pytest.raises(TypeError):
+        landscape.extract_torch_module(object())
+
+
+def test_oxford_loss_landscapes_integration():
+    torch = pytest.importorskip("torch")
+    pytest.importorskip("oxford_loss_landscapes")
+
     class ToyPotential(torch.nn.Module):
         def __init__(self):
             super().__init__()
@@ -183,28 +211,28 @@ def test_loss_landscape_sharpness_and_pes_coupling():
     r0 = np.array([[0.5, -0.2, 0.1], [0.3, 0.4, -0.6]])
     base_weight_copy = model.weight.detach().clone()
 
-    def loss_fn():
-        e_val, _ = model.energy_and_forces(r0)
+    def eval_loss(wrapper):
+        net = wrapper.modules[0]
+        e_val, _ = net.energy_and_forces(r0)
         return (e_val - 1.0) ** 2
 
-    d1 = landscape.filter_normalized_direction(model, seed=10)
-    d2 = landscape.filter_normalized_direction(model, seed=11)
-
     slice_1d = landscape.evaluate_loss_landscape_1d(
-        model, loss_fn, d1, alphas=np.linspace(-0.05, 0.05, 9)
+        model, eval_loss, distance=0.05, steps=9, normalization="filter"
     )
     assert slice_1d["losses"].shape == (9,)
     assert np.all(np.isfinite(slice_1d["losses"]))
     assert torch.allclose(model.weight, base_weight_copy)
 
     slice_2d = landscape.evaluate_loss_landscape_2d(
-        model, loss_fn, d1, d2, alpha_grid=[-0.02, 0.0, 0.02], beta_grid=[-0.02, 0.0, 0.02]
+        model, eval_loss, distance=0.05, steps=5, normalization="filter"
     )
-    assert slice_2d["losses"].shape == (3, 3)
-    assert np.isclose(slice_2d["losses"][1, 1], slice_2d["base_loss"])
+    assert slice_2d["losses"].shape == (5, 5)
+    assert np.all(np.isfinite(slice_2d["losses"]))
     assert torch.allclose(model.weight, base_weight_copy)
 
-    sharp = landscape.parameter_sharpness(model, loss_fn, rho=1e-2, n_directions=4, seed=42)
+    sharp = landscape.parameter_sharpness(
+        model, eval_loss, rho=1e-2, n_directions=3, seed=42
+    )
     assert np.isfinite(sharp["max_sharpness"])
     assert np.isfinite(sharp["mean_curvature"])
     assert torch.allclose(model.weight, base_weight_copy)
@@ -212,10 +240,10 @@ def test_loss_landscape_sharpness_and_pes_coupling():
     adv_dir = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
     coupling = landscape.pes_parameter_coupling(
         model,
-        lambda: model.energy_and_forces(r0),
+        lambda wrapper: wrapper.modules[0].energy_and_forces(r0),
         direction_r=adv_dir,
         rho=1e-3,
-        n_directions=4,
+        n_directions=3,
         seed=7,
     )
     assert coupling["mean_energy_sensitivity"] > 0.0

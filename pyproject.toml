@@ -51,6 +51,10 @@ chgnet = [
     "chgnet>=0.4.2",
 ]
 
+landscape = [
+    "oxford-loss-landscapes @ git+https://github.com/TRustworthy-AI-Tools-for-Science/oxford-loss-landscapes.git",
+]
+
 notebooks = [
     "jupyterlab>=3.0",
     "ipywidgets>=8.0",

@@ -125,6 +125,8 @@ Optional extras
      - ``fairchem-core >= 2.0, < 3.0`` + ``huggingface_hub`` -- UMA calculator support
    * - ``chgnet``
      - ``chgnet >= 0.4.2`` -- CHGNet calculator support
+   * - ``landscape``
+     - ``oxford-loss-landscapes`` -- Parameter-space loss landscape & VR-PCA Hessian analysis
    * - ``notebooks``
      - ``jupyterlab``, ``ipywidgets``, ``ipykernel`` -- running example notebooks
    * - ``dev``

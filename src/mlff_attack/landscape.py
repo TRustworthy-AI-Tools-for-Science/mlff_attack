@@ -9,9 +9,11 @@ This module connects input-space adversarial perturbations to:
    :math:`\\Gamma`-point phonon stability.
 2. **Model loss-landscape geometry in parameter space** (:math:`\\theta`-space)
    and **cross-space coupling** (:math:`\\theta \\leftrightarrow \\mathbf{R}`):
-   filter-normalized random directions (Li et al., 2018), 1D/2D parameter loss
-   slices, local parameter sharpness, and parameter sensitivity of predicted
-   energies and forces projected onto adversarial perturbation directions.
+   thin adapters delegating directly to
+   `oxford-loss-landscapes <https://github.com/TRustworthy-AI-Tools-for-Science/oxford-loss-landscapes>`_
+   (``random_line``, ``random_plane``, ``hessian_plane``,
+   ``min_max_hessian_eigs_vrpca``, ``ModelWrapper``, and ``ModelParameters``
+   filter/layer/model normalization), plus parameter-to-PES force coupling.
 
 Attribution
 -----------
@@ -25,7 +27,7 @@ MIT License, Copyright (c) 2026 Declan Chan.
 """
 
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -829,222 +831,396 @@ def gamma_phonon_modes(
 
 
 # ---------------------------------------------------------------------------
-# 3. Model Loss Landscape (Parameter Space) & Parameter-PES Coupling
+# 3. Model Loss Landscape (oxford-loss-landscapes integration) & PES Coupling
 # ---------------------------------------------------------------------------
 
 
-def _trainable_params(model: Any) -> List[Any]:
-    """Return floating-point parameters of a PyTorch ``nn.Module``."""
-    params = [
-        p for p in model.parameters() if p.requires_grad and p.is_floating_point()
-    ]
-    if not params:
-        params = [p for p in model.parameters() if p.is_floating_point()]
-    if not params:
-        raise ValueError("Model has no floating-point parameters.")
-    return params
+def _require_oxford_loss_landscapes():
+    """Import ``oxford_loss_landscapes`` or raise an actionable ImportError."""
+    try:
+        import oxford_loss_landscapes as oll
+    except ImportError as exc:
+        raise ImportError(
+            "Parameter-space loss landscape analysis requires "
+            "`oxford-loss-landscapes`. Install it with:\n"
+            '    pip install -e ".[landscape]"\n'
+            "or directly from GitHub:\n"
+            "    pip install git+https://github.com/"
+            "TRustworthy-AI-Tools-for-Science/oxford-loss-landscapes.git"
+        ) from exc
+    return oll
 
 
-def filter_normalized_direction(
-    model: Any,
-    seed: Optional[int] = None,
-) -> List[Any]:
-    """Sample a filter-normalized random direction in parameter space.
+def extract_torch_module(calculator_or_module: Any) -> Any:
+    """Extract the underlying PyTorch ``nn.Module`` from an MLFF calculator.
 
-    Implements the filter-wise normalization of Li et al. (NeurIPS 2018),
-    scaling each random tensor slice to match the Frobenius/Euclidean norm of
-    the corresponding parameter filter so scale invariance does not distort
-    loss-landscape curvature comparisons.
+    Supports:
+    - MACE calculators (``calc.models[0]``)
+    - UMA / ``FAIRChemCalculator`` (``calc.predictor.model``)
+    - CHGNet calculators (``calc.model``)
+    - Raw ``torch.nn.Module`` or ``oxford_loss_landscapes.ModelWrapper``
 
     Parameters
     ----------
-    model : torch.nn.Module
-        PyTorch model whose parameter shapes and norms define the direction.
-    seed : int, optional
-        Random seed for reproducibility.
+    calculator_or_module : Any
+        ASE calculator, PyTorch ``nn.Module``, or ``ModelWrapper``.
 
     Returns
     -------
-    list of torch.Tensor
-        Direction tensors aligned with the model's floating-point parameters.
+    Any
+        Underlying PyTorch module (or ``ModelWrapper`` if already wrapped).
     """
-    import torch
+    if hasattr(calculator_or_module, "get_module_parameters"):
+        return calculator_or_module
+    if hasattr(calculator_or_module, "models") and calculator_or_module.models:
+        return calculator_or_module.models[0]
+    predictor = getattr(calculator_or_module, "predictor", None)
+    if predictor is not None and hasattr(predictor, "model"):
+        return predictor.model
+    if hasattr(calculator_or_module, "model") and hasattr(
+        calculator_or_module.model, "parameters"
+    ):
+        return calculator_or_module.model
+    if hasattr(calculator_or_module, "parameters"):
+        return calculator_or_module
+    raise TypeError(
+        "Could not extract a PyTorch module from object of type "
+        f"{type(calculator_or_module).__name__}."
+    )
 
-    params = _trainable_params(model)
-    rng = np.random.default_rng(seed)
-    direction = []
 
-    for param in params:
-        noise_np = rng.standard_normal(size=tuple(param.shape))
-        d_tensor = torch.as_tensor(
-            noise_np, dtype=param.dtype, device=param.device
+def wrap_mlff_model(
+    calculator_or_module: Any,
+    forward_fn: Optional[Callable[[Any, Any], Any]] = None,
+) -> Any:
+    """Wrap an MLFF calculator or PyTorch module for ``oxford_loss_landscapes``.
+
+    Parameters
+    ----------
+    calculator_or_module : Any
+        MACE/UMA/CHGNet calculator, ``torch.nn.Module``, or ``ModelWrapper``.
+    forward_fn : callable, optional
+        Optional ``forward_fn(model, x)`` for ``GeneralModelWrapper``.
+
+    Returns
+    -------
+    oxford_loss_landscapes.ModelWrapper
+        Wrapped model ready for ``oxford_loss_landscapes`` routines.
+    """
+    oll = _require_oxford_loss_landscapes()
+    module = extract_torch_module(calculator_or_module)
+    if isinstance(module, oll.ModelWrapper):
+        return module
+    if forward_fn is not None:
+        return oll.GeneralModelWrapper(module, [module], forward_fn)
+    return oll.SimpleModelWrapper(module)
+
+
+def make_mlff_metric(eval_fn: Callable[[Any], float]) -> Any:
+    """Adapt an MLFF evaluation callable into an ``oxford_loss_landscapes.Metric``.
+
+    Parameters
+    ----------
+    eval_fn : callable
+        Callable accepting an ``oxford_loss_landscapes.ModelWrapper`` (or zero
+        arguments if wrapped via ``lambda _wrapper: ...``) and returning a
+        scalar ``float`` loss, energy, or force-error metric.
+
+    Returns
+    -------
+    oxford_loss_landscapes.metrics.metric.Metric
+        Metric instance usable with ``random_line``, ``random_plane``,
+        ``planar_interpolation``, ``linear_interpolation``, and
+        ``hessian_plane``.
+    """
+    oll = _require_oxford_loss_landscapes()
+    from oxford_loss_landscapes.metrics.metric import Metric as OllMetric
+
+    class _MLFFCallableMetric(OllMetric):
+        def __init__(self, fn: Callable[[Any], float]):
+            super().__init__()
+            self._fn = fn
+
+        def __call__(self, model_wrapper: Any) -> float:
+            return float(self._fn(model_wrapper))
+
+    return _MLFFCallableMetric(eval_fn)
+
+
+def _normalize_oll_direction(
+    direction: Any,
+    ref_point: Any,
+    normalization: Optional[str],
+) -> Any:
+    """Apply ``oxford_loss_landscapes`` parameter normalization in-place."""
+    if normalization == "filter":
+        direction.filter_normalize_(ref_point)
+    elif normalization == "layer":
+        direction.layer_normalize_(ref_point)
+    elif normalization == "model":
+        direction.model_normalize_(ref_point)
+    elif normalization is None:
+        pass
+    else:
+        raise ValueError(
+            "normalization must be 'filter', 'layer', 'model', or None."
         )
-        if param.ndim >= 2:
-            # Normalize per output filter (dim 0) to match parameter filter norm
-            flat_p = param.detach().reshape(param.shape[0], -1)
-            flat_d = d_tensor.reshape(param.shape[0], -1)
-            p_norm = torch.linalg.norm(flat_p, dim=1, keepdim=True)
-            d_norm = torch.linalg.norm(flat_d, dim=1, keepdim=True).clamp(min=1e-12)
-            d_tensor = (flat_d * (p_norm / d_norm)).reshape(param.shape)
-        else:
-            p_norm = torch.linalg.norm(param.detach())
-            d_norm = torch.linalg.norm(d_tensor).clamp(min=1e-12)
-            d_tensor = d_tensor * (p_norm / d_norm)
-        direction.append(d_tensor)
-
     return direction
-
-
-def _apply_parameter_offset(
-    params: Sequence[Any],
-    base_weights: Sequence[Any],
-    offsets: Sequence[Tuple[float, Sequence[Any]]],
-) -> None:
-    """Set each parameter tensor to ``base + sum(coeff * d)`` in-place."""
-    import torch
-
-    with torch.no_grad():
-        for idx, (param, base) in enumerate(zip(params, base_weights)):
-            updated = base.clone()
-            for coeff, direction in offsets:
-                if coeff != 0.0:
-                    updated.add_(direction[idx], alpha=float(coeff))
-            param.copy_(updated)
 
 
 def evaluate_loss_landscape_1d(
     model: Any,
-    loss_fn: Callable[[], float],
-    direction: Sequence[Any],
-    alphas: Sequence[float],
+    eval_fn: Callable[[Any], float],
+    distance: float = 0.1,
+    steps: int = 51,
+    normalization: Optional[str] = "filter",
+    deepcopy_model: bool = True,
 ) -> Dict[str, Any]:
-    """Evaluate a 1D parameter-space loss slice ``L(theta_0 + alpha * d)``.
+    """Evaluate a 1D random parameter-space loss slice via ``oxford_loss_landscapes``.
 
-    Original model weights are guaranteed to be restored even if ``loss_fn``
-    raises an exception.
+    Delegates directly to :func:`oxford_loss_landscapes.random_line` and
+    computes curvature roughness along the slice.
 
     Parameters
     ----------
-    model : torch.nn.Module
-        PyTorch model.
-    loss_fn : callable
-        Zero-argument callable returning the scalar loss (or energy/force
-        error) evaluated with ``model``'s current parameters.
-    direction : sequence of torch.Tensor
-        Direction tensors from :func:`filter_normalized_direction`.
-    alphas : sequence of float
-        1D perturbation coefficients along ``direction``.
+    model : Any
+        MLFF calculator, PyTorch ``nn.Module``, or ``ModelWrapper``.
+    eval_fn : callable
+        Callable ``eval_fn(model_wrapper) -> float`` (or an existing
+        ``oxford_loss_landscapes.metrics.metric.Metric``).
+    distance : float, optional
+        Perturbation distance passed to ``oll.random_line``, by default ``0.1``.
+    steps : int, optional
+        Number of grid points along the line, by default ``51``.
+    normalization : {'filter', 'layer', 'model', None}, optional
+        Direction normalization scheme, by default ``'filter'``.
+    deepcopy_model : bool, optional
+        Deep-copy the model before perturbing weights, by default True.
 
     Returns
     -------
     dict
-        Contains ``alphas``, ``losses``, ``base_loss``, and ``roughness``.
+        Contains ``alphas``, ``losses``, ``distance``, ``steps``, and
+        ``roughness``.
     """
-    params = _trainable_params(model)
-    base_weights = [p.detach().clone() for p in params]
-    alpha_arr = np.asarray(alphas, dtype=float)
-    losses = np.full(alpha_arr.shape, np.nan, dtype=float)
+    oll = _require_oxford_loss_landscapes()
+    from oxford_loss_landscapes.metrics.metric import Metric as OllMetric
 
-    try:
-        base_loss = float(loss_fn())
-        for idx, alpha in enumerate(alpha_arr):
-            _apply_parameter_offset(
-                params, base_weights, ((float(alpha), direction),)
-            )
-            losses[idx] = float(loss_fn())
-    finally:
-        _apply_parameter_offset(params, base_weights, ())
-
+    wrapper = wrap_mlff_model(model)
+    metric = eval_fn if isinstance(eval_fn, OllMetric) else make_mlff_metric(eval_fn)
+    losses = np.asarray(
+        oll.random_line(
+            wrapper,
+            metric=metric,
+            distance=distance,
+            steps=steps,
+            normalization=normalization,
+            deepcopy_model=deepcopy_model,
+        ),
+        dtype=float,
+    )
+    alphas = np.linspace(-float(distance), float(distance), losses.size)
     return {
-        "alphas": alpha_arr,
-        "base_loss": base_loss,
+        "alphas": alphas,
         "losses": losses,
-        "roughness": pes_roughness(alpha_arr, losses),
+        "distance": float(distance),
+        "steps": int(steps),
+        "roughness": pes_roughness(alphas, losses),
     }
 
 
 def evaluate_loss_landscape_2d(
     model: Any,
-    loss_fn: Callable[[], float],
-    dir1: Sequence[Any],
-    dir2: Sequence[Any],
-    alpha_grid: Sequence[float],
-    beta_grid: Sequence[float],
+    eval_fn: Callable[[Any], float],
+    distance: float = 1.0,
+    steps: int = 21,
+    normalization: Optional[str] = "filter",
+    deepcopy_model: bool = True,
+    use_ray: bool = False,
+    num_workers: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Evaluate a 2D parameter-space loss surface ``L(theta_0 + a d1 + b d2)``.
+    """Evaluate a 2D random parameter-space loss surface via ``oxford_loss_landscapes``.
+
+    Delegates directly to :func:`oxford_loss_landscapes.random_plane`.
 
     Parameters
     ----------
-    model : torch.nn.Module
-        PyTorch model.
-    loss_fn : callable
-        Zero-argument callable returning scalar loss under current parameters.
-    dir1, dir2 : sequence of torch.Tensor
-        Filter-normalized parameter directions.
-    alpha_grid, beta_grid : sequence of float
-        1D grids along ``dir1`` and ``dir2``.
+    model : Any
+        MLFF calculator, PyTorch ``nn.Module``, or ``ModelWrapper``.
+    eval_fn : callable
+        Callable ``eval_fn(model_wrapper) -> float`` or ``Metric``.
+    distance : float, optional
+        Maximum perturbation distance along each axis, by default ``1.0``.
+    steps : int, optional
+        Grid resolution (``steps x steps``), by default ``21``.
+    normalization : {'filter', 'layer', 'model', None}, optional
+        Direction normalization scheme, by default ``'filter'``.
+    deepcopy_model : bool, optional
+        Deep-copy the model before perturbing weights, by default True.
+    use_ray : bool, optional
+        Enable Ray parallel evaluation in ``oxford_loss_landscapes``,
+        by default False.
+    num_workers : int, optional
+        Number of Ray workers when ``use_ray=True``.
 
     Returns
     -------
     dict
-        Contains ``alpha``, ``beta``, ``base_loss``, and ``losses`` with shape
-        ``(len(beta_grid), len(alpha_grid))``.
+        Contains ``alpha``, ``beta``, ``losses`` (shape ``(steps, steps)``),
+        ``distance``, and ``steps``.
     """
-    params = _trainable_params(model)
-    base_weights = [p.detach().clone() for p in params]
-    a_arr = np.asarray(alpha_grid, dtype=float)
-    b_arr = np.asarray(beta_grid, dtype=float)
-    losses = np.full((b_arr.size, a_arr.size), np.nan, dtype=float)
+    oll = _require_oxford_loss_landscapes()
+    from oxford_loss_landscapes.metrics.metric import Metric as OllMetric
 
-    try:
-        base_loss = float(loss_fn())
-        for ib, beta in enumerate(b_arr):
-            for ia, alpha in enumerate(a_arr):
-                _apply_parameter_offset(
-                    params,
-                    base_weights,
-                    ((float(alpha), dir1), (float(beta), dir2)),
-                )
-                losses[ib, ia] = float(loss_fn())
-    finally:
-        _apply_parameter_offset(params, base_weights, ())
-
+    wrapper = wrap_mlff_model(model)
+    metric = eval_fn if isinstance(eval_fn, OllMetric) else make_mlff_metric(eval_fn)
+    losses = np.asarray(
+        oll.random_plane(
+            wrapper,
+            metric=metric,
+            distance=distance,
+            steps=steps,
+            normalization=normalization,
+            deepcopy_model=deepcopy_model,
+            use_ray=use_ray,
+            num_workers=num_workers,
+        ),
+        dtype=float,
+    )
+    axis = np.linspace(-float(distance), float(distance), int(steps))
     return {
-        "alpha": a_arr,
-        "beta": b_arr,
-        "base_loss": base_loss,
+        "alpha": axis,
+        "beta": axis,
         "losses": losses,
+        "distance": float(distance),
+        "steps": int(steps),
     }
+
+
+def evaluate_hessian_loss_plane(
+    model: Any,
+    eval_fn: Callable[[Any], float],
+    criterion: Any,
+    inputs: Any,
+    targets: Any,
+    distance: float = 1.0,
+    steps: int = 21,
+    deepcopy_model: bool = True,
+    vrpca_config: Optional[Any] = None,
+) -> Dict[str, Any]:
+    """Evaluate a 2D loss plane along the dominant parameter Hessian eigenvector.
+
+    Delegates directly to :func:`oxford_loss_landscapes.hessian_plane`, which
+    computes the top parameter-Hessian eigenvector via VR-PCA and pairs it
+    with a random orthogonal direction.
+
+    Parameters
+    ----------
+    model : Any
+        MLFF calculator, PyTorch ``nn.Module``, or ``ModelWrapper``.
+    eval_fn : callable
+        Callable ``eval_fn(model_wrapper) -> float`` or ``Metric``.
+    criterion : callable
+        Differentiable PyTorch loss criterion for Hessian computation.
+    inputs, targets : Any
+        Inputs and targets passed to ``oll.hessian_plane``.
+    distance : float, optional
+        Maximum distance from center along each axis, by default ``1.0``.
+    steps : int, optional
+        Grid resolution (``steps x steps``), by default ``21``.
+    deepcopy_model : bool, optional
+        Deep-copy the model before perturbing weights, by default True.
+    vrpca_config : VRPCAConfig, optional
+        Optional ``oxford_loss_landscapes.VRPCAConfig`` instance.
+
+    Returns
+    -------
+    dict
+        Contains ``alpha``, ``beta``, ``losses``, ``distance``, and ``steps``.
+    """
+    oll = _require_oxford_loss_landscapes()
+    from oxford_loss_landscapes.metrics.metric import Metric as OllMetric
+
+    module = extract_torch_module(model)
+    metric = eval_fn if isinstance(eval_fn, OllMetric) else make_mlff_metric(eval_fn)
+    losses = np.asarray(
+        oll.hessian_plane(
+            module,
+            metric=metric,
+            criterion=criterion,
+            inputs=inputs,
+            targets=targets,
+            distance=distance,
+            steps=steps,
+            deepcopy_model=deepcopy_model,
+            vrpca_config=vrpca_config,
+        ),
+        dtype=float,
+    )
+    axis = np.linspace(-float(distance), float(distance), int(steps))
+    return {
+        "alpha": axis,
+        "beta": axis,
+        "losses": losses,
+        "distance": float(distance),
+        "steps": int(steps),
+    }
+
+
+def compute_parameter_hessian_eigs(
+    model: Any,
+    criterion: Any,
+    inputs: Any,
+    targets: Any,
+    vrpca_config: Optional[Any] = None,
+) -> Any:
+    """Estimate min/max parameter-space Hessian eigenpairs via ``oxford_loss_landscapes``.
+
+    Delegates directly to :func:`oxford_loss_landscapes.min_max_hessian_eigs_vrpca`.
+    """
+    oll = _require_oxford_loss_landscapes()
+    module = extract_torch_module(model)
+    if isinstance(module, oll.ModelWrapper):
+        module = module.modules[0]
+    return oll.min_max_hessian_eigs_vrpca(
+        net=module,
+        inputs=inputs,
+        targets=targets,
+        criterion=criterion,
+        config=vrpca_config,
+    )
 
 
 def parameter_sharpness(
     model: Any,
-    loss_fn: Callable[[], float],
+    eval_fn: Callable[[Any], float],
     rho: float = 1e-2,
     n_directions: int = 10,
+    normalization: Optional[str] = "filter",
     seed: int = 42,
 ) -> Dict[str, Any]:
-    """Estimate local parameter-space sharpness and curvature around ``theta_0``.
+    """Estimate local parameter-space sharpness using ``oxford_loss_landscapes`` directions.
 
-    Samples ``n_directions`` filter-normalized directions ``d_k`` and evaluates
-    symmetric perturbations :math:`\\theta_0 \\pm \\rho d_k` to compute:
-
-    - worst-case sharpness :math:`\\max_k \\max(\\mathcal{L}(\\theta_0 \\pm \\rho d_k)) - \\mathcal{L}(\\theta_0)`
-    - central-difference directional curvature
-      :math:`(\\mathcal{L}_+ + \\mathcal{L}_- - 2\\mathcal{L}_0) / \\rho^2`
+    Samples ``n_directions`` normalized parameter directions via
+    :func:`oxford_loss_landscapes.model_interface.model_parameters.rand_n_like`
+    and evaluates symmetric perturbations :math:`\\theta_0 \\pm \\rho d_k`,
+    restoring the original weights in a ``finally`` block.
 
     Parameters
     ----------
-    model : torch.nn.Module
-        PyTorch model.
-    loss_fn : callable
-        Zero-argument scalar loss callable.
+    model : Any
+        MLFF calculator, PyTorch ``nn.Module``, or ``ModelWrapper``.
+    eval_fn : callable
+        Callable ``eval_fn(model_wrapper) -> float``.
     rho : float, optional
-        Parameter perturbation radius, by default ``1e-2``.
+        Perturbation scale, by default ``1e-2``.
     n_directions : int, optional
-        Number of random filter-normalized directions, by default ``10``.
+        Number of random parameter directions, by default ``10``.
+    normalization : {'filter', 'layer', 'model', None}, optional
+        Direction normalization passed to ``ModelParameters``, by default
+        ``'filter'``.
     seed : int, optional
-        Base random seed, by default ``42``.
+        Random seed for PyTorch direction sampling, by default ``42``.
 
     Returns
     -------
@@ -1057,24 +1233,47 @@ def parameter_sharpness(
     if n_directions <= 0:
         raise ValueError("n_directions must be a positive integer.")
 
-    params = _trainable_params(model)
-    base_weights = [p.detach().clone() for p in params]
+    import copy
+    import torch
+
+    _require_oxford_loss_landscapes()
+    from oxford_loss_landscapes.model_interface.model_parameters import rand_n_like
+
+    wrapper = wrap_mlff_model(model)
+    params = wrapper.get_module_parameters()
+    base_snapshot = copy.deepcopy(params)
+
     sharpness_vals = []
     curvatures = []
 
-    try:
-        base_loss = float(loss_fn())
-        for idx in range(n_directions):
-            direction = filter_normalized_direction(model, seed=seed + idx)
-            _apply_parameter_offset(params, base_weights, ((rho, direction),))
-            loss_plus = float(loss_fn())
-            _apply_parameter_offset(params, base_weights, ((-rho, direction),))
-            loss_minus = float(loss_fn())
+    with torch.random.fork_rng():
+        torch.manual_seed(int(seed))
+        try:
+            base_loss = float(eval_fn(wrapper))
+            for _ in range(n_directions):
+                direction = rand_n_like(params)
+                _normalize_oll_direction(direction, base_snapshot, normalization)
+                step_vec = direction * float(rho)
 
-            sharpness_vals.append(max(loss_plus, loss_minus) - base_loss)
-            curvatures.append((loss_plus + loss_minus - 2.0 * base_loss) / (rho**2))
-    finally:
-        _apply_parameter_offset(params, base_weights, ())
+                params.add_(step_vec)
+                loss_plus = float(eval_fn(wrapper))
+
+                params.sub_(step_vec * 2.0)
+                loss_minus = float(eval_fn(wrapper))
+
+                # Restore exact baseline parameters before next direction
+                with torch.no_grad():
+                    for cur_p, base_p in zip(params, base_snapshot):
+                        cur_p.copy_(base_p)
+
+                sharpness_vals.append(max(loss_plus, loss_minus) - base_loss)
+                curvatures.append(
+                    (loss_plus + loss_minus - 2.0 * base_loss) / (rho**2)
+                )
+        finally:
+            with torch.no_grad():
+                for cur_p, base_p in zip(params, base_snapshot):
+                    cur_p.copy_(base_p)
 
     sharp_arr = np.asarray(sharpness_vals, dtype=float)
     curv_arr = np.asarray(curvatures, dtype=float)
@@ -1091,44 +1290,46 @@ def parameter_sharpness(
 
 def pes_parameter_coupling(
     model: Any,
-    eval_energy_and_forces: Callable[[], Tuple[float, np.ndarray]],
+    eval_energy_and_forces: Callable[[Any], Tuple[float, np.ndarray]],
     direction_r: np.ndarray,
     rho: float = 1e-3,
     n_directions: int = 5,
+    normalization: Optional[str] = "filter",
     seed: int = 42,
 ) -> Dict[str, Any]:
-    """Quantify coupling between model parameter perturbations and PES forces.
+    """Quantify coupling between parameter perturbations and PES forces.
 
-    Perturbs model parameters along ``n_directions`` filter-normalized
-    directions :math:`\\theta_0 \\pm \\rho d_k` and computes finite-difference
-    parameter sensitivities of:
+    Uses ``oxford_loss_landscapes`` ``ModelParameters`` direction sampling and
+    normalization to perturb :math:`\\theta_0 \\pm \\rho d_k`, then measures:
 
-    - predicted energy :math:`|\\partial E_\\theta / \\partial \\alpha_k|`
-    - full force field :math:`\\|\\partial \\mathbf{F}_\\theta / \\partial \\alpha_k\\|_F`
-    - force projected onto the adversarial perturbation direction
-      :math:`\\hat{\\mathbf{d}}_R`:
+    - predicted energy sensitivity :math:`|\\partial E_\\theta / \\partial \\alpha_k|`
+    - full force sensitivity :math:`\\|\\partial \\mathbf{F}_\\theta / \\partial \\alpha_k\\|_F`
+    - adversarial-direction force sensitivity
       :math:`|\\langle \\partial \\mathbf{F}_\\theta / \\partial \\alpha_k, \\hat{\\mathbf{d}}_R \\rangle|`
-      (a finite-difference probe of the mixed derivative
+      (finite-difference probe of
       :math:`\\nabla_\\theta \\nabla_{\\mathbf{R}} E_\\theta \\cdot \\hat{\\mathbf{d}}_R`)
     - cosine alignment between :math:`\\partial \\mathbf{F}_\\theta / \\partial \\alpha_k`
       and :math:`\\hat{\\mathbf{d}}_R`.
 
     Parameters
     ----------
-    model : torch.nn.Module
-        PyTorch MLFF model.
+    model : Any
+        MLFF calculator, PyTorch ``nn.Module``, or ``ModelWrapper``.
     eval_energy_and_forces : callable
-        Zero-argument callable returning ``(energy, forces)`` where ``forces``
-        has shape ``(N, 3)`` evaluated with ``model``'s current parameters.
+        Callable ``eval_energy_and_forces(model_wrapper) -> (energy, forces)``
+        returning scalar energy and ``(N, 3)`` forces.
     direction_r : np.ndarray
         Input-space (e.g. adversarial) perturbation vector of shape ``(N, 3)``
         or ``(3N,)``.
     rho : float, optional
         Parameter-space finite-difference step size, by default ``1e-3``.
     n_directions : int, optional
-        Number of filter-normalized parameter directions, by default ``5``.
+        Number of normalized parameter directions, by default ``5``.
+    normalization : {'filter', 'layer', 'model', None}, optional
+        Direction normalization passed to ``ModelParameters``, by default
+        ``'filter'``.
     seed : int, optional
-        Base random seed, by default ``42``.
+        Random seed, by default ``42``.
 
     Returns
     -------
@@ -1141,45 +1342,67 @@ def pes_parameter_coupling(
     if n_directions <= 0:
         raise ValueError("n_directions must be a positive integer.")
 
+    import copy
+    import torch
+
+    _require_oxford_loss_landscapes()
+    from oxford_loss_landscapes.model_interface.model_parameters import rand_n_like
+
     u_r = _unit_vector(direction_r, name="direction_r")
-    params = _trainable_params(model)
-    base_weights = [p.detach().clone() for p in params]
+    wrapper = wrap_mlff_model(model)
+    params = wrapper.get_module_parameters()
+    base_snapshot = copy.deepcopy(params)
 
     energy_sens = []
     force_sens = []
     adv_proj_sens = []
     adv_cos_align = []
 
-    try:
-        base_energy, base_forces = eval_energy_and_forces()
-        base_forces = np.asarray(base_forces, dtype=float)
-        if base_forces.size != u_r.size:
-            raise ValueError(
-                f"direction_r size {u_r.size} does not match forces size {base_forces.size}."
-            )
+    with torch.random.fork_rng():
+        torch.manual_seed(int(seed))
+        try:
+            base_energy, base_forces = eval_energy_and_forces(wrapper)
+            base_forces = np.asarray(base_forces, dtype=float)
+            if base_forces.size != u_r.size:
+                raise ValueError(
+                    f"direction_r size {u_r.size} does not match forces size {base_forces.size}."
+                )
 
-        for idx in range(n_directions):
-            direction_theta = filter_normalized_direction(model, seed=seed + idx)
-            _apply_parameter_offset(params, base_weights, ((rho, direction_theta),))
-            e_plus, f_plus = eval_energy_and_forces()
-            _apply_parameter_offset(params, base_weights, ((-rho, direction_theta),))
-            e_minus, f_minus = eval_energy_and_forces()
+            for _ in range(n_directions):
+                direction_theta = rand_n_like(params)
+                _normalize_oll_direction(
+                    direction_theta, base_snapshot, normalization
+                )
+                step_vec = direction_theta * float(rho)
 
-            de_dalpha = (float(e_plus) - float(e_minus)) / (2.0 * rho)
-            df_dalpha = (
-                np.asarray(f_plus, dtype=float) - np.asarray(f_minus, dtype=float)
-            ).reshape(-1) / (2.0 * rho)
+                params.add_(step_vec)
+                e_plus, f_plus = eval_energy_and_forces(wrapper)
 
-            df_norm = float(np.linalg.norm(df_dalpha))
-            proj = float(abs(np.dot(df_dalpha, u_r)))
-            cos_align = proj / df_norm if df_norm > 1e-12 else float("nan")
+                params.sub_(step_vec * 2.0)
+                e_minus, f_minus = eval_energy_and_forces(wrapper)
 
-            energy_sens.append(abs(de_dalpha))
-            force_sens.append(df_norm)
-            adv_proj_sens.append(proj)
-            adv_cos_align.append(cos_align)
-    finally:
-        _apply_parameter_offset(params, base_weights, ())
+                with torch.no_grad():
+                    for cur_p, base_p in zip(params, base_snapshot):
+                        cur_p.copy_(base_p)
+
+                de_dalpha = (float(e_plus) - float(e_minus)) / (2.0 * rho)
+                df_dalpha = (
+                    np.asarray(f_plus, dtype=float)
+                    - np.asarray(f_minus, dtype=float)
+                ).reshape(-1) / (2.0 * rho)
+
+                df_norm = float(np.linalg.norm(df_dalpha))
+                proj = float(abs(np.dot(df_dalpha, u_r)))
+                cos_align = proj / df_norm if df_norm > 1e-12 else float("nan")
+
+                energy_sens.append(abs(de_dalpha))
+                force_sens.append(df_norm)
+                adv_proj_sens.append(proj)
+                adv_cos_align.append(cos_align)
+        finally:
+            with torch.no_grad():
+                for cur_p, base_p in zip(params, base_snapshot):
+                    cur_p.copy_(base_p)
 
     e_arr = np.asarray(energy_sens, dtype=float)
     f_arr = np.asarray(force_sens, dtype=float)
@@ -1206,18 +1429,22 @@ def pes_parameter_coupling(
 
 __all__ = [
     "build_attack_relaxation_basis",
+    "compute_parameter_hessian_eigs",
     "compute_pes_hessian",
+    "evaluate_hessian_loss_plane",
     "evaluate_loss_landscape_1d",
     "evaluate_loss_landscape_2d",
     "evaluate_pes_profile_1d",
     "evaluate_pes_slice_2d",
-    "filter_normalized_direction",
+    "extract_torch_module",
     "gamma_phonon_modes",
     "hessian_spectrum",
+    "make_mlff_metric",
     "parameter_sharpness",
     "perturbation_hessian_alignment",
     "pes_parameter_coupling",
     "pes_roughness",
     "plot_pes_basin_2d",
     "project_onto_basis",
+    "wrap_mlff_model",
 ]
