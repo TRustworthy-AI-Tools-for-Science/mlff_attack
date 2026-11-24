@@ -889,42 +889,188 @@ def extract_torch_module(calculator_or_module: Any) -> Any:
     )
 
 
+def invalidate_calculator_cache(calculator: Any) -> None:
+    """Clear cached ASE calculator results after in-place weight changes.
+
+    ASE calculators cache energies and forces in ``calc.results`` keyed only
+    by atomic positions and cell (``check_state(atoms)``). When perturbing
+    MLFF parameters in-place with fixed atomic coordinates, the cache must be
+    invalidated before every evaluation so the perturbed weights are actually
+    used.
+
+    Parameters
+    ----------
+    calculator : Any
+        ASE calculator instance (no-op if ``None``).
+    """
+    if calculator is None:
+        return
+    reset_fn = getattr(calculator, "reset", None)
+    if callable(reset_fn):
+        reset_fn()
+    results = getattr(calculator, "results", None)
+    if isinstance(results, dict):
+        results.clear()
+    if hasattr(calculator, "atoms"):
+        calculator.atoms = None
+
+
+def _is_ase_calculator_like(obj: Any) -> bool:
+    """Return True if ``obj`` looks like an ASE calculator rather than a raw nn.Module."""
+    return (
+        hasattr(obj, "get_potential_energy")
+        or hasattr(obj, "calculate")
+        or isinstance(getattr(obj, "results", None), dict)
+    )
+
+
+def _snapshot_wrapper_params(wrapper: Any) -> list:
+    """Clone current wrapper parameters for safe in-place restoration."""
+    if hasattr(wrapper, "snapshot_parameters"):
+        return wrapper.snapshot_parameters()
+    return [p.detach().clone() for p in wrapper.get_module_parameters()]
+
+
+def _restore_wrapper_params(wrapper: Any, snapshot: list) -> None:
+    """Restore wrapper parameters from ``snapshot`` and invalidate calculator cache."""
+    if hasattr(wrapper, "restore_parameters"):
+        wrapper.restore_parameters(snapshot)
+    else:
+        import torch
+
+        params = wrapper.get_module_parameters()
+        with torch.no_grad():
+            for cur_p, saved_p in zip(params, snapshot):
+                cur_p.copy_(saved_p)
+    if hasattr(wrapper, "invalidate_cache"):
+        wrapper.invalidate_cache()
+
+
 def wrap_mlff_model(
     calculator_or_module: Any,
     forward_fn: Optional[Callable[[Any, Any], Any]] = None,
+    trainable_only: bool = False,
 ) -> Any:
     """Wrap an MLFF calculator or PyTorch module for ``oxford_loss_landscapes``.
+
+    Returns an ``MLFFModelWrapper`` (a subclass of
+    :class:`oxford_loss_landscapes.ModelWrapper`) that:
+
+    - extracts the underlying PyTorch ``nn.Module`` from MACE, UMA, or CHGNet
+      calculators,
+    - keeps a reference to the original ASE ``calculator`` and exposes
+      :meth:`invalidate_cache` so fixed-structure evaluations never return
+      stale cached energies/forces,
+    - filters out non-floating-point parameters (and frozen parameters when
+      ``trainable_only=True``), and
+    - restores parameters in-place via :meth:`snapshot_parameters` /
+      :meth:`restore_parameters` without ``copy.deepcopy`` (which fails on
+      ``e3nn`` / TorchScript modules and detaches ASE calculators).
 
     Parameters
     ----------
     calculator_or_module : Any
         MACE/UMA/CHGNet calculator, ``torch.nn.Module``, or ``ModelWrapper``.
     forward_fn : callable, optional
-        Optional ``forward_fn(model, x)`` for ``GeneralModelWrapper``.
+        Optional ``forward_fn(model, x)`` for custom forward passes.
+    trainable_only : bool, optional
+        If True, restrict parameter perturbations to tensors with
+        ``requires_grad=True``, by default False.
 
     Returns
     -------
     oxford_loss_landscapes.ModelWrapper
         Wrapped model ready for ``oxford_loss_landscapes`` routines.
     """
+    import torch
+
     oll = _require_oxford_loss_landscapes()
+    from oxford_loss_landscapes.model_interface.model_parameters import ModelParameters
+
+    if isinstance(calculator_or_module, oll.ModelWrapper):
+        return calculator_or_module
+
     module = extract_torch_module(calculator_or_module)
     if isinstance(module, oll.ModelWrapper):
         return module
-    if forward_fn is not None:
-        return oll.GeneralModelWrapper(module, [module], forward_fn)
-    return oll.SimpleModelWrapper(module)
+
+    calculator = (
+        calculator_or_module
+        if (
+            calculator_or_module is not module
+            or _is_ase_calculator_like(calculator_or_module)
+        )
+        else None
+    )
+
+    class MLFFModelWrapper(oll.ModelWrapper):
+        """ASE/MLFF-aware ``oxford_loss_landscapes.ModelWrapper``."""
+
+        def __init__(
+            self,
+            torch_module: Any,
+            calc: Optional[Any],
+            fwd_fn: Optional[Callable[[Any, Any], Any]],
+            only_trainable: bool,
+        ):
+            super().__init__([torch_module])
+            self.model = torch_module
+            self.calculator = calc
+            self.forward_fn = fwd_fn
+            self.trainable_only = bool(only_trainable)
+
+        def invalidate_cache(self) -> None:
+            invalidate_calculator_cache(self.calculator)
+
+        def get_module_parameters(
+            self, trainable_only: Optional[bool] = None
+        ) -> Any:
+            use_trainable = (
+                self.trainable_only if trainable_only is None else bool(trainable_only)
+            )
+            params = [
+                p
+                for mod in self.modules
+                for p in mod.parameters()
+                if p.is_floating_point() and (not use_trainable or p.requires_grad)
+            ]
+            return ModelParameters(params)
+
+        def snapshot_parameters(self) -> list:
+            return [p.detach().clone() for p in self.get_module_parameters()]
+
+        def restore_parameters(self, snapshot: list) -> None:
+            params = self.get_module_parameters()
+            with torch.no_grad():
+                for param, saved in zip(params, snapshot):
+                    param.copy_(saved)
+            self.invalidate_cache()
+
+        def forward(self, x: Any) -> Any:
+            if self.forward_fn is not None:
+                return self.forward_fn(self.model, x)
+            return self.model(x)
+
+    return MLFFModelWrapper(module, calculator, forward_fn, trainable_only)
 
 
-def make_mlff_metric(eval_fn: Callable[[Any], float]) -> Any:
+def make_mlff_metric(
+    eval_fn: Callable[[Any], float],
+    calculator: Optional[Any] = None,
+) -> Any:
     """Adapt an MLFF evaluation callable into an ``oxford_loss_landscapes.Metric``.
+
+    Automatically invalidates the ASE calculator cache before every evaluation
+    so weight perturbations are never masked by stale cached energies/forces.
 
     Parameters
     ----------
     eval_fn : callable
-        Callable accepting an ``oxford_loss_landscapes.ModelWrapper`` (or zero
-        arguments if wrapped via ``lambda _wrapper: ...``) and returning a
-        scalar ``float`` loss, energy, or force-error metric.
+        Callable accepting an ``oxford_loss_landscapes.ModelWrapper`` and
+        returning a scalar ``float`` loss, energy, or force-error metric.
+    calculator : Any, optional
+        Optional ASE calculator whose cache should be invalidated prior to
+        each evaluation (in addition to ``model_wrapper.invalidate_cache()``).
 
     Returns
     -------
@@ -933,18 +1079,314 @@ def make_mlff_metric(eval_fn: Callable[[Any], float]) -> Any:
         ``planar_interpolation``, ``linear_interpolation``, and
         ``hessian_plane``.
     """
-    oll = _require_oxford_loss_landscapes()
+    _require_oxford_loss_landscapes()
     from oxford_loss_landscapes.metrics.metric import Metric as OllMetric
 
     class _MLFFCallableMetric(OllMetric):
-        def __init__(self, fn: Callable[[Any], float]):
+        def __init__(self, fn: Callable[[Any], float], calc: Optional[Any]):
             super().__init__()
             self._fn = fn
+            self._calculator = calc
 
         def __call__(self, model_wrapper: Any) -> float:
+            invalidate_calculator_cache(self._calculator)
+            if hasattr(model_wrapper, "invalidate_cache"):
+                model_wrapper.invalidate_cache()
             return float(self._fn(model_wrapper))
 
-    return _MLFFCallableMetric(eval_fn)
+    return _MLFFCallableMetric(eval_fn, calculator)
+
+
+def _as_atoms_sequence(atoms_or_list: Any) -> list:
+    """Normalize a single ASE ``Atoms`` or sequence of ``Atoms`` into a list."""
+    if hasattr(atoms_or_list, "get_positions"):
+        return [atoms_or_list]
+    return list(atoms_or_list)
+
+
+def _resolve_metric_calculator(
+    atoms: Any,
+    model_wrapper: Any,
+    explicit_calculator: Optional[Any],
+) -> Any:
+    calc = (
+        explicit_calculator
+        if explicit_calculator is not None
+        else getattr(model_wrapper, "calculator", None)
+    )
+    if calc is None:
+        calc = getattr(atoms, "calc", None)
+    if calc is None:
+        raise ValueError(
+            "Provide `calculator`, wrap an ASE calculator with `wrap_mlff_model`, "
+            "or attach a calculator to the input `Atoms` objects."
+        )
+    return calc
+
+
+def make_energy_loss_metric(
+    atoms_list: Any,
+    target_energies: Union[float, Sequence[float]],
+    calculator: Optional[Any] = None,
+) -> Any:
+    """Build an ``oxford_loss_landscapes.Metric`` computing energy MSE over structures.
+
+    Parameters
+    ----------
+    atoms_list : ase.Atoms or sequence of ase.Atoms
+        Structure(s) to evaluate at each parameter-space grid point.
+    target_energies : float or sequence of float
+        Reference/target potential energy (eV) for each structure.
+    calculator : Any, optional
+        ASE calculator (defaults to ``model_wrapper.calculator`` or ``atoms.calc``).
+
+    Returns
+    -------
+    oxford_loss_landscapes.metrics.metric.Metric
+        Metric returning mean squared energy error :math:`\\frac{1}{M}\\sum_i (E_\\theta(\\mathbf{R}_i) - E_i^*)^2`.
+    """
+    structures = [a.copy() for a in _as_atoms_sequence(atoms_list)]
+    targets = np.asarray(target_energies, dtype=float).reshape(-1)
+    if len(structures) != targets.size:
+        raise ValueError(
+            f"Number of structures ({len(structures)}) must match "
+            f"target_energies length ({targets.size})."
+        )
+
+    def _eval(model_wrapper: Any) -> float:
+        sq_errors = []
+        for atoms, target_e in zip(structures, targets):
+            calc = _resolve_metric_calculator(atoms, model_wrapper, calculator)
+            invalidate_calculator_cache(calc)
+            atoms.calc = calc
+            pred_e = float(atoms.get_potential_energy())
+            sq_errors.append((pred_e - float(target_e)) ** 2)
+        return float(np.mean(sq_errors))
+
+    return make_mlff_metric(_eval, calculator=calculator)
+
+
+def make_force_loss_metric(
+    atoms_list: Any,
+    target_forces: Union[np.ndarray, Sequence[np.ndarray]],
+    calculator: Optional[Any] = None,
+) -> Any:
+    """Build an ``oxford_loss_landscapes.Metric`` computing force MSE over structures.
+
+    Parameters
+    ----------
+    atoms_list : ase.Atoms or sequence of ase.Atoms
+        Structure(s) to evaluate at each parameter-space grid point.
+    target_forces : np.ndarray or sequence of np.ndarray
+        Reference force array ``(N, 3)`` (or one per structure) in eV/Å.
+    calculator : Any, optional
+        ASE calculator (defaults to ``model_wrapper.calculator`` or ``atoms.calc``).
+
+    Returns
+    -------
+    oxford_loss_landscapes.metrics.metric.Metric
+        Metric returning mean squared force component error across all atoms.
+    """
+    structures = [a.copy() for a in _as_atoms_sequence(atoms_list)]
+    if len(structures) == 1 and isinstance(target_forces, np.ndarray) and target_forces.ndim == 2:
+        force_targets = [np.asarray(target_forces, dtype=float)]
+    else:
+        force_targets = [np.asarray(f, dtype=float) for f in target_forces]
+    if len(structures) != len(force_targets):
+        raise ValueError(
+            f"Number of structures ({len(structures)}) must match "
+            f"target_forces count ({len(force_targets)})."
+        )
+
+    def _eval(model_wrapper: Any) -> float:
+        sq_errors = []
+        for atoms, target_f in zip(structures, force_targets):
+            calc = _resolve_metric_calculator(atoms, model_wrapper, calculator)
+            invalidate_calculator_cache(calc)
+            atoms.calc = calc
+            pred_f = np.asarray(atoms.get_forces(), dtype=float)
+            sq_errors.append(float(np.mean((pred_f - target_f) ** 2)))
+        return float(np.mean(sq_errors))
+
+    return make_mlff_metric(_eval, calculator=calculator)
+
+
+def make_adversarial_gap_metric(
+    atoms_reference: Any,
+    atoms_perturbed: Any,
+    calculator: Optional[Any] = None,
+) -> Any:
+    """Build a ``Metric`` tracking the adversarial energy gap over parameter space.
+
+    Evaluates :math:`\\Delta E_\\theta = E_\\theta(\\mathbf{R}_{\\mathrm{adv}}) - E_\\theta(\\mathbf{R}_0)`
+    as model weights :math:`\\theta` move along random or Hessian directions,
+    directly linking input-space adversarial perturbations to parameter-space
+    loss-landscape geometry.
+
+    Parameters
+    ----------
+    atoms_reference : ase.Atoms
+        Unperturbed reference structure :math:`\\mathbf{R}_0`.
+    atoms_perturbed : ase.Atoms
+        Adversarially perturbed structure :math:`\\mathbf{R}_{\\mathrm{adv}}`.
+    calculator : Any, optional
+        ASE calculator (defaults to ``model_wrapper.calculator`` or ``atoms_reference.calc``).
+
+    Returns
+    -------
+    oxford_loss_landscapes.metrics.metric.Metric
+        Metric returning :math:`E_\\theta(\\mathbf{R}_{\\mathrm{adv}}) - E_\\theta(\\mathbf{R}_0)` in eV.
+    """
+    ref_copy = atoms_reference.copy()
+    pert_copy = atoms_perturbed.copy()
+
+    def _eval(model_wrapper: Any) -> float:
+        calc = _resolve_metric_calculator(ref_copy, model_wrapper, calculator)
+        invalidate_calculator_cache(calc)
+        ref_copy.calc = calc
+        e_ref = float(ref_copy.get_potential_energy())
+        invalidate_calculator_cache(calc)
+        pert_copy.calc = calc
+        e_pert = float(pert_copy.get_potential_energy())
+        return e_pert - e_ref
+
+    return make_mlff_metric(_eval, calculator=calculator)
+
+
+def make_mace_loss_callable(
+    atoms_or_list: Any,
+    calculator: Any,
+    target_energies: Optional[Union[float, Sequence[float]]] = None,
+    target_forces: Optional[Union[np.ndarray, Sequence[np.ndarray]]] = None,
+    force_weight: float = 0.0,
+    device: Optional[Any] = None,
+) -> Tuple[Callable[[Optional[Sequence[int]]], Any], int]:
+    """Build a differentiable MACE ``loss_callable`` for VR-PCA Hessian analysis.
+
+    Converts one or more ASE ``Atoms`` structures into MACE ``AtomicData`` graph
+    batches using the calculator's ``r_max``, ``z_table``, and ``head`` settings,
+    returning ``(loss_callable, dataset_size)`` suitable for
+    :func:`evaluate_hessian_loss_plane` and :func:`compute_parameter_hessian_eigs`.
+
+    Parameters
+    ----------
+    atoms_or_list : ase.Atoms or sequence of ase.Atoms
+        Input structure(s).
+    calculator : Any
+        A ``MACECalculator`` instance (with ``calculator.models[0]``).
+    target_energies : float or sequence of float, optional
+        Reference potential energies (eV). If both ``target_energies`` and
+        ``target_forces`` are omitted, returns the sum of predicted energies
+        (useful for inspecting the Hessian of :math:`E_\\theta` itself).
+    target_forces : np.ndarray or sequence of np.ndarray, optional
+        Reference forces ``(N, 3)`` (eV/Å) when ``force_weight > 0``.
+    force_weight : float, optional
+        Weight multiplying the force MSE term, by default ``0.0``.
+    device : torch.device or str, optional
+        Target PyTorch device (defaults to the MACE model's parameter device).
+
+    Returns
+    -------
+    tuple of (callable, int)
+        ``(loss_callable, dataset_size)`` where ``loss_callable(batch_indices)``
+        returns a scalar differentiable PyTorch loss tensor.
+    """
+    import torch
+    from mace import data as mace_data
+    from mace.tools import torch_geometric
+
+    model = extract_torch_module(calculator)
+    first_param = next(model.parameters())
+    target_device = torch.device(device) if device is not None else first_param.device
+    target_dtype = first_param.dtype
+
+    structures = _as_atoms_sequence(atoms_or_list)
+    n_samples = len(structures)
+    if n_samples == 0:
+        raise ValueError("atoms_or_list must contain at least one structure.")
+
+    r_max = float(getattr(calculator, "r_max", model.r_max.item()))
+    z_table = getattr(calculator, "z_table", None)
+    if z_table is None:
+        from mace.tools import AtomicNumberTable
+
+        z_table = AtomicNumberTable([int(z) for z in model.atomic_numbers.tolist()])
+
+    import inspect
+
+    heads = getattr(model, "heads", ["Default"])
+    head_name = getattr(calculator, "head", None) or (heads[0] if heads else "Default")
+    from_config_params = inspect.signature(mace_data.AtomicData.from_config).parameters
+
+    data_list = []
+    for atoms in structures:
+        cfg = mace_data.config_from_atoms(atoms)
+        if hasattr(cfg, "head"):
+            cfg.head = head_name
+        fc_kwargs: Dict[str, Any] = {"z_table": z_table, "cutoff": r_max}
+        if "heads" in from_config_params:
+            fc_kwargs["heads"] = heads
+        atomic_data = mace_data.AtomicData.from_config(cfg, **fc_kwargs)
+        data_list.append(atomic_data)
+
+    e_targets = (
+        torch.as_tensor(target_energies, dtype=target_dtype, device=target_device).reshape(-1)
+        if target_energies is not None
+        else None
+    )
+    if e_targets is not None and e_targets.numel() != n_samples:
+        raise ValueError(
+            f"target_energies length ({e_targets.numel()}) must match "
+            f"number of structures ({n_samples})."
+        )
+
+    f_targets = None
+    if force_weight > 0.0 and target_forces is not None:
+        if n_samples == 1 and isinstance(target_forces, np.ndarray) and target_forces.ndim == 2:
+            raw_f = [target_forces]
+        else:
+            raw_f = list(target_forces)
+        if len(raw_f) != n_samples:
+            raise ValueError(
+                f"target_forces count ({len(raw_f)}) must match "
+                f"number of structures ({n_samples})."
+            )
+        f_targets = [
+            torch.as_tensor(arr, dtype=target_dtype, device=target_device)
+            for arr in raw_f
+        ]
+
+    compute_force = bool(force_weight > 0.0 and f_targets is not None)
+
+    def loss_callable(batch_indices: Optional[Sequence[int]] = None) -> Any:
+        if batch_indices is None:
+            idxs = list(range(n_samples))
+        else:
+            idxs = [int(i) for i in batch_indices]
+
+        batch = torch_geometric.batch.Batch.from_data_list(
+            [data_list[i] for i in idxs]
+        ).to(target_device)
+        batch_dict = batch.to_dict()
+        for key, val in batch_dict.items():
+            if isinstance(val, torch.Tensor) and val.is_floating_point():
+                batch_dict[key] = val.to(dtype=target_dtype)
+
+        out = model(batch_dict, training=False, compute_force=compute_force)
+        pred_e = out["energy"].reshape(-1)
+
+        if e_targets is None and not compute_force:
+            return pred_e.sum()
+
+        loss = torch.zeros((), dtype=target_dtype, device=target_device)
+        if e_targets is not None:
+            loss = loss + torch.mean((pred_e - e_targets[idxs]) ** 2)
+        if compute_force and f_targets is not None:
+            ref_f = torch.cat([f_targets[i] for i in idxs], dim=0)
+            loss = loss + float(force_weight) * torch.mean((out["forces"] - ref_f) ** 2)
+        return loss
+
+    return loss_callable, n_samples
 
 
 def _normalize_oll_direction(
@@ -968,18 +1410,33 @@ def _normalize_oll_direction(
     return direction
 
 
+def _call_oll_with_restore(fn: Callable[..., Any], *args: Any, restore_model: bool, **kwargs: Any) -> Any:
+    """Call an ``oxford_loss_landscapes`` function passing ``restore_model`` if supported."""
+    import inspect
+
+    sig = inspect.signature(fn)
+    if "restore_model" in sig.parameters:
+        kwargs["restore_model"] = restore_model
+    return fn(*args, **kwargs)
+
+
 def evaluate_loss_landscape_1d(
     model: Any,
     eval_fn: Callable[[Any], float],
     distance: float = 0.1,
     steps: int = 51,
     normalization: Optional[str] = "filter",
-    deepcopy_model: bool = True,
+    deepcopy_model: bool = False,
+    restore_model: bool = True,
+    trainable_only: bool = False,
 ) -> Dict[str, Any]:
     """Evaluate a 1D random parameter-space loss slice via ``oxford_loss_landscapes``.
 
     Delegates directly to :func:`oxford_loss_landscapes.random_line` and
-    computes curvature roughness along the slice.
+    computes curvature roughness along the slice. Defaults to
+    ``deepcopy_model=False, restore_model=True`` so ASE calculators and
+    ``e3nn`` / TorchScript MLFF modules are perturbed safely in-place and
+    restored identically afterwards.
 
     Parameters
     ----------
@@ -995,7 +1452,13 @@ def evaluate_loss_landscape_1d(
     normalization : {'filter', 'layer', 'model', None}, optional
         Direction normalization scheme, by default ``'filter'``.
     deepcopy_model : bool, optional
-        Deep-copy the model before perturbing weights, by default True.
+        Deep-copy the model before perturbing weights, by default False
+        (recommended for MLFF calculators / ``e3nn`` modules).
+    restore_model : bool, optional
+        Restore original parameters in-place when ``deepcopy_model=False``,
+        by default True.
+    trainable_only : bool, optional
+        Perturb only parameters with ``requires_grad=True``, by default False.
 
     Returns
     -------
@@ -1006,19 +1469,26 @@ def evaluate_loss_landscape_1d(
     oll = _require_oxford_loss_landscapes()
     from oxford_loss_landscapes.metrics.metric import Metric as OllMetric
 
-    wrapper = wrap_mlff_model(model)
+    wrapper = wrap_mlff_model(model, trainable_only=trainable_only)
     metric = eval_fn if isinstance(eval_fn, OllMetric) else make_mlff_metric(eval_fn)
-    losses = np.asarray(
-        oll.random_line(
-            wrapper,
-            metric=metric,
-            distance=distance,
-            steps=steps,
-            normalization=normalization,
-            deepcopy_model=deepcopy_model,
-        ),
-        dtype=float,
-    )
+    snapshot = _snapshot_wrapper_params(wrapper) if (not deepcopy_model and restore_model) else None
+    try:
+        losses = np.asarray(
+            _call_oll_with_restore(
+                oll.random_line,
+                wrapper,
+                metric=metric,
+                distance=distance,
+                steps=steps,
+                normalization=normalization,
+                deepcopy_model=deepcopy_model,
+                restore_model=restore_model,
+            ),
+            dtype=float,
+        )
+    finally:
+        if snapshot is not None:
+            _restore_wrapper_params(wrapper, snapshot)
     alphas = np.linspace(-float(distance), float(distance), losses.size)
     return {
         "alphas": alphas,
@@ -1035,13 +1505,16 @@ def evaluate_loss_landscape_2d(
     distance: float = 1.0,
     steps: int = 21,
     normalization: Optional[str] = "filter",
-    deepcopy_model: bool = True,
+    deepcopy_model: bool = False,
+    restore_model: bool = True,
+    trainable_only: bool = False,
     use_ray: bool = False,
     num_workers: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Evaluate a 2D random parameter-space loss surface via ``oxford_loss_landscapes``.
 
     Delegates directly to :func:`oxford_loss_landscapes.random_plane`.
+    Defaults to ``deepcopy_model=False, restore_model=True`` for MLFF safety.
 
     Parameters
     ----------
@@ -1056,7 +1529,12 @@ def evaluate_loss_landscape_2d(
     normalization : {'filter', 'layer', 'model', None}, optional
         Direction normalization scheme, by default ``'filter'``.
     deepcopy_model : bool, optional
-        Deep-copy the model before perturbing weights, by default True.
+        Deep-copy the model before perturbing weights, by default False.
+    restore_model : bool, optional
+        Restore original parameters in-place when ``deepcopy_model=False``,
+        by default True.
+    trainable_only : bool, optional
+        Perturb only parameters with ``requires_grad=True``, by default False.
     use_ray : bool, optional
         Enable Ray parallel evaluation in ``oxford_loss_landscapes``,
         by default False.
@@ -1072,21 +1550,28 @@ def evaluate_loss_landscape_2d(
     oll = _require_oxford_loss_landscapes()
     from oxford_loss_landscapes.metrics.metric import Metric as OllMetric
 
-    wrapper = wrap_mlff_model(model)
+    wrapper = wrap_mlff_model(model, trainable_only=trainable_only)
     metric = eval_fn if isinstance(eval_fn, OllMetric) else make_mlff_metric(eval_fn)
-    losses = np.asarray(
-        oll.random_plane(
-            wrapper,
-            metric=metric,
-            distance=distance,
-            steps=steps,
-            normalization=normalization,
-            deepcopy_model=deepcopy_model,
-            use_ray=use_ray,
-            num_workers=num_workers,
-        ),
-        dtype=float,
-    )
+    snapshot = _snapshot_wrapper_params(wrapper) if (not deepcopy_model and restore_model) else None
+    try:
+        losses = np.asarray(
+            _call_oll_with_restore(
+                oll.random_plane,
+                wrapper,
+                metric=metric,
+                distance=distance,
+                steps=steps,
+                normalization=normalization,
+                deepcopy_model=deepcopy_model,
+                use_ray=use_ray,
+                num_workers=num_workers,
+                restore_model=restore_model,
+            ),
+            dtype=float,
+        )
+    finally:
+        if snapshot is not None:
+            _restore_wrapper_params(wrapper, snapshot)
     axis = np.linspace(-float(distance), float(distance), int(steps))
     return {
         "alpha": axis,
@@ -1100,19 +1585,25 @@ def evaluate_loss_landscape_2d(
 def evaluate_hessian_loss_plane(
     model: Any,
     eval_fn: Callable[[Any], float],
-    criterion: Any,
-    inputs: Any,
-    targets: Any,
+    criterion: Optional[Any] = None,
+    inputs: Any = None,
+    targets: Any = None,
     distance: float = 1.0,
     steps: int = 21,
-    deepcopy_model: bool = True,
+    deepcopy_model: bool = False,
+    restore_model: bool = True,
+    trainable_only: bool = False,
     vrpca_config: Optional[Any] = None,
+    forward_fn: Optional[Callable[[Any, Any], Any]] = None,
+    loss_callable: Optional[Callable[[Optional[Sequence[int]]], Any]] = None,
+    dataset_size: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Evaluate a 2D loss plane along the dominant parameter Hessian eigenvector.
 
     Delegates directly to :func:`oxford_loss_landscapes.hessian_plane`, which
     computes the top parameter-Hessian eigenvector via VR-PCA and pairs it
-    with a random orthogonal direction.
+    with a random orthogonal direction. Supports MLFF graph/dict batches via
+    ``forward_fn`` or ``loss_callable`` (e.g. from :func:`make_mace_loss_callable`).
 
     Parameters
     ----------
@@ -1120,43 +1611,75 @@ def evaluate_hessian_loss_plane(
         MLFF calculator, PyTorch ``nn.Module``, or ``ModelWrapper``.
     eval_fn : callable
         Callable ``eval_fn(model_wrapper) -> float`` or ``Metric``.
-    criterion : callable
-        Differentiable PyTorch loss criterion for Hessian computation.
-    inputs, targets : Any
+    criterion : callable, optional
+        Differentiable PyTorch loss criterion (optional if ``loss_callable`` is set).
+    inputs, targets : Any, optional
         Inputs and targets passed to ``oll.hessian_plane``.
     distance : float, optional
         Maximum distance from center along each axis, by default ``1.0``.
     steps : int, optional
         Grid resolution (``steps x steps``), by default ``21``.
     deepcopy_model : bool, optional
-        Deep-copy the model before perturbing weights, by default True.
+        Deep-copy the model before perturbing weights, by default False.
+    restore_model : bool, optional
+        Restore original parameters in-place when ``deepcopy_model=False``,
+        by default True.
+    trainable_only : bool, optional
+        Perturb only parameters with ``requires_grad=True``, by default False.
     vrpca_config : VRPCAConfig, optional
         Optional ``oxford_loss_landscapes.VRPCAConfig`` instance.
+    forward_fn : callable, optional
+        Custom ``forward_fn(model, batch)`` for graph/dict MLFF inputs.
+    loss_callable : callable, optional
+        Differentiable ``loss_callable(batch_indices) -> scalar Tensor`` (e.g.
+        from :func:`make_mace_loss_callable`).
+    dataset_size : int, optional
+        Dataset size paired with ``loss_callable`` or dict/graph inputs.
 
     Returns
     -------
     dict
         Contains ``alpha``, ``beta``, ``losses``, ``distance``, and ``steps``.
     """
+    import inspect
+
     oll = _require_oxford_loss_landscapes()
     from oxford_loss_landscapes.metrics.metric import Metric as OllMetric
 
-    module = extract_torch_module(model)
+    wrapper = wrap_mlff_model(model, forward_fn=forward_fn, trainable_only=trainable_only)
     metric = eval_fn if isinstance(eval_fn, OllMetric) else make_mlff_metric(eval_fn)
-    losses = np.asarray(
-        oll.hessian_plane(
-            module,
-            metric=metric,
-            criterion=criterion,
-            inputs=inputs,
-            targets=targets,
-            distance=distance,
-            steps=steps,
-            deepcopy_model=deepcopy_model,
-            vrpca_config=vrpca_config,
-        ),
-        dtype=float,
-    )
+
+    sig = inspect.signature(oll.hessian_plane)
+    extra_kwargs: Dict[str, Any] = {}
+    if "forward_fn" in sig.parameters and forward_fn is not None:
+        extra_kwargs["forward_fn"] = forward_fn
+    if "loss_callable" in sig.parameters and loss_callable is not None:
+        extra_kwargs["loss_callable"] = loss_callable
+    if "dataset_size" in sig.parameters and dataset_size is not None:
+        extra_kwargs["dataset_size"] = dataset_size
+
+    snapshot = _snapshot_wrapper_params(wrapper) if (not deepcopy_model and restore_model) else None
+    try:
+        losses = np.asarray(
+            _call_oll_with_restore(
+                oll.hessian_plane,
+                wrapper,
+                metric=metric,
+                criterion=criterion,
+                inputs=inputs,
+                targets=targets,
+                distance=distance,
+                steps=steps,
+                deepcopy_model=deepcopy_model,
+                vrpca_config=vrpca_config,
+                restore_model=restore_model,
+                **extra_kwargs,
+            ),
+            dtype=float,
+        )
+    finally:
+        if snapshot is not None:
+            _restore_wrapper_params(wrapper, snapshot)
     axis = np.linspace(-float(distance), float(distance), int(steps))
     return {
         "alpha": axis,
@@ -1169,25 +1692,46 @@ def evaluate_hessian_loss_plane(
 
 def compute_parameter_hessian_eigs(
     model: Any,
-    criterion: Any,
-    inputs: Any,
-    targets: Any,
+    criterion: Optional[Any] = None,
+    inputs: Any = None,
+    targets: Any = None,
     vrpca_config: Optional[Any] = None,
+    compute_min: bool = False,
+    forward_fn: Optional[Callable[[Any, Any], Any]] = None,
+    loss_callable: Optional[Callable[[Optional[Sequence[int]]], Any]] = None,
+    dataset_size: Optional[int] = None,
 ) -> Any:
     """Estimate min/max parameter-space Hessian eigenpairs via ``oxford_loss_landscapes``.
 
-    Delegates directly to :func:`oxford_loss_landscapes.min_max_hessian_eigs_vrpca`.
+    Delegates directly to :func:`oxford_loss_landscapes.min_max_hessian_eigs_vrpca`,
+    forwarding ``forward_fn``, ``loss_callable``, and ``dataset_size`` for
+    graph/dict MLFF models.
     """
+    import inspect
+
     oll = _require_oxford_loss_landscapes()
     module = extract_torch_module(model)
     if isinstance(module, oll.ModelWrapper):
         module = module.modules[0]
+
+    sig = inspect.signature(oll.min_max_hessian_eigs_vrpca)
+    extra_kwargs: Dict[str, Any] = {}
+    if "compute_min" in sig.parameters:
+        extra_kwargs["compute_min"] = compute_min
+    if "forward_fn" in sig.parameters and forward_fn is not None:
+        extra_kwargs["forward_fn"] = forward_fn
+    if "loss_callable" in sig.parameters and loss_callable is not None:
+        extra_kwargs["loss_callable"] = loss_callable
+    if "dataset_size" in sig.parameters and dataset_size is not None:
+        extra_kwargs["dataset_size"] = dataset_size
+
     return oll.min_max_hessian_eigs_vrpca(
         net=module,
         inputs=inputs,
         targets=targets,
         criterion=criterion,
         config=vrpca_config,
+        **extra_kwargs,
     )
 
 
@@ -1198,13 +1742,15 @@ def parameter_sharpness(
     n_directions: int = 10,
     normalization: Optional[str] = "filter",
     seed: int = 42,
+    trainable_only: bool = False,
 ) -> Dict[str, Any]:
     """Estimate local parameter-space sharpness using ``oxford_loss_landscapes`` directions.
 
     Samples ``n_directions`` normalized parameter directions via
     :func:`oxford_loss_landscapes.model_interface.model_parameters.rand_n_like`
     and evaluates symmetric perturbations :math:`\\theta_0 \\pm \\rho d_k`,
-    restoring the original weights in a ``finally`` block.
+    invalidating any ASE calculator cache before every evaluation and restoring
+    the original weights in a ``finally`` block.
 
     Parameters
     ----------
@@ -1221,6 +1767,8 @@ def parameter_sharpness(
         ``'filter'``.
     seed : int, optional
         Random seed for PyTorch direction sampling, by default ``42``.
+    trainable_only : bool, optional
+        Perturb only parameters with ``requires_grad=True``, by default False.
 
     Returns
     -------
@@ -1233,15 +1781,18 @@ def parameter_sharpness(
     if n_directions <= 0:
         raise ValueError("n_directions must be a positive integer.")
 
-    import copy
     import torch
 
     _require_oxford_loss_landscapes()
-    from oxford_loss_landscapes.model_interface.model_parameters import rand_n_like
+    from oxford_loss_landscapes.model_interface.model_parameters import (
+        ModelParameters,
+        rand_n_like,
+    )
 
-    wrapper = wrap_mlff_model(model)
+    wrapper = wrap_mlff_model(model, trainable_only=trainable_only)
     params = wrapper.get_module_parameters()
-    base_snapshot = copy.deepcopy(params)
+    base_snapshot_list = _snapshot_wrapper_params(wrapper)
+    base_snapshot = ModelParameters(base_snapshot_list)
 
     sharpness_vals = []
     curvatures = []
@@ -1249,6 +1800,8 @@ def parameter_sharpness(
     with torch.random.fork_rng():
         torch.manual_seed(int(seed))
         try:
+            if hasattr(wrapper, "invalidate_cache"):
+                wrapper.invalidate_cache()
             base_loss = float(eval_fn(wrapper))
             for _ in range(n_directions):
                 direction = rand_n_like(params)
@@ -1256,24 +1809,24 @@ def parameter_sharpness(
                 step_vec = direction * float(rho)
 
                 params.add_(step_vec)
+                if hasattr(wrapper, "invalidate_cache"):
+                    wrapper.invalidate_cache()
                 loss_plus = float(eval_fn(wrapper))
 
                 params.sub_(step_vec * 2.0)
+                if hasattr(wrapper, "invalidate_cache"):
+                    wrapper.invalidate_cache()
                 loss_minus = float(eval_fn(wrapper))
 
                 # Restore exact baseline parameters before next direction
-                with torch.no_grad():
-                    for cur_p, base_p in zip(params, base_snapshot):
-                        cur_p.copy_(base_p)
+                _restore_wrapper_params(wrapper, base_snapshot_list)
 
                 sharpness_vals.append(max(loss_plus, loss_minus) - base_loss)
                 curvatures.append(
                     (loss_plus + loss_minus - 2.0 * base_loss) / (rho**2)
                 )
         finally:
-            with torch.no_grad():
-                for cur_p, base_p in zip(params, base_snapshot):
-                    cur_p.copy_(base_p)
+            _restore_wrapper_params(wrapper, base_snapshot_list)
 
     sharp_arr = np.asarray(sharpness_vals, dtype=float)
     curv_arr = np.asarray(curvatures, dtype=float)
@@ -1296,11 +1849,13 @@ def pes_parameter_coupling(
     n_directions: int = 5,
     normalization: Optional[str] = "filter",
     seed: int = 42,
+    trainable_only: bool = False,
 ) -> Dict[str, Any]:
     """Quantify coupling between parameter perturbations and PES forces.
 
     Uses ``oxford_loss_landscapes`` ``ModelParameters`` direction sampling and
-    normalization to perturb :math:`\\theta_0 \\pm \\rho d_k`, then measures:
+    normalization to perturb :math:`\\theta_0 \\pm \\rho d_k`, invalidating any
+    ASE calculator cache before each evaluation, then measures:
 
     - predicted energy sensitivity :math:`|\\partial E_\\theta / \\partial \\alpha_k|`
     - full force sensitivity :math:`\\|\\partial \\mathbf{F}_\\theta / \\partial \\alpha_k\\|_F`
@@ -1330,6 +1885,8 @@ def pes_parameter_coupling(
         ``'filter'``.
     seed : int, optional
         Random seed, by default ``42``.
+    trainable_only : bool, optional
+        Perturb only parameters with ``requires_grad=True``, by default False.
 
     Returns
     -------
@@ -1342,16 +1899,19 @@ def pes_parameter_coupling(
     if n_directions <= 0:
         raise ValueError("n_directions must be a positive integer.")
 
-    import copy
     import torch
 
     _require_oxford_loss_landscapes()
-    from oxford_loss_landscapes.model_interface.model_parameters import rand_n_like
+    from oxford_loss_landscapes.model_interface.model_parameters import (
+        ModelParameters,
+        rand_n_like,
+    )
 
     u_r = _unit_vector(direction_r, name="direction_r")
-    wrapper = wrap_mlff_model(model)
+    wrapper = wrap_mlff_model(model, trainable_only=trainable_only)
     params = wrapper.get_module_parameters()
-    base_snapshot = copy.deepcopy(params)
+    base_snapshot_list = _snapshot_wrapper_params(wrapper)
+    base_snapshot = ModelParameters(base_snapshot_list)
 
     energy_sens = []
     force_sens = []
@@ -1361,6 +1921,8 @@ def pes_parameter_coupling(
     with torch.random.fork_rng():
         torch.manual_seed(int(seed))
         try:
+            if hasattr(wrapper, "invalidate_cache"):
+                wrapper.invalidate_cache()
             base_energy, base_forces = eval_energy_and_forces(wrapper)
             base_forces = np.asarray(base_forces, dtype=float)
             if base_forces.size != u_r.size:
@@ -1376,14 +1938,16 @@ def pes_parameter_coupling(
                 step_vec = direction_theta * float(rho)
 
                 params.add_(step_vec)
+                if hasattr(wrapper, "invalidate_cache"):
+                    wrapper.invalidate_cache()
                 e_plus, f_plus = eval_energy_and_forces(wrapper)
 
                 params.sub_(step_vec * 2.0)
+                if hasattr(wrapper, "invalidate_cache"):
+                    wrapper.invalidate_cache()
                 e_minus, f_minus = eval_energy_and_forces(wrapper)
 
-                with torch.no_grad():
-                    for cur_p, base_p in zip(params, base_snapshot):
-                        cur_p.copy_(base_p)
+                _restore_wrapper_params(wrapper, base_snapshot_list)
 
                 de_dalpha = (float(e_plus) - float(e_minus)) / (2.0 * rho)
                 df_dalpha = (
@@ -1400,9 +1964,7 @@ def pes_parameter_coupling(
                 adv_proj_sens.append(proj)
                 adv_cos_align.append(cos_align)
         finally:
-            with torch.no_grad():
-                for cur_p, base_p in zip(params, base_snapshot):
-                    cur_p.copy_(base_p)
+            _restore_wrapper_params(wrapper, base_snapshot_list)
 
     e_arr = np.asarray(energy_sens, dtype=float)
     f_arr = np.asarray(force_sens, dtype=float)
@@ -1439,6 +2001,11 @@ __all__ = [
     "extract_torch_module",
     "gamma_phonon_modes",
     "hessian_spectrum",
+    "invalidate_calculator_cache",
+    "make_adversarial_gap_metric",
+    "make_energy_loss_metric",
+    "make_force_loss_metric",
+    "make_mace_loss_callable",
     "make_mlff_metric",
     "parameter_sharpness",
     "perturbation_hessian_alignment",

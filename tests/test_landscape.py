@@ -190,6 +190,46 @@ def test_extract_torch_module_variants():
         landscape.extract_torch_module(object())
 
 
+def test_invalidate_calculator_cache_clears_ase_state():
+    class MockCachingCalculator:
+        def __init__(self, weight: float):
+            self.weight = weight
+            self.results = {}
+            self.atoms = None
+            self.reset_calls = 0
+
+        def reset(self):
+            self.reset_calls += 1
+            self.results = {}
+            self.atoms = None
+
+        def get_potential_energy(self, positions):
+            key = tuple(np.asarray(positions, dtype=float).ravel())
+            if self.atoms == key and "energy" in self.results:
+                return self.results["energy"]
+            self.atoms = key
+            self.results["energy"] = self.weight * float(np.sum(np.asarray(positions) ** 2))
+            return self.results["energy"]
+
+    pos = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+    calc = MockCachingCalculator(weight=2.0)
+    assert np.isclose(calc.get_potential_energy(pos), 2.0)
+
+    # Mutate weight in-place without invalidating cache -> stale cached result
+    calc.weight = 5.0
+    assert np.isclose(calc.get_potential_energy(pos), 2.0)
+
+    # After invalidating cache -> reflects perturbed weight
+    landscape.invalidate_calculator_cache(calc)
+    assert calc.reset_calls == 1
+    assert calc.results == {}
+    assert calc.atoms is None
+    assert np.isclose(calc.get_potential_energy(pos), 5.0)
+
+    # Safe no-op on None
+    landscape.invalidate_calculator_cache(None)
+
+
 def test_oxford_loss_landscapes_integration():
     torch = pytest.importorskip("torch")
     pytest.importorskip("oxford_loss_landscapes")
@@ -198,40 +238,149 @@ def test_oxford_loss_landscapes_integration():
         def __init__(self):
             super().__init__()
             self.weight = torch.nn.Parameter(torch.eye(6, dtype=torch.float64) * 2.0)
+            # 0-D scalar parameter & frozen parameter mimicking MACE/UMA/CHGNet
+            self.energy_scale = torch.nn.Parameter(torch.tensor(1.5, dtype=torch.float64))
+            self.frozen_shift = torch.nn.Parameter(
+                torch.tensor(-0.5, dtype=torch.float64), requires_grad=False
+            )
 
         def energy_and_forces(self, r_vec):
             r_t = torch.tensor(
                 r_vec.reshape(-1), dtype=torch.float64, requires_grad=True
             )
-            energy = 0.5 * torch.sum((self.weight @ r_t) ** 2)
+            energy = (
+                0.5 * torch.sum((self.weight @ r_t) ** 2) * self.energy_scale
+                + self.frozen_shift
+            )
             forces = -torch.autograd.grad(energy, r_t)[0]
             return float(energy.item()), forces.detach().numpy().reshape(-1, 3)
 
-    model = ToyPotential()
-    r0 = np.array([[0.5, -0.2, 0.1], [0.3, 0.4, -0.6]])
-    base_weight_copy = model.weight.detach().clone()
+    class MockAtoms:
+        def __init__(self, positions, calc=None):
+            self._positions = np.asarray(positions, dtype=float).copy()
+            self.calc = calc
 
-    def eval_loss(wrapper):
-        net = wrapper.modules[0]
-        e_val, _ = net.energy_and_forces(r0)
-        return (e_val - 1.0) ** 2
+        def copy(self):
+            return MockAtoms(self._positions, calc=self.calc)
+
+        def get_positions(self):
+            return self._positions.copy()
+
+        def get_potential_energy(self):
+            return self.calc.get_potential_energy(self)
+
+        def get_forces(self):
+            return self.calc.get_forces(self)
+
+    class MockMACECachingCalculator:
+        def __init__(self, module):
+            self.models = [module]
+            self.results = {}
+            self.atoms = None
+
+        def reset(self):
+            self.results = {}
+            self.atoms = None
+
+        def _ensure(self, atoms):
+            key = tuple(atoms.get_positions().ravel())
+            if self.atoms == key and "energy" in self.results:
+                return
+            self.atoms = key
+            e_val, f_val = self.models[0].energy_and_forces(atoms.get_positions())
+            self.results = {"energy": e_val, "forces": f_val}
+
+        def get_potential_energy(self, atoms):
+            self._ensure(atoms)
+            return self.results["energy"]
+
+        def get_forces(self, atoms):
+            self._ensure(atoms)
+            return self.results["forces"]
+
+    model = ToyPotential()
+    calc = MockMACECachingCalculator(model)
+    r0 = np.array([[0.5, -0.2, 0.1], [0.3, 0.4, -0.6]])
+    r_adv = r0 + np.array([[0.15, 0.0, 0.0], [0.0, -0.1, 0.0]])
+    atoms_ref = MockAtoms(r0, calc=calc)
+    atoms_adv = MockAtoms(r_adv, calc=calc)
+
+    base_weight_copy = model.weight.detach().clone()
+    base_scale_copy = model.energy_scale.detach().clone()
+    base_frozen_copy = model.frozen_shift.detach().clone()
+
+    # Wrapper skips frozen parameters when trainable_only=True
+    wrapped_trainable = landscape.wrap_mlff_model(calc, trainable_only=True)
+    assert wrapped_trainable.calculator is calc
+    assert len(wrapped_trainable.get_module_parameters()) == 2
+
+    # Energy, force, and adversarial-gap metrics must clear ASE cache on every call
+    e0, f0 = model.energy_and_forces(r0)
+    energy_metric = landscape.make_energy_loss_metric(atoms_ref, e0 - 0.5, calculator=calc)
+    force_metric = landscape.make_force_loss_metric(atoms_ref, f0, calculator=calc)
+    gap_metric = landscape.make_adversarial_gap_metric(atoms_ref, atoms_adv, calculator=calc)
 
     slice_1d = landscape.evaluate_loss_landscape_1d(
-        model, eval_loss, distance=0.05, steps=9, normalization="filter"
+        calc,
+        energy_metric,
+        distance=0.05,
+        steps=9,
+        normalization="filter",
+        deepcopy_model=False,
+        restore_model=True,
+        trainable_only=True,
     )
     assert slice_1d["losses"].shape == (9,)
     assert np.all(np.isfinite(slice_1d["losses"]))
+    assert np.ptp(slice_1d["losses"]) > 0.0  # proves cache was invalidated
+    assert np.isclose(slice_1d["losses"][4], 0.25, atol=1e-5)
     assert torch.allclose(model.weight, base_weight_copy)
+    assert torch.allclose(model.energy_scale, base_scale_copy)
+    assert torch.allclose(model.frozen_shift, base_frozen_copy)
 
     slice_2d = landscape.evaluate_loss_landscape_2d(
-        model, eval_loss, distance=0.05, steps=5, normalization="filter"
+        calc,
+        gap_metric,
+        distance=0.05,
+        steps=5,
+        normalization="filter",
+        deepcopy_model=False,
+        restore_model=True,
+        trainable_only=True,
     )
     assert slice_2d["losses"].shape == (5, 5)
     assert np.all(np.isfinite(slice_2d["losses"]))
+    assert np.ptp(slice_2d["losses"]) > 0.0
+    assert torch.allclose(model.weight, base_weight_copy)
+
+    # Differentiable loss_callable for VR-PCA Hessian & hessian_plane
+    r0_t = torch.tensor(r0.reshape(-1), dtype=torch.float64)
+
+    def loss_callable(_indices):
+        e_t = 0.5 * torch.sum((model.weight @ r0_t) ** 2) * model.energy_scale + model.frozen_shift
+        return (e_t - (e0 - 0.5)) ** 2
+
+    import oxford_loss_landscapes as oll
+
+    cfg = oll.VRPCAConfig(batch_size=1, epochs=3, seed=42)
+    h_plane = landscape.evaluate_hessian_loss_plane(
+        calc,
+        eval_fn=force_metric,
+        loss_callable=loss_callable,
+        dataset_size=1,
+        distance=0.05,
+        steps=5,
+        deepcopy_model=False,
+        restore_model=True,
+        vrpca_config=cfg,
+    )
+    assert h_plane["losses"].shape == (5, 5)
+    assert np.all(np.isfinite(h_plane["losses"]))
+    assert np.isclose(h_plane["losses"][2, 2], 0.0, atol=1e-6)
     assert torch.allclose(model.weight, base_weight_copy)
 
     sharp = landscape.parameter_sharpness(
-        model, eval_loss, rho=1e-2, n_directions=3, seed=42
+        calc, energy_metric, rho=1e-2, n_directions=3, seed=42, trainable_only=True
     )
     assert np.isfinite(sharp["max_sharpness"])
     assert np.isfinite(sharp["mean_curvature"])
@@ -239,12 +388,13 @@ def test_oxford_loss_landscapes_integration():
 
     adv_dir = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
     coupling = landscape.pes_parameter_coupling(
-        model,
-        lambda wrapper: wrapper.modules[0].energy_and_forces(r0),
+        calc,
+        lambda _w: (atoms_ref.get_potential_energy(), atoms_ref.get_forces()),
         direction_r=adv_dir,
         rho=1e-3,
         n_directions=3,
         seed=7,
+        trainable_only=True,
     )
     assert coupling["mean_energy_sensitivity"] > 0.0
     assert coupling["mean_force_sensitivity"] > 0.0
