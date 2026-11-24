@@ -239,7 +239,7 @@ visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
 
 ## Companion Repositories & Acknowledgments
 
-- **HPC Benchmarking & Data Collection Framework**: [declanwhchan/mlff_attack_data_collection](https://github.com/declanwhchan/mlff_attack_data_collection) by Declan Chan (MIT License). Structural topology, crystallographic symmetry-retention, normalized-epsilon, and force-change metrics in `mlff_attack.metrics` are adapted with attribution from this companion repository; see [NOTICE](NOTICE) for details.
+- **HPC Benchmarking & Data Collection Framework**: [declanwhchan/mlff_attack_data_collection](https://github.com/declanwhchan/mlff_attack_data_collection) by Declan Chan (MIT License). Structural topology, crystallographic symmetry-retention, normalized-epsilon, and force-change metrics in `mlff_attack.metrics`, as well as 2D attack/relaxation PES basin slicing and $\Gamma$-point phonon stability helpers in `mlff_attack.landscape`, are adapted with attribution from this companion repository; see [NOTICE](NOTICE) for details.
 
 ## License
 

@@ -9,6 +9,7 @@ __all__ = [
     "calc_setup",
     "visualization",
     "attacks",
+    "landscape",
     "metrics",
     "random_seed",
     "__version__",

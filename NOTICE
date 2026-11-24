@@ -16,6 +16,8 @@ This repository includes components adapted from companion open-source work:
      `src/mlff_attack/metrics.py`
    - Normalized perturbation budget, RMS force, and delta-force angle utilities
      in `src/mlff_attack/metrics.py`
+   - 2D attack/orthogonal-relaxation PES basin projection, plotting, and
+     Gamma-point phonon stability diagnostics in `src/mlff_attack/landscape.py`
 
    MIT License permission notice:
    Permission is hereby granted, free of charge, to any person obtaining a copy
