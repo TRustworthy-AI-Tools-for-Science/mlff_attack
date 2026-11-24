@@ -237,6 +237,10 @@ visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
 - CPU and float64 only
 - `.almtp` and `.almtp.elements` file
 
+## Companion Repositories & Acknowledgments
+
+- **HPC Benchmarking & Data Collection Framework**: [declanwhchan/mlff_attack_data_collection](https://github.com/declanwhchan/mlff_attack_data_collection) by Declan Chan (MIT License). Structural topology, crystallographic symmetry-retention, normalized-epsilon, and force-change metrics in `mlff_attack.metrics` are adapted with attribution from this companion repository; see [NOTICE](NOTICE) for details.
+
 ## License
 
 See LICENSE file for details.

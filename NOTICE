@@ -1,0 +1,28 @@
+mlff_attack — Third-Party & Companion Attribution Notice
+========================================================
+
+This repository includes components adapted from companion open-source work:
+
+1. mlff_attack_data_collection
+   Repository: https://github.com/declanwhchan/mlff_attack_data_collection
+   Copyright (c) 2026 Declan Chan
+   License: MIT License
+
+   Adapted components:
+   - Structural topology metrics (neighbor-edge Jaccard distance, coordination
+     changes, periodic-safe ASE RDF L1 distance) in `src/mlff_attack/metrics.py`
+     and `tests/test_metrics.py`
+   - Multi-tolerance `spglib` symmetry-retention metrics in
+     `src/mlff_attack/metrics.py`
+   - Normalized perturbation budget, RMS force, and delta-force angle utilities
+     in `src/mlff_attack/metrics.py`
+
+   MIT License permission notice:
+   Permission is hereby granted, free of charge, to any person obtaining a copy
+   of this software and associated documentation files (the "Software"), to
+   deal in the Software without restriction, including without limitation the
+   rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+   sell copies of the Software, and to permit persons to whom the Software is
+   furnished to do so, subject to the following conditions:
+   The above copyright notice and this permission notice shall be included in
+   all copies or substantial portions of the Software.
