@@ -16,6 +16,7 @@ Core Modules
    :maxdepth: 2
 
    mlff_attack.attacks
+   mlff_attack.baselines
    mlff_attack.calculators
    mlff_attack.calc_setup
    mlff_attack.landscape

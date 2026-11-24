@@ -240,7 +240,7 @@ visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
 ## Companion Repositories & Acknowledgments
 
 - **Loss Landscape Analysis**: [TRustworthy-AI-Tools-for-Science/oxford-loss-landscapes](https://github.com/TRustworthy-AI-Tools-for-Science/oxford-loss-landscapes) (MIT License). Parameter-space loss landscape slicing (`random_line`, `random_plane`, `hessian_plane`), VR-PCA parameter Hessian eigensolvers, and `ModelParameters` normalization in `mlff_attack.landscape` delegate directly to `oxford-loss-landscapes` (install with `pip install -e ".[landscape]"`).
-- **HPC Benchmarking & Data Collection Framework**: [declanwhchan/mlff_attack_data_collection](https://github.com/declanwhchan/mlff_attack_data_collection) by Declan Chan (MIT License). Structural topology, crystallographic symmetry-retention, normalized-epsilon, and force-change metrics in `mlff_attack.metrics`, as well as 2D attack/relaxation PES basin slicing and $\Gamma$-point phonon stability helpers in `mlff_attack.landscape`, are adapted with attribution from this companion repository; see [NOTICE](NOTICE) for details.
+- **HPC Benchmarking & Data Collection Framework**: [declanwhchan/mlff_attack_data_collection](https://github.com/declanwhchan/mlff_attack_data_collection) by Declan Chan (MIT License). Structural topology, crystallographic symmetry-retention, normalized-epsilon, and force-change metrics in `mlff_attack.metrics`, 2D attack/relaxation PES basin slicing and $\Gamma$-point phonon stability helpers in `mlff_attack.landscape`, and `ContourExploration` baseline & VASP DFT loader helpers in `mlff_attack.baselines` are adapted with attribution from this companion repository; see [NOTICE](NOTICE) for details.
 
 ## License
 
