@@ -6,7 +6,7 @@ This page provides a theoretical overview of the adversarial attack methods impl
 FGSM
 ----
 
-The Fast Gradient Sign Method (FGSM) attack was first implemeted by Goodfellow et al. in the 2014 paper `Explaining and Harnessing Adversarial Examples <https://arxiv.org/abs/1412.6572>`_.
+The Fast Gradient Sign Method (FGSM) attack was first implemented by Goodfellow et al. in the 2014 paper `Explaining and Harnessing Adversarial Examples <https://arxiv.org/abs/1412.6572>`_.
 
 The update rule for FGSM is 
 

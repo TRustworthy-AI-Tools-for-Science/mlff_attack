@@ -3,7 +3,13 @@
 __version__ = "0.1.0"
 __author__ = "Trustworthy AI Tools for Science"
 
-# Import core modules
-from mlff_attack import relaxation, visualization
-
-__all__ = ["relaxation", "visualization", "__version__"]
+__all__ = [
+    "relaxation",
+    "calculators",
+    "calc_setup",
+    "visualization",
+    "attacks",
+    "metrics",
+    "random_seed",
+    "__version__",
+]

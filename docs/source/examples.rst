@@ -62,7 +62,7 @@ For more control over the attack process:
 .. code-block:: python
 
    from ase.io import read
-   from mlff_attack.grad_based.fgsm import FGSM_MACE
+   from mlff_attack.grad_based.fgsm import FGSM_ASE
    from mlff_attack.relaxation import setup_calculator
    
    # Load structure and setup calculator
@@ -70,7 +70,7 @@ For more control over the attack process:
    atoms = setup_calculator(atoms, 'mace-mpa-0-medium.model', device='cuda')
    
    # Create FGSM attack instance
-   fgsm_attack = FGSM_MACE(
+   fgsm_attack = FGSM_ASE(
        model=atoms.calc,
        epsilon=0.1,
        device='cuda',
@@ -122,7 +122,7 @@ Monitor the attack progress with detailed history tracking:
 .. code-block:: python
 
    from ase.io import read
-   from mlff_attack.grad_based.fgsm import FGSM_MACE
+   from mlff_attack.grad_based.fgsm import FGSM_ASE
    from mlff_attack.relaxation import setup_calculator
    import matplotlib.pyplot as plt
    
@@ -130,7 +130,7 @@ Monitor the attack progress with detailed history tracking:
    atoms = setup_calculator(atoms, 'mace-mpa-0-medium.model', device='cuda')
    
    # Create attack with history tracking
-   attack = FGSM_MACE(
+   attack = FGSM_ASE(
        model=atoms.calc,
        epsilon=0.05,
        device='cuda',
@@ -340,8 +340,8 @@ Examples using the command-line interface:
 
 .. code-block:: bash
 
-   mace-calc-single --input structure.cif --model mace-model.model \\
-                    --outdir results/ --fmax 0.01 --max-steps 300
+   calc-single --input structure.cif --model mace-model.model \
+               --outdir output/ --fmax 0.01 --max-steps 300
 
 **Trajectory Visualization:**
 
