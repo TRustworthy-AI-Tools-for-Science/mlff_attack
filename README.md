@@ -51,15 +51,18 @@ pip install -e ".[dev]"
 
 ### Install targeted MLFF support
 
-Each MLFF model should be installed in separate Python environments because their dependencies can conflict:
-* MACE support
-* UMA support must be in Python <= 3.12 and requires access through Hugging Face
-* CHGNet support must be in Python <= 3.12
-* MTP support uses the external MLIP-3 `mlp` executable
+Each MLFF model should be installed in a separate Python environment because their dependencies can conflict (for example, `mace-torch` pins `e3nn==0.4.4`, while `fairchem-core` requires `e3nn>=0.5`):
+* **MACE / MACE-MH**: `pip install -e ".[mace]"` (or `bash scripts/setup_mace.sh` on Ubuntu/WSL)
+* **UMA** (Python <= 3.12, requires Hugging Face authentication via `hf auth login`): `pip install -e ".[uma]"` (or `bash scripts/setup_uma.sh`)
+* **CHGNet** (Python <= 3.12): `pip install -e ".[chgnet]"` (or `bash scripts/setup_chgnet.sh`)
+* **MTP** (uses the external MLIP-3 `mlp` executable): `bash scripts/setup_mtp.sh`
 
 ```bash
-git switch mlff-<model>
-bash setup.sh
+# Automated Ubuntu / WSL setup (creates a dedicated environment per backend)
+bash scripts/setup_mace.sh     # .venv-mace
+bash scripts/setup_uma.sh      # .venv-uma
+bash scripts/setup_chgnet.sh   # .venv-chgnet
+bash scripts/setup_mtp.sh      # conda env: env-mtp
 ```
 
 > **Reminder to activate environment:** Before running calculations, make sure to activate the correct MLFF environment for the targeted model.
@@ -193,17 +196,23 @@ visualize-traj --traj output_perturbed/relaxed.traj --outdir output_perturbed/
 
 ### Base package
 
-- Python >= 3.10
+- Python >= 3.10, < 3.13
 - ase >= 3.22.0
 - torch >= 2.0.0
 - numpy >= 1.20.0
+- scipy >= 1.7.0
 - matplotlib >= 3.5.0
-- pandas
+- pandas >= 1.3.0
+- tqdm >= 4.60.0
 - seaborn
 - spglib
 - mp_api
-- ipywidgets
-- jupyterlab
+
+### Notebook extras (`[notebooks]`)
+
+- jupyterlab >= 3.0
+- ipywidgets >= 8.0
+- ipykernel
 
 ### MACE support
 
@@ -238,7 +247,7 @@ If you use this library in your research, please consider citing:
 ```bibtex
 @software{mlff_attack,
   title = {MLFF Attack: A library for attacking MLFF models},
-  author = {Ashley S. Dale AND Hao Wan},
+  author = {Ashley S. Dale AND Hao Wan AND Declan Chan},
   url = {https://github.com/Trustworthy-AI-Tools-for-Science/mlff_attack},
   year = {2025}
 }

@@ -94,7 +94,8 @@ class PGD_ASE(MLFFAttack):
         tuple
             ``(energy, forces, positions)`` where ``energy`` is a scalar torch
             tensor, ``forces`` has shape ``(n_atoms, 3)``, and ``positions`` is
-            the gradient-enabled torch position tensor.
+            the gradient-enabled torch position tensor. The computation graph is
+            retained so callers can call ``loss.backward()`` afterward.
         """
         import torch
         from mace.data import AtomicData, config_from_atoms
@@ -170,7 +171,6 @@ class PGD_ASE(MLFFAttack):
         model.eval()
 
         with torch.enable_grad():
-            positions.requires_grad_(True)
             batch["positions"] = positions
             output = model(batch, training=False, compute_force=False)
 

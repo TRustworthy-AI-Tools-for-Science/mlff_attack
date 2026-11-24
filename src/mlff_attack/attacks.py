@@ -57,8 +57,8 @@ def make_attack(
         or a UMA model name
     device : str
         Device to run the model on ("cpu" or "cuda")
-    dtype : str
-        Data type for calculations ("float32" or "float64")
+    dtype_str : str, optional
+        Data type for calculations ("float32" or "float64"), by default "float64"
     seed : int, optional
         Random seed used for MACE/UMA setup and PGD random start, by default 42
     output_cif : str or Path
@@ -81,8 +81,8 @@ def make_attack(
     verbose : bool, optional
         Whether to log attack setup and summary information, by default True
     calculator : str or None, optional
-        Calculator type to use: "mace", "uma", or None. If None, the calculator
-        is inferred from model_path
+        Calculator type to use: "mace", "uma", "chgnet", "mtp", or None.
+        If None, the calculator is inferred from model_path
     mace_head : str or None, optional
         MACE-MH prediction head to use, such as "omat_pbe". Only valid for
         multihead MACE models. If None, no head is passed
@@ -208,162 +208,6 @@ def make_attack(
         logger.info("   Successfully saved!")
 
     return str(output_cif), perturbed_atoms, attack.attack_history
-
-
-# def forward_pass_with_gradients(atoms, device="cpu"):
-#     """Perform a forward pass through the MACE model with gradient tracking.
-
-#     .. deprecated::
-#         Use FGSM_ASE class instead. This function is kept for backward compatibility.
-
-#     This uses the calculator's internal method to prepare the batch,
-#     then replaces positions with a gradient-enabled version.
-
-#     Parameters
-#     ----------
-#     atoms : ase.Atoms
-#         ASE Atoms object with MACE calculator attached
-#     device : str, optional
-#         Device to run on ("cpu" or "cuda"), by default "cpu"
-
-#     Returns
-#     -------
-#     tuple
-#         A tuple containing:
-
-#         - energy : torch.Tensor
-#             Total energy (scalar, requires_grad=True)
-#         - forces : torch.Tensor
-#             Forces on atoms (shape [n_atoms, 3], with gradients)
-#         - positions : torch.Tensor
-#             Position tensor (requires_grad=True)
-#     """
-#     calc = atoms.calc
-#     model = calc.models[0]
-
-#     # Save original positions
-#     positions_np = atoms.get_positions()
-
-#     # Use the calculator's internal method to prepare the batch
-#     # Call the calculator to get the batch structure, then modify positions
-#     from mace.data import AtomicData, config_from_atoms
-
-#     # Create configuration from atoms
-#     config = config_from_atoms(atoms)
-
-#     # Create AtomicData with the calculator's settings
-#     atomic_data = AtomicData.from_config(
-#         config, z_table=calc.z_table, cutoff=calc.r_max
-#     )
-
-#     # Convert to dict
-#     batch = atomic_data.to_dict()
-
-#     # Move everything to the right device first
-#     for key in batch:
-#         if torch.is_tensor(batch[key]):
-#             batch[key] = batch[key].to(device)
-
-#     # Add batch indexing if not present (on correct device)
-#     if "batch" not in batch:
-#         batch["batch"] = torch.zeros(len(atoms), dtype=torch.long, device=device)
-#     if "ptr" not in batch:
-#         batch["ptr"] = torch.tensor([0, len(atoms)], dtype=torch.long, device=device)
-
-#     # Now replace positions with gradient-enabled version
-#     positions = torch.tensor(positions_np, dtype=torch.float64, device=device, requires_grad=True)
-#     batch["positions"] = positions
-
-#     # Check and fix natoms if present
-#     if "natoms" in batch:
-#         natoms_val = batch["natoms"]
-#         # Ensure it's 1D with 2 elements
-#         if natoms_val.dim() == 0:
-#             batch["natoms"] = torch.tensor([len(atoms), len(atoms)], dtype=torch.long, device=device)
-#         elif natoms_val.dim() == 1 and len(natoms_val) < 2:
-#             batch["natoms"] = torch.tensor([len(atoms), len(atoms)], dtype=torch.long, device=device)
-#     else:
-#         batch["natoms"] = torch.tensor([len(atoms), len(atoms)], dtype=torch.long, device=device)
-
-#     # Add head field if present in calculator (for multi-head models)
-#     if hasattr(calc, 'head') and calc.head is not None:
-#         # Map head name to index
-#         if hasattr(calc, 'heads') and calc.heads is not None:
-#             head_idx = calc.heads.index(calc.head) if calc.head in calc.heads else 0
-#         else:
-#             head_idx = 0
-#         # Head should be an array with one value per atom in the batch
-#         batch["head"] = torch.full((len(atoms),), head_idx, dtype=torch.long, device=device)
-#     elif "head" not in batch:
-#         # Default head is 0
-#         batch["head"] = torch.zeros(len(atoms), dtype=torch.long, device=device)
-
-#     # Forward pass - disable computing forces in the model output
-#     model.eval()
-
-#     # We need to recompute with fresh gradients
-#     # Don't use model's internal force computation
-#     with torch.enable_grad():
-#         # Ensure positions require grad
-#         positions.requires_grad_(True)
-
-#         # Update batch with fresh positions
-#         batch["positions"] = positions
-
-#         # Forward pass through model
-#         output = model(batch, training=False, compute_force=False)
-
-#         # Extract energy
-#         energy = output["energy"]
-#         # Ensure energy is a scalar for gradient computation
-#         if energy.dim() > 0:
-#             energy = energy.sum()
-
-#         # Compute forces as negative gradient
-#         forces = -torch.autograd.grad(
-#             outputs=energy,
-#             inputs=positions,
-#             retain_graph=True,
-#             create_graph=False
-#         )[0]
-
-#     return energy, forces, positions
-
-
-# def backprop_step(energy, positions, loss_fn=None):
-#     """Perform backpropagation to compute gradients.
-
-#     .. deprecated::
-#         Use FGSM_ASE.compute_gradient() instead. This function is kept for backward compatibility.
-
-#     Parameters
-#     ----------
-#     energy : torch.Tensor
-#         Energy tensor from forward pass (requires_grad=True)
-#     positions : torch.Tensor
-#         Position tensor from forward pass (requires_grad=True)
-#     loss_fn : Callable, optional
-#         Optional loss function to apply to energy before backprop.
-#         If None, backprop directly on energy, by default None
-
-#     Returns
-#     -------
-#     torch.Tensor
-#         Gradient of loss w.r.t. positions (dL/dr)
-#     """
-#     # Apply loss function if provided
-#     if loss_fn is not None:
-#         loss = loss_fn(energy)
-#     else:
-#         loss = energy
-
-#     # Perform backpropagation
-#     loss.backward(retain_graph=True)
-
-#     # Get gradients w.r.t. positions
-#     grad_positions = positions.grad
-
-#     return grad_positions
 
 
 def save_perturbation(
@@ -528,71 +372,6 @@ def load_perturbation(load_path):
     return result
 
 
-# def adversarial_attack_step(atoms, device="cpu", epsilon=0.01, target_energy=None):
-#     """Perform one step of adversarial attack on atomic positions.
-
-#     .. deprecated::
-#         Use FGSM_ASE.attack_step() instead. This function is kept for backward compatibility.
-
-#     Parameters
-#     ----------
-#     atoms : ase.Atoms
-#         ASE Atoms object with MACE calculator attached
-#     device : str, optional
-#         Device to run on, by default "cpu"
-#     epsilon : float, optional
-#         Step size for perturbation, by default 0.01
-#     target_energy : float or None, optional
-#         Optional target energy for attack. If None, maximize energy, by default None
-
-#     Returns
-#     -------
-#     tuple
-#         A tuple containing:
-
-#         - perturbed_atoms : ase.Atoms
-#             Atoms with perturbed positions
-#         - energy : float
-#             Original energy
-#         - perturbed_energy : float
-#             Energy after perturbation
-#         - grad_positions : torch.Tensor
-#             Gradients used for perturbation
-#     """
-#     # Forward pass with gradients
-#     energy, forces, positions = forward_pass_with_gradients(atoms, device=device)
-
-#     # Define loss (maximize or target energy)
-#     if target_energy is not None:
-#         # Try to reach target energy
-#         loss = (energy - target_energy) ** 2
-#     else:
-#         # Maximize energy (for adversarial attack)
-#         loss = -energy
-
-#     # Backprop to get gradients w.r.t. positions
-#     loss.backward()
-#     grad_positions = positions.grad
-
-#     # Compute perturbation (gradient ascent to maximize energy)
-#     perturbation = epsilon * torch.sign(grad_positions)
-
-#     # Apply perturbation
-#     perturbed_positions = positions.detach() + perturbation
-
-#     # Create new atoms with perturbed positions
-#     perturbed_atoms = atoms.copy()
-#     perturbed_atoms.set_positions(perturbed_positions.cpu().numpy())
-
-#     # Set calculator on perturbed atoms
-#     perturbed_atoms.calc = atoms.calc
-
-#     # Compute energy of perturbed structure
-#     perturbed_energy_np = perturbed_atoms.get_potential_energy()
-
-#     return perturbed_atoms, energy.item(), perturbed_energy_np, grad_positions.detach()
-
-
 def visualize_perturbation(atoms_before, atoms_after, epsilon=0.01, outdir=None):
     """Visualize the difference between original and perturbed atomic structures.
 
@@ -745,7 +524,7 @@ Displacement Distribution:
 
     # Save figure - use the perturbed atoms file path if available
     if outdir is not None:
-        outdir = Path(outdir)   
+        outdir = Path(outdir)
         outdir.mkdir(parents=True, exist_ok=True)
 
         # Try to determine filename from atoms_after if it has a file path

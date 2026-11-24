@@ -13,10 +13,10 @@ Overview
 
 This package provides tools for:
 
-- **Adversarial Attacks**: Implement various attack methods (FGSM, PGD) on MLFF models
-- **MACE Integration**: Seamless integration with MACE force field models
+- **Adversarial Attacks**: Implement various attack methods (FGSM, I-FGSM, PGD) on MLFF models
+- **Multi-MLFF Integration**: Supports MACE, MACE-MH, Meta UMA, CHGNet, and MTP calculators
 - **Structure Relaxation**: Tools for performing geometry optimization with MLFF models
-- **Visualization**: Comprehensive plotting and analysis of attack results and trajectories
+- **Visualization & Metrics**: Comprehensive plotting and analysis of attack results, trajectories, and force noise spectra
 
 Key Features
 ------------
@@ -30,13 +30,23 @@ Key Features
 Installation
 ------------
 
-From source (development mode):
+Each MLFF backend should be installed in its own virtual environment to avoid
+dependency conflicts (such as the MACE / UMA ``e3nn`` version mismatch) ---
+see :doc:`installation` for complete setup details.
+
+Quick start on Ubuntu / WSL:
 
 .. code-block:: bash
 
    git clone https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack.git
    cd mlff_attack
-   pip install -e ."[dev]"
+   bash scripts/setup_mace.sh   # or setup_uma.sh / setup_chgnet.sh / setup_mtp.sh
+
+Or install manually with ``pip``:
+
+.. code-block:: bash
+
+   pip install -e ".[mace,dev]"
 
 Quick Start
 -----------
@@ -92,6 +102,7 @@ Contents
 .. toctree::
    :maxdepth: 2
 
+   installation
    attacks
    examples
    modules

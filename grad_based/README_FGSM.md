@@ -254,7 +254,7 @@ summary = attack.get_attack_summary()
 
 ## Examples
 
-See `/home/ashley/attack_mlff/mlff_attack/example_notebooks/example_fgsm_attack.py` for complete working examples:
+See `src/mlff_attack/examples/example_fgsm_attack.py` for complete working examples:
 
 1. **Basic FGSM** - Single-step attack
 2. **Iterative FGSM** - Multi-step attack with clipping
@@ -263,8 +263,7 @@ See `/home/ashley/attack_mlff/mlff_attack/example_notebooks/example_fgsm_attack.
 
 Run with:
 ```bash
-cd /home/ashley/attack_mlff
-python mlff_attack/example_notebooks/example_fgsm_attack.py
+python src/mlff_attack/examples/example_fgsm_attack.py
 ```
 
 ## Future Extensions

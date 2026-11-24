@@ -5,9 +5,11 @@ __author__ = "Trustworthy AI Tools for Science"
 
 __all__ = [
     "relaxation",
-    "calculator",
+    "calculators",
+    "calc_setup",
     "visualization",
     "attacks",
     "metrics",
+    "random_seed",
     "__version__",
 ]

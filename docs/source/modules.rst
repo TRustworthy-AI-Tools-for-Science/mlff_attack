@@ -16,6 +16,10 @@ Core Modules
    :maxdepth: 2
 
    mlff_attack.attacks
+   mlff_attack.calculators
+   mlff_attack.calc_setup
+   mlff_attack.metrics
+   mlff_attack.random_seed
    mlff_attack.relaxation
    mlff_attack.visualization
 

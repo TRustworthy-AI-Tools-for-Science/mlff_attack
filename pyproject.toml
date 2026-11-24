@@ -7,7 +7,7 @@ name = "mlff_attack"
 version = "0.1.0"
 description = "Attacks against MLFF Models"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 license = {text = "MIT"}
 authors = [
     {name = "Trustworthy AI Tools for Science"}
@@ -29,12 +29,12 @@ dependencies = [
     "torch>=2.0.0",
     "matplotlib>=3.5.0",
     "numpy>=1.20.0",
-    "pandas",
+    "scipy>=1.7.0",
+    "pandas>=1.3.0",
+    "tqdm>=4.60.0",
     "seaborn",
     "spglib",
     "mp_api",
-    "ipywidgets",
-    "jupyterlab",
 ]
 
 [project.optional-dependencies]
@@ -43,12 +43,18 @@ mace = [
 ]
 
 uma = [
-    "fairchem-core>=2.0.0",
+    "fairchem-core>=2.0.0,<3.0.0",
     "huggingface_hub",
 ]
 
 chgnet = [
     "chgnet>=0.4.2",
+]
+
+notebooks = [
+    "jupyterlab>=3.0",
+    "ipywidgets>=8.0",
+    "ipykernel",
 ]
 
 dev = [
@@ -60,7 +66,8 @@ dev = [
     "mypy>=0.990",
     "ipython",
     "ipykernel",
-    "sphinx"
+    "sphinx",
+    "furo",
 ]
 
 [project.scripts]
@@ -71,3 +78,10 @@ make-attack = "mlff_attack.cli.make_attack:main"
 [project.urls]
 Homepage = "https://trustworthy-ai-tools-for-science.github.io/mlff_attack/"
 Repository = "https://github.com/TRustworthy-AI-Tools-for-Science/mlff_attack"
+
+[tool.uv]
+# mace-torch pins e3nn==0.4.4; fairchem-core requires e3nn>=0.5.
+# Install one MLFF backend extra per virtual environment.
+conflicts = [
+    [{ extra = "mace" }, { extra = "uma" }],
+]
