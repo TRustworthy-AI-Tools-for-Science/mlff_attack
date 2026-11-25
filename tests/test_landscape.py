@@ -357,8 +357,11 @@ def test_oxford_loss_landscapes_integration():
     r0_t = torch.tensor(r0.reshape(-1), dtype=torch.float64)
 
     def loss_callable(_indices):
-        e_t = 0.5 * torch.sum((model.weight @ r0_t) ** 2) * model.energy_scale + model.frozen_shift
-        return (e_t - (e0 - 0.5)) ** 2
+        r_req = r0_t.detach().clone().requires_grad_(True)
+        e_t = 0.5 * torch.sum((model.weight @ r_req) ** 2) * model.energy_scale + model.frozen_shift
+        f_t = -torch.autograd.grad(e_t, r_req, create_graph=True)[0]
+        f0_t = torch.tensor(f0.reshape(-1), dtype=torch.float64)
+        return ((e_t - (e0 - 0.5)) ** 2) + torch.mean((f_t - f0_t) ** 2)
 
     import oxford_loss_landscapes as oll
 

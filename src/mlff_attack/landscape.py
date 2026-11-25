@@ -1372,7 +1372,9 @@ def make_mace_loss_callable(
             if isinstance(val, torch.Tensor) and val.is_floating_point():
                 batch_dict[key] = val.to(dtype=target_dtype)
 
-        out = model(batch_dict, training=False, compute_force=compute_force)
+        # Pass training=compute_force so MACE retains create_graph=True on
+        # out["forces"] = -grad_q E_theta(q) when differentiating force losses wrt theta.
+        out = model(batch_dict, training=compute_force, compute_force=compute_force)
         pred_e = out["energy"].reshape(-1)
 
         if e_targets is None and not compute_force:
